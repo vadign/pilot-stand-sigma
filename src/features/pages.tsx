@@ -20,16 +20,16 @@ export function BriefingPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="grid grid-cols-12 gap-4">
-      <div className="col-span-9 space-y-4">
+    <div className="grid gap-4 lg:grid-cols-12">
+      <div className="space-y-4 lg:col-span-9">
         <Card>
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <div className="mb-2 text-sm font-semibold uppercase tracking-wider text-blue-700">Sigma Управленческий бриф</div>
               <h1 className="text-4xl font-extrabold">Ежедневный управленческий бриф: {new Date().toLocaleDateString('ru-RU')}</h1>
               <p className="mt-2 text-lg text-slate-500">Синтез глобальных операций за последние 24 часа, созданный ИИ.</p>
             </div>
-            <div className="space-x-2">
+            <div className="flex flex-wrap gap-2">
               <button onClick={() => window.print()} className="rounded-xl border px-3 py-2 font-semibold"><Download size={14} className="mr-1 inline" />Экспорт PDF</button>
               <button onClick={() => navigator.clipboard.writeText(location.href)} className="rounded-xl bg-blue-600 px-3 py-2 font-semibold text-white"><Copy size={14} className="mr-1 inline" />Разослать</button>
             </div>
@@ -38,13 +38,13 @@ export function BriefingPage() {
 
         <Card>
           <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">Сводка системы</div>
-          <p className="mt-2 text-3xl leading-relaxed text-slate-700">
+          <p className="mt-2 text-xl leading-relaxed text-slate-700 lg:text-3xl">
             За последние 24 часа в операциях Sigma наблюдается <b className="text-blue-700">умеренное увеличение</b> развертывания ресурсов.
             Общая стабильность остается высокой — <b>99.8%</b>, а среднее время критического реагирования составило <b>4.2 минуты</b>.
           </p>
         </Card>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <div className="text-sm font-semibold uppercase tracking-widest text-slate-500">Критические изменения со вчера</div>
             <div className="mt-3 text-5xl font-bold text-red-600">+15.4%</div>
@@ -58,7 +58,7 @@ export function BriefingPage() {
         </div>
 
         <Card>
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-xl font-bold">Активные критические события</div>
             <Badge text="требуется действие" className="bg-red-50 text-red-700" />
           </div>
@@ -77,14 +77,14 @@ export function BriefingPage() {
           <div className="mb-3 text-xl font-bold">Метрики эффективности служб</div>
           {servicePerformance.slice(0, 2).map((item) => (
             <div key={item.id} className="mb-4 rounded-xl border p-3">
-              <div className="mb-2 flex items-center justify-between"><span className="font-semibold">{item.service}</span><span className="text-2xl font-bold text-blue-700">{item.resolvedInTime}%</span></div>
+              <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><span className="font-semibold">{item.service}</span><span className="text-2xl font-bold text-blue-700">{item.resolvedInTime}%</span></div>
               <div className="h-2 rounded-full bg-slate-100"><div className="h-2 rounded-full bg-blue-600" style={{ width: `${item.resolvedInTime}%` }} /></div>
             </div>
           ))}
         </Card>
       </div>
 
-      <div className="col-span-3 space-y-4">
+      <div className="space-y-4 lg:col-span-3">
         <Card>
           <div className="mb-2 text-sm font-semibold uppercase tracking-widest text-slate-500">Повестка брифинга</div>
           {briefs.slice(0, 5).map((b) => <div key={b.id} className="border-b py-2 text-sm last:border-none">{b.title}</div>)}
@@ -129,23 +129,23 @@ export function MayorDashboardPage() {
 
       <Card className="bg-gradient-to-r from-blue-700 to-blue-600 text-white">
         <Badge text="статус системы: стабильно" className="mb-3 border-emerald-300 bg-emerald-500/20 text-emerald-100" />
-        <h2 className="text-6xl font-extrabold leading-tight">Город функционирует в штатном режиме</h2>
-        <p className="mt-3 max-w-4xl text-2xl text-blue-100">Все основные подсистемы работают эффективно. Выявлены локальные инциденты, обработка в контуре.</p>
-        <div className="mt-5 flex gap-2">
+        <h2 className="text-3xl font-extrabold leading-tight sm:text-5xl lg:text-6xl">Город функционирует в штатном режиме</h2>
+        <p className="mt-3 max-w-4xl text-lg text-blue-100 lg:text-2xl">Все основные подсистемы работают эффективно. Выявлены локальные инциденты, обработка в контуре.</p>
+        <div className="mt-5 flex flex-wrap gap-2">
           <Link to="/briefing" className="rounded-xl bg-white px-5 py-3 font-semibold text-blue-700">Подробный отчёт</Link>
           <Link to="/operations" className="rounded-xl border border-white/30 px-5 py-3 font-semibold">Карта здоровья систем</Link>
         </div>
       </Card>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.slice(0, 4).map((k) => (
           <Link to="/history" key={k.id}><Card><div className="text-sm text-slate-500">{k.title}</div><div className="mt-2 text-5xl font-bold">{k.value}</div><div className="mt-2 text-sm text-slate-500">{k.type.toUpperCase()}</div></Card></Link>
         ))}
       </div>
 
-      <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-8"><Card><div className="mb-3 text-4xl font-bold">Карта территориальных проблем</div><MapView incidents={filtered.slice(0, 12)} /></Card></div>
-        <div className="col-span-4 space-y-3">
+      <div className="grid gap-4 lg:grid-cols-12">
+        <div className="lg:col-span-8"><Card><div className="mb-3 text-3xl font-bold lg:text-4xl">Карта территориальных проблем</div><MapView incidents={filtered.slice(0, 12)} /></Card></div>
+        <div className="space-y-3 lg:col-span-4">
           <Card>
             <div className="mb-2 text-4xl font-bold">Срочные действия</div>
             {filtered.slice(0, 3).map((i) => (
@@ -171,10 +171,10 @@ export function OperationsPage() {
   const filtered = incidents.filter((i) => !severity || i.severity === severity)
 
   return (
-    <div className="grid grid-cols-12 gap-4">
-      <div className="col-span-4 space-y-3">
+    <div className="grid gap-4 lg:grid-cols-12">
+      <div className="space-y-3 lg:col-span-4">
         <Card>
-          <div className="mb-3 text-4xl font-bold">Оперативный монитор</div>
+          <div className="mb-3 text-3xl font-bold lg:text-4xl">Оперативный монитор</div>
           <div className="flex gap-2">
             <select className="flex-1 rounded-xl border px-3 py-2" value={severity} onChange={(e) => setSeverity(e.target.value)}>
               <option value="">Критичность: Все</option>
@@ -187,10 +187,10 @@ export function OperationsPage() {
 
         {filtered.slice(0, 6).map((i) => (
           <Card key={i.id} className={`border-l-4 ${i.severity === 'критический' ? 'border-l-red-500' : i.severity === 'высокий' ? 'border-l-amber-500' : 'border-l-emerald-500'}`}>
-            <div className="mb-2 flex items-center justify-between"><Badge text={i.severity.toUpperCase()} className={severityStyles[i.severity]} /><span className="text-xs text-slate-500">{new Date(i.detectedAt).toLocaleTimeString('ru-RU')}</span></div>
+            <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><Badge text={i.severity.toUpperCase()} className={severityStyles[i.severity]} /><span className="text-xs text-slate-500">{new Date(i.detectedAt).toLocaleTimeString('ru-RU')}</span></div>
             <div className="text-2xl font-bold">{i.title}</div>
             <div className="mt-1 text-slate-500">{i.summary}</div>
-            <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
               <button onClick={() => assignIncident(i.id, 'Штаб района')} className="rounded-lg bg-blue-600 py-2 text-xs font-semibold text-white">Назначить</button>
               <button onClick={() => escalateIncident(i.id)} className="rounded-lg bg-amber-500 py-2 text-xs font-semibold text-white">Эскалировать</button>
               <button onClick={() => archiveIncident(i.id)} className="rounded-lg bg-slate-200 py-2 text-xs font-semibold">Архив</button>
@@ -204,7 +204,7 @@ export function OperationsPage() {
       <div className="col-span-8">
         <Card className="relative">
           <MapView incidents={filtered} onPick={setSelectedIncident} />
-          <div className="absolute bottom-5 right-5 rounded-2xl border border-red-200 bg-white p-3 shadow">
+          <div className="absolute bottom-3 left-3 right-3 rounded-2xl border border-red-200 bg-white p-3 shadow lg:bottom-5 lg:left-auto lg:right-5">
             <div className="font-bold text-red-600"><AlertTriangle size={16} className="mr-1 inline" />НОВЫЙ КРИТИЧЕСКИЙ ИНЦИДЕНТ</div>
             <div className="text-sm text-slate-600">Угроза целостности конструкции. Аномалия сейсмодатчика.</div>
           </div>
@@ -225,29 +225,29 @@ export function IncidentPage() {
   return (
     <div className="space-y-4">
       <Card>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-5xl font-extrabold">{incident.title}</h1>
+            <h1 className="text-3xl font-extrabold lg:text-5xl">{incident.title}</h1>
             <div className="mt-2 text-slate-500">ID: {incident.id} · Обнаружен: {new Date(incident.detectedAt).toLocaleTimeString('ru-RU')} · Зона: {incident.district}</div>
           </div>
-          <div className="space-x-2">
+          <div className="flex flex-wrap gap-2">
             <button onClick={() => escalateIncident(incident.id)} className="rounded-xl bg-slate-200 px-4 py-2 font-semibold">Эскалировать</button>
             <button onClick={() => resolveIncident(incident.id)} className="rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white">Разрешить инцидент</button>
           </div>
         </div>
       </Card>
 
-      <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-8 space-y-4">
-          <div className="grid grid-cols-3 gap-4">
-            <Card><div className="text-sm uppercase tracking-wide text-slate-500">Источник</div><div className="text-4xl font-bold">Датчик/051</div></Card>
-            <Card><div className="text-sm uppercase tracking-wide text-slate-500">Точное местоположение</div><div className="text-4xl font-bold">{incident.coordinates[0].toFixed(4)}°, {incident.coordinates[1].toFixed(4)}°</div></Card>
+      <div className="grid gap-4 lg:grid-cols-12">
+        <div className="space-y-4 lg:col-span-8">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Card><div className="text-sm uppercase tracking-wide text-slate-500">Источник</div><div className="text-3xl font-bold lg:text-4xl">Датчик/051</div></Card>
+            <Card><div className="text-sm uppercase tracking-wide text-slate-500">Точное местоположение</div><div className="text-3xl font-bold lg:text-4xl">{incident.coordinates[0].toFixed(4)}°, {incident.coordinates[1].toFixed(4)}°</div></Card>
             <Card><div className="text-sm uppercase tracking-wide text-slate-500">Потеря давления</div><div className="text-4xl font-bold text-red-600">-4.2 бар/мин</div></Card>
           </div>
 
           <Card>
-            <div className="mb-3 text-4xl font-bold">Анализ критичности</div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="mb-3 text-3xl font-bold lg:text-4xl">Анализ критичности</div>
+            <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-2">
                 <div className="rounded-xl border p-3"><b>Влияние на жителей:</b> около {incident.affectedPopulation}+ домохозяйств.</div>
                 <div className="rounded-xl border p-3"><b>Угроза объектам:</b> зона рядом с критической инфраструктурой.</div>
@@ -258,7 +258,7 @@ export function IncidentPage() {
           </Card>
 
           <Card>
-            <div className="mb-3 text-4xl font-bold">Рекомендации Sigma Logic</div>
+            <div className="mb-3 text-3xl font-bold lg:text-4xl">Рекомендации Sigma Logic</div>
             {incident.recommendations.map((rec) => (
               <div key={rec.id} className="space-y-2">
                 {rec.steps.map((step, index) => (
@@ -272,7 +272,7 @@ export function IncidentPage() {
           </Card>
         </div>
 
-        <div className="col-span-4 space-y-4">
+        <div className="space-y-4 lg:col-span-4">
           <Card className="bg-blue-50">
             <div className="mb-2 flex items-center gap-2 text-2xl font-bold text-blue-700"><Shield size={18} />Цифровые регламенты</div>
             {regulations.filter((r) => incident.linkedRegulationIds.includes(r.id)).map((r) => (
@@ -308,7 +308,7 @@ export function HistoryPage() {
 
   return (
     <div className="space-y-4">
-      <Card className="flex items-center justify-between">
+      <Card className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <SectionTitle title="История и аналитика" />
         <div className="flex gap-2">
           {['7 дней', 'месяц', 'квартал', 'год'].map((p) => <button key={p} onClick={() => setPeriod(p)} className={`rounded-xl px-3 py-2 ${period === p ? 'bg-slate-900 text-white' : 'bg-slate-100'}`}>{p}</button>)}
@@ -316,17 +316,17 @@ export function HistoryPage() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-4 gap-4">
-        <Card><div className="text-slate-500">Ср. время решения</div><div className="text-5xl font-bold">42.5м</div><div className="text-emerald-600">↘ -12% за период</div></Card>
-        <Card><div className="text-slate-500">Соблюдение норм</div><div className="text-5xl font-bold">99.8%</div><div className="text-emerald-600">Соответствует</div></Card>
-        <Card><div className="text-slate-500">Объем событий</div><div className="text-5xl font-bold">12,842</div><div className="text-red-600">+4.2% рост</div></Card>
-        <Card><div className="text-slate-500">Эффективность системы</div><div className="text-5xl font-bold">94.2</div><div className="text-emerald-600">+1.5 индекс</div></Card>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card><div className="text-slate-500">Ср. время решения</div><div className="text-4xl font-bold lg:text-5xl">42.5м</div><div className="text-emerald-600">↘ -12% за период</div></Card>
+        <Card><div className="text-slate-500">Соблюдение норм</div><div className="text-4xl font-bold lg:text-5xl">99.8%</div><div className="text-emerald-600">Соответствует</div></Card>
+        <Card><div className="text-slate-500">Объем событий</div><div className="text-4xl font-bold lg:text-5xl">12,842</div><div className="text-red-600">+4.2% рост</div></Card>
+        <Card><div className="text-slate-500">Эффективность системы</div><div className="text-4xl font-bold lg:text-5xl">94.2</div><div className="text-emerald-600">+1.5 индекс</div></Card>
       </div>
 
-      <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-8 space-y-4">
+      <div className="grid gap-4 lg:grid-cols-12">
+        <div className="space-y-4 lg:col-span-8">
           <Card>
-            <div className="mb-3 flex items-center justify-between"><div className="text-4xl font-bold">Тренд частоты событий</div><div className="text-slate-500">Текущий период / Прошлый период</div></div>
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="text-3xl font-bold lg:text-4xl">Тренд частоты событий</div><div className="text-slate-500">Текущий период / Прошлый период</div></div>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={filtered.slice(0, 7).map((i, idx) => ({ day: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][idx], value: i.progress, prev: Math.max(i.progress - 10, 0) }))}>
                 <XAxis dataKey="day" /><YAxis /><Tooltip />
@@ -335,18 +335,18 @@ export function HistoryPage() {
               </LineChart>
             </ResponsiveContainer>
           </Card>
-          <Card><div className="mb-2 flex items-center justify-between"><div className="text-4xl font-bold">Очаги проблем</div><Link to="/operations" className="font-semibold text-blue-700">Подробная карта</Link></div><MapView incidents={filtered.slice(0, 10)} /></Card>
+          <Card><div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><div className="text-3xl font-bold lg:text-4xl">Очаги проблем</div><Link to="/operations" className="font-semibold text-blue-700">Подробная карта</Link></div><MapView incidents={filtered.slice(0, 10)} /></Card>
         </div>
 
-        <div className="col-span-4 space-y-4">
+        <div className="space-y-4 lg:col-span-4">
           <Card>
-            <div className="mb-3 text-4xl font-bold">Распределение по категориям</div>
+            <div className="mb-3 text-3xl font-bold lg:text-4xl">Распределение по категориям</div>
             <ResponsiveContainer width="100%" height={220}>
               <PieChart><Pie data={category} dataKey="value" nameKey="name">{category.map((_, idx) => <Cell key={idx} fill={['#2563eb', '#0ea5e9', '#8b5cf6', '#64748b'][idx % 4]} />)}</Pie></PieChart>
             </ResponsiveContainer>
           </Card>
           <Card>
-            <div className="mb-3 text-4xl font-bold">Сравнительный анализ</div>
+            <div className="mb-3 text-3xl font-bold lg:text-4xl">Сравнительный анализ</div>
             <div className="space-y-2">
               <div className="rounded-xl bg-emerald-50 p-3">Скорость решения <b className="float-right text-emerald-700">+14.2%</b></div>
               <div className="rounded-xl bg-red-50 p-3">Энергопотребление <b className="float-right text-red-700">-2.1%</b></div>
@@ -366,10 +366,10 @@ export function ScenariosPage() {
   const run = scenarioRuns.filter((r) => r.scenarioId === selectedId).at(-1)
 
   return (
-    <div className="grid grid-cols-12 gap-4">
-      <div className="col-span-3 space-y-4">
+    <div className="grid gap-4 lg:grid-cols-12">
+      <div className="space-y-4 lg:col-span-3">
         <Card>
-          <div className="mb-2 flex items-center justify-between"><div className="text-xl font-bold uppercase tracking-widest text-slate-500">Библиотека сценариев</div><Plus size={16} /></div>
+          <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><div className="text-xl font-bold uppercase tracking-widest text-slate-500">Библиотека сценариев</div><Plus size={16} /></div>
           {scenarios.map((s) => <button key={s.id} onClick={() => setSelectedId(s.id)} className={`mb-2 w-full rounded-xl border p-3 text-left ${s.id === selectedId ? 'border-blue-300 bg-blue-50' : ''}`}><div className="font-semibold">{s.title}</div><div className="text-sm text-slate-500">{s.description}</div></button>)}
         </Card>
         <Card>
@@ -379,14 +379,14 @@ export function ScenariosPage() {
         </Card>
       </div>
 
-      <div className="col-span-9 space-y-4">
-        <Card className="flex items-center justify-between">
+      <div className="space-y-4 lg:col-span-9">
+        <Card className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <SectionTitle title={scenario.title} subtitle="ID симуляции: SM-7742 · Движок v4.2 активен" />
           <button disabled={!run} onClick={() => run && saveScenario(run.id)} className="rounded-xl border px-4 py-2 font-semibold disabled:opacity-50">Сохранить сценарий</button>
         </Card>
 
-        <div className="grid grid-cols-12 gap-4">
-          <div className="col-span-4 space-y-3">
+        <div className="grid gap-4 lg:grid-cols-12">
+          <div className="space-y-3 lg:col-span-4">
             {scenario.impacts.map((impact, idx) => (
               <Card key={impact.label} className={idx === 0 ? 'border-red-200 bg-red-50' : idx === 1 ? 'border-amber-200 bg-amber-50' : 'border-blue-200 bg-blue-50'}>
                 <div className="text-sm font-semibold uppercase tracking-wide">{impact.label}</div>
@@ -395,12 +395,12 @@ export function ScenariosPage() {
               </Card>
             ))}
           </div>
-          <div className="col-span-8"><Card><MapView incidents={useSigmaStore.getState().incidents.slice(0, 8)} /></Card></div>
+          <div className="lg:col-span-8"><Card><MapView incidents={useSigmaStore.getState().incidents.slice(0, 8)} /></Card></div>
         </div>
 
-        <div className="grid grid-cols-12 gap-4">
-          <div className="col-span-7"><Card><div className="mb-3 flex items-center justify-between"><div className="text-4xl font-bold">Сравнение мер реагирования</div><ArrowUpRight size={18} /></div><div className="grid grid-cols-2 gap-2"><div className="rounded-xl border p-3"><div className="text-sm text-slate-500">Базовый сценарий</div><div className="text-4xl font-bold">~1,240</div><div>инцидентов</div></div><div className="rounded-xl border border-blue-200 bg-blue-50 p-3"><div className="text-sm text-slate-500">Предложенная стратегия</div><div className="text-4xl font-bold text-blue-700">~890</div><div>инцидентов</div></div></div></Card></div>
-          <div className="col-span-5"><Card><div className="mb-3 text-4xl font-bold">Нагрузка на службы</div>{[['Полиция / Экстренные', 92], ['ЖКХ / Снегоуборка', 78], ['Здравоохранение', 85], ['Транспорт', 54]].map(([name, val]) => <div key={name as string} className="mb-2"><div className="mb-1 text-sm">{name} <b className="float-right">{val}%</b></div><div className="h-2 rounded bg-slate-100"><div className="h-2 rounded bg-red-500" style={{ width: `${val}%` }} /></div></div>)}</Card></div>
+        <div className="grid gap-4 lg:grid-cols-12">
+          <div className="lg:col-span-7"><Card><div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="text-3xl font-bold lg:text-4xl">Сравнение мер реагирования</div><ArrowUpRight size={18} /></div><div className="grid gap-2 md:grid-cols-2"><div className="rounded-xl border p-3"><div className="text-sm text-slate-500">Базовый сценарий</div><div className="text-3xl font-bold lg:text-4xl">~1,240</div><div>инцидентов</div></div><div className="rounded-xl border border-blue-200 bg-blue-50 p-3"><div className="text-sm text-slate-500">Предложенная стратегия</div><div className="text-4xl font-bold text-blue-700">~890</div><div>инцидентов</div></div></div></Card></div>
+          <div className="lg:col-span-5"><Card><div className="mb-3 text-3xl font-bold lg:text-4xl">Нагрузка на службы</div>{[['Полиция / Экстренные', 92], ['ЖКХ / Снегоуборка', 78], ['Здравоохранение', 85], ['Транспорт', 54]].map(([name, val]) => <div key={name as string} className="mb-2"><div className="mb-1 text-sm">{name} <b className="float-right">{val}%</b></div><div className="h-2 rounded bg-slate-100"><div className="h-2 rounded bg-red-500" style={{ width: `${val}%` }} /></div></div>)}</Card></div>
         </div>
 
         <Card>
@@ -418,8 +418,8 @@ export function DeputiesPage() {
   const deputy = deputies.find((d) => d.id === selectedId)!
 
   return (
-    <div className="grid grid-cols-12 gap-4">
-      <div className="col-span-9 space-y-4">
+    <div className="grid gap-4 lg:grid-cols-12">
+      <div className="space-y-4 lg:col-span-9">
         <Card>
           <SectionTitle title="Цифровые заместители" subtitle="Управляйте автономными рабочими процессами, цифровыми двойниками и операционными границами." />
           <div className="flex gap-2 border-b pb-2">
@@ -428,8 +428,8 @@ export function DeputiesPage() {
         </Card>
 
         <Card>
-          <div className="mb-3 flex items-center justify-between"><div className="text-5xl font-bold">{deputy.name}</div><Badge text="активен" className="bg-emerald-50 text-emerald-700" /></div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="text-4xl font-bold lg:text-5xl">{deputy.name}</div><Badge text="активен" className="bg-emerald-50 text-emerald-700" /></div>
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
               <div className="mb-2 text-sm font-semibold uppercase tracking-widest text-slate-500">Операционный режим</div>
               {(['recommendation', 'approval', 'autonomous'] as const).map((mode) => <button key={mode} onClick={() => setDeputyMode(deputy.id, mode)} className={`mb-2 block w-full rounded-xl border p-3 text-left ${deputy.mode === mode ? 'border-blue-300 bg-blue-50' : ''}`}>{mode}</button>)}
@@ -444,15 +444,15 @@ export function DeputiesPage() {
           </div>
         </Card>
 
-        <div className="grid grid-cols-4 gap-4">
-          <Card><div className="text-sm text-slate-500">Всего решений</div><div className="text-5xl font-bold">12,482</div><div className="text-emerald-600">+8.4%</div></Card>
-          <Card><div className="text-sm text-slate-500">Уровень эскалации</div><div className="text-5xl font-bold">0.42%</div><div className="text-blue-600">Оптимально</div></Card>
-          <Card><div className="text-sm text-slate-500">Пропускная способность</div><div className="text-5xl font-bold">1.2 ГБ/с</div></Card>
-          <Card><div className="text-sm text-slate-500">Активные ограничения</div><div className="text-5xl font-bold">42</div></Card>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Card><div className="text-sm text-slate-500">Всего решений</div><div className="text-4xl font-bold lg:text-5xl">12,482</div><div className="text-emerald-600">+8.4%</div></Card>
+          <Card><div className="text-sm text-slate-500">Уровень эскалации</div><div className="text-4xl font-bold lg:text-5xl">0.42%</div><div className="text-blue-600">Оптимально</div></Card>
+          <Card><div className="text-sm text-slate-500">Пропускная способность</div><div className="text-4xl font-bold lg:text-5xl">1.2 ГБ/с</div></Card>
+          <Card><div className="text-sm text-slate-500">Активные ограничения</div><div className="text-4xl font-bold lg:text-5xl">42</div></Card>
         </div>
       </div>
 
-      <div className="col-span-3 space-y-3">
+      <div className="space-y-3 lg:col-span-3">
         <Card>
           <div className="mb-2 text-xl font-bold">Ожидающие и другие заместители</div>
           {deputies.map((d) => <button key={d.id} onClick={() => setSelectedId(d.id)} className={`mb-2 w-full rounded-xl border p-3 text-left ${d.id === selectedId ? 'border-blue-300 bg-blue-50' : ''}`}><div className="font-semibold">{d.name}</div><div className="text-sm text-slate-500">Режим: {d.mode}</div></button>)}
@@ -493,19 +493,19 @@ export function RegulationsPage() {
         <div className="mt-3 flex gap-2"><button className="rounded-xl border px-4 py-2 font-semibold">Экспорт кода</button><button className="rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white">+ Создать правило</button></div>
       </Card>
 
-      <div className="grid grid-cols-4 gap-4">
-        <Card><div className="text-sm text-slate-500">Активные правила</div><div className="text-5xl font-bold">{regulations.length}</div></Card>
-        <Card><div className="text-sm text-slate-500">Покрытие логики</div><div className="text-5xl font-bold">{coverage.pct}%</div></Card>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card><div className="text-sm text-slate-500">Активные правила</div><div className="text-4xl font-bold lg:text-5xl">{regulations.length}</div></Card>
+        <Card><div className="text-sm text-slate-500">Покрытие логики</div><div className="text-4xl font-bold lg:text-5xl">{coverage.pct}%</div></Card>
         <Card><div className="text-sm text-slate-500">Неопределенности</div><div className="text-5xl font-bold text-amber-600">04</div></Card>
-        <Card><div className="text-sm text-slate-500">Оценка аудита</div><div className="text-5xl font-bold">A+</div></Card>
+        <Card><div className="text-sm text-slate-500">Оценка аудита</div><div className="text-4xl font-bold lg:text-5xl">A+</div></Card>
       </div>
 
       <Card>
         <div className="mb-3 flex flex-wrap gap-2"><input value={title} onChange={(e) => setTitle(e.target.value)} className="rounded-xl border px-3 py-2" placeholder="Название правила" /><select value={domain} onChange={(e) => setDomain(e.target.value)} className="rounded-xl border px-3 py-2"><option>ЖКХ</option><option>Дороги</option><option>Безопасность</option><option>Экология</option></select><button onClick={() => createRegulation(title || 'Новое правило', domain)} className="rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white">Создать правило</button></div>
-        <table className="w-full text-sm"><thead>{table.getHeaderGroups().map((hg) => <tr key={hg.id}>{hg.headers.map((h) => <th key={h.id} className="border-b py-2 text-left text-slate-500">{flexRender(h.column.columnDef.header, h.getContext())}</th>)}</tr>)}</thead><tbody>{table.getRowModel().rows.slice(0, 10).map((r) => <tr key={r.id} onClick={() => setSelected(r.original)} className="cursor-pointer hover:bg-slate-50">{r.getVisibleCells().map((c) => <td key={c.id} className="border-b py-2">{flexRender(c.column.columnDef.cell, c.getContext())}</td>)}</tr>)}</tbody></table>
+        <div className="overflow-x-auto"><table className="min-w-[700px] w-full text-sm"><thead>{table.getHeaderGroups().map((hg) => <tr key={hg.id}>{hg.headers.map((h) => <th key={h.id} className="border-b py-2 text-left text-slate-500">{flexRender(h.column.columnDef.header, h.getContext())}</th>)}</tr>)}</thead><tbody>{table.getRowModel().rows.slice(0, 10).map((r) => <tr key={r.id} onClick={() => setSelected(r.original)} className="cursor-pointer hover:bg-slate-50">{r.getVisibleCells().map((c) => <td key={c.id} className="border-b py-2">{flexRender(c.column.columnDef.cell, c.getContext())}</td>)}</tr>)}</tbody></table></div>
       </Card>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card><div className="mb-2 text-4xl font-bold">Инспектор логики</div><div className="mb-2 rounded-xl bg-slate-900 p-3 font-mono text-sm text-blue-200">if (target_vehicle.classification === 'EMERGENCY') {'{'}\n  preemption_signal.requestPriority('level_ultra')\n{'}'}</div><div className="text-sm text-slate-500">{selected.sourceDocument} · {selected.sourceClause}</div></Card>
         <Card><div className="mb-2 text-4xl font-bold">Аудит покрытия</div><div className="mb-2 text-sm">Покрыто: {coverage.covered}/{coverage.total}</div><div className="grid grid-cols-12 gap-1">{Array.from({ length: 48 }).map((_, idx) => <div key={idx} className={`h-5 rounded ${idx % 17 === 0 ? 'bg-amber-300' : idx % 9 === 0 ? 'bg-slate-200' : 'bg-emerald-400'}`} />)}</div></Card>
       </div>
