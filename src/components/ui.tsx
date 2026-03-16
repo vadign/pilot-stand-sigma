@@ -12,7 +12,7 @@ export const Badge = ({ text, className = '' }: { text: string; className?: stri
 
 export const SectionTitle = ({ title, subtitle }: { title: string; subtitle?: string }) => (
   <div className="mb-4">
-    <h2 className="text-3xl font-bold tracking-tight text-slate-900">{title}</h2>
+    <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{title}</h2>
     {subtitle && <p className="mt-1 text-slate-500">{subtitle}</p>}
   </div>
 )

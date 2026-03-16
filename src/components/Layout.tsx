@@ -1,4 +1,4 @@
-import { Bell, Building2, Search } from 'lucide-react'
+import { Bell, Building2, Menu, Search, X } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { useEffect, useMemo, useState } from 'react'
@@ -23,6 +23,7 @@ export function Layout() {
   const scenarios = useSigmaStore((s) => s.scenarios)
   const bump = useSigmaStore((s) => s.bumpLive)
   const [query, setQuery] = useState('')
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   useEffect(() => {
     const timer = setInterval(() => bump(), 12000)
@@ -40,8 +41,8 @@ export function Layout() {
   }, [incidents, query, regulations, scenarios])
 
   return (
-    <div className="flex min-h-screen bg-slate-100 text-slate-900">
-      <aside className="w-72 border-r border-slate-200 bg-white p-5">
+    <div className="flex min-h-screen flex-col bg-slate-100 text-slate-900 lg:flex-row">
+      <aside className="hidden w-72 border-r border-slate-200 bg-white p-5 lg:block">
         <div className="mb-8 flex items-center gap-3">
           <div className="rounded-xl bg-blue-600 p-2 text-white">
             <Building2 size={20} />
@@ -70,9 +71,41 @@ export function Layout() {
         </nav>
       </aside>
 
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-3 sm:p-4 lg:p-6">
         <header className="mb-5 rounded-2xl border border-slate-200 bg-white p-3">
-          <div className="flex items-center gap-3">
+          <div className="mb-3 flex items-center justify-between lg:hidden">
+            <button
+              onClick={() => setMobileNavOpen((prev) => !prev)}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium"
+            >
+              {mobileNavOpen ? <X size={16} /> : <Menu size={16} />}
+              Разделы
+            </button>
+            <div className="text-xs text-slate-500">{formatDistanceToNow(new Date(), { locale: ru, addSuffix: true })}</div>
+          </div>
+
+          {mobileNavOpen && (
+            <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50 p-2 lg:hidden">
+              <nav className="space-y-1.5">
+                {nav.map(([to, label]) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    onClick={() => setMobileNavOpen(false)}
+                    className={({ isActive }) =>
+                      `block rounded-xl px-4 py-2 text-sm font-medium transition ${
+                        isActive ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-200'
+                      }`
+                    }
+                  >
+                    {label}
+                  </NavLink>
+                ))}
+              </nav>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <div className="flex flex-1 items-center gap-2 rounded-xl bg-slate-100 px-3 py-2">
               <Search size={18} className="text-slate-500" />
               <input
@@ -82,7 +115,7 @@ export function Layout() {
                 className="w-full bg-transparent text-[15px] outline-none"
               />
             </div>
-            <div className="text-sm text-slate-500">Обновлено {formatDistanceToNow(new Date(), { locale: ru, addSuffix: true })}</div>
+            <div className="hidden text-sm text-slate-500 lg:block">Обновлено {formatDistanceToNow(new Date(), { locale: ru, addSuffix: true })}</div>
             <button className="relative rounded-xl border border-slate-200 bg-white p-2.5">
               <Bell size={18} />
               <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-1.5 text-[10px] text-white">{notifications.length}</span>
