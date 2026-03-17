@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/incompatible-library */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AlertTriangle, ArrowUpRight, BellRing, CheckCircle2, Copy, Download, Mic, MicOff, Play, Plus, Shield, Siren, Sparkles } from 'lucide-react'
 import { Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
@@ -285,8 +285,10 @@ export function MayorDashboardPage() {
 
 export function OperationsPage() {
   const { incidents, assignIncident, escalateIncident, archiveIncident, setSelectedIncident } = useSigmaStore()
-  const [severity, setSeverity] = useState('')
-  const filtered = incidents.filter((i) => !severity || i.severity === severity)
+  const [searchParams] = useSearchParams()
+  const [severity, setSeverity] = useState(searchParams.get('severity') ?? '')
+  const district = searchParams.get('district') ?? ''
+  const filtered = incidents.filter((i) => (!severity || i.severity === severity) && (!district || i.district === district))
 
   return (
     <div className="grid gap-4 lg:grid-cols-12">

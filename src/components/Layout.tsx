@@ -2,6 +2,8 @@ import { Bell, Building2, Menu, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useSigmaStore } from '../store/useSigmaStore'
+import { AskSigmaBar } from '../features/ask-sigma/AskSigmaBar'
+import { AnswerPanel } from '../features/ask-sigma/rendering/AnswerPanel'
 
 const nav = [
   ['/mayor-dashboard', 'Панель мэра'],
@@ -84,7 +86,9 @@ export function Layout() {
             </nav>
           </div>
         )}
+        <AskSigmaBar />
         <Outlet />
+        <AnswerPanel />
       </main>
     </div>
   )
