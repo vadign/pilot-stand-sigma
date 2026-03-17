@@ -389,8 +389,7 @@ export function IncidentPage() {
 export function HistoryPage() {
   const { incidents } = useSigmaStore()
   const [period, setPeriod] = useState('7 дней')
-  const [pattern, setPattern] = useState('')
-  const filtered = incidents.filter((i) => i.title.toLowerCase().includes(pattern.toLowerCase()))
+  const filtered = incidents
   const category = Object.entries(filtered.reduce<Record<string, number>>((acc, i) => ({ ...acc, [i.subsystem]: (acc[i.subsystem] || 0) + 1 }), {})).map(([name, value]) => ({ name, value }))
 
   return (
@@ -399,7 +398,6 @@ export function HistoryPage() {
         <SectionTitle title="История и аналитика" />
         <div className="flex gap-2">
           {['7 дней', 'месяц', 'квартал', 'год'].map((p) => <button key={p} onClick={() => setPeriod(p)} className={`rounded-xl px-3 py-2 ${period === p ? 'bg-slate-900 text-white' : 'bg-slate-100'}`}>{p}</button>)}
-          <input value={pattern} onChange={(e) => setPattern(e.target.value)} className="rounded-xl border px-3 py-2" placeholder="Поиск паттернов..." />
         </div>
       </Card>
 
