@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/incompatible-library */
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { AlertTriangle, ArrowUpRight, CheckCircle2, Copy, Download, Play, Plus, Shield, Siren } from 'lucide-react'
+import { AlertTriangle, ArrowUpRight, CheckCircle2, Download, Play, Plus, Shield, Siren } from 'lucide-react'
 import { Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
 import { MapView } from '../components/MapView'
@@ -74,12 +74,12 @@ const formatScenarioParameterValue = (key: string, value: number): string => {
 }
 
 export function BriefingPage() {
-  const { briefs, incidents, servicePerformance } = useSigmaStore()
+  const { incidents, servicePerformance } = useSigmaStore()
   const navigate = useNavigate()
 
   return (
     <div className="grid gap-4 lg:grid-cols-12">
-      <div className="space-y-4 lg:col-span-9">
+      <div className="space-y-4 lg:col-span-12">
         <Card>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
@@ -89,7 +89,6 @@ export function BriefingPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               <button onClick={() => window.print()} className="rounded-xl border px-3 py-2 font-semibold"><Download size={14} className="mr-1 inline" />Экспорт PDF</button>
-              <button onClick={() => navigator.clipboard.writeText(location.href)} className="rounded-xl bg-blue-600 px-3 py-2 font-semibold text-white"><Copy size={14} className="mr-1 inline" />Разослать</button>
             </div>
           </div>
         </Card>
@@ -139,14 +138,6 @@ export function BriefingPage() {
               <div className="h-2 rounded-full bg-slate-100"><div className="h-2 rounded-full bg-blue-600" style={{ width: `${item.resolvedInTime}%` }} /></div>
             </div>
           ))}
-        </Card>
-      </div>
-
-      <div className="space-y-4 lg:col-span-3">
-        <Card>
-          <div className="mb-2 text-sm font-semibold uppercase tracking-widest text-slate-500">Повестка брифинга</div>
-          {briefs.slice(0, 5).map((b) => <div key={b.id} className="border-b py-2 text-sm last:border-none">{b.title}</div>)}
-          <button className="mt-3 w-full rounded-xl border py-2 font-semibold">+ Добавить тему</button>
         </Card>
         <Card>
           <div className="mb-2 text-sm font-semibold">Живой вид системы</div>
