@@ -424,10 +424,10 @@ export function HistoryPage() {
           <Card>
             <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="text-3xl font-bold lg:text-4xl">Тренд частоты событий</div><div className="text-slate-500">Текущий период / Прошлый период</div></div>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={filtered.slice(0, 7).map((i, idx) => ({ day: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][idx], value: i.progress, prev: Math.max(i.progress - 10, 0) }))}>
+              <LineChart data={filtered.slice(0, 7).map((i, idx) => ({ day: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][idx], текущее: i.progress, предыдущее: Math.max(i.progress - 10, 0) }))}>
                 <XAxis dataKey="day" /><YAxis /><Tooltip />
-                <Line dataKey="value" stroke="#1d4ed8" strokeWidth={4} dot={false} />
-                <Line dataKey="prev" stroke="#94a3b8" strokeDasharray="5 5" dot={false} />
+                <Line dataKey="текущее" stroke="#1d4ed8" strokeWidth={4} dot={false} />
+                <Line dataKey="предыдущее" stroke="#94a3b8" strokeDasharray="5 5" dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </Card>
