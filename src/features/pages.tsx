@@ -1,44 +1,14 @@
 /* eslint-disable react-hooks/incompatible-library */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { AlertTriangle, ArrowUpRight, BellRing, CheckCircle2, Copy, Download, Mic, MicOff, Play, Plus, Shield, Siren, Sparkles } from 'lucide-react'
+import { AlertTriangle, ArrowUpRight, CheckCircle2, Copy, Download, Play, Plus, Shield, Siren } from 'lucide-react'
 import { Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
 import { MapView } from '../components/MapView'
 import { Badge, Card, SectionTitle } from '../components/ui'
+import { getDataTypeLabel } from '../lib/dataTypes'
+import { getDistrictName } from '../lib/districts'
 import { useSigmaStore } from '../store/useSigmaStore'
-
-interface BrowserSpeechRecognitionEvent extends Event {
-  readonly resultIndex: number
-  readonly results: SpeechRecognitionResultList
-}
-
-interface BrowserSpeechRecognitionErrorEvent extends Event {
-  readonly error: string
-}
-
-interface BrowserSpeechRecognition extends EventTarget {
-  continuous: boolean
-  interimResults: boolean
-  lang: string
-  onend: ((this: BrowserSpeechRecognition, ev: Event) => unknown) | null
-  onerror: ((this: BrowserSpeechRecognition, ev: BrowserSpeechRecognitionErrorEvent) => unknown) | null
-  onresult: ((this: BrowserSpeechRecognition, ev: BrowserSpeechRecognitionEvent) => unknown) | null
-  start(): void
-  stop(): void
-  abort(): void
-}
-
-type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition
-
-const getSpeechRecognitionConstructor = (): BrowserSpeechRecognitionConstructor | null => {
-  const speechWindow = window as Window & {
-    SpeechRecognition?: BrowserSpeechRecognitionConstructor
-    webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor
-  }
-
-  return speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition ?? null
-}
 
 const severityStyles: Record<string, string> = {
   критический: 'border-red-200 bg-red-50 text-red-700',
@@ -135,104 +105,10 @@ export function BriefingPage() {
 export function MayorDashboardPage() {
   const { kpis, incidents, approveIncident, districts } = useSigmaStore()
   const [district, setDistrict] = useState('')
-  const [isMicActive, setIsMicActive] = useState(false)
-  const [micError, setMicError] = useState('')
-  const [spokenQuery, setSpokenQuery] = useState('Какая загруженность дорог в 4-м районе?')
-  const [interimQuery, setInterimQuery] = useState('')
-  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null)
   const filtered = incidents.filter((i) => !district || i.district === district)
-  const sigmaPrompt = interimQuery || spokenQuery
-
-  const toggleMicrophone = async () => {
-    if (isMicActive) {
-      recognitionRef.current?.stop()
-      return
-    }
-
-    const SpeechRecognitionConstructor = getSpeechRecognitionConstructor()
-
-    if (!SpeechRecognitionConstructor) {
-      setMicError('Распознавание речи не поддерживается в этом браузере.')
-      return
-    }
-
-    const recognition = new SpeechRecognitionConstructor()
-    recognition.lang = 'ru-RU'
-    recognition.continuous = false
-    recognition.interimResults = true
-
-    recognition.onresult = (event) => {
-      let nextInterimQuery = ''
-
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        const result = event.results[index]
-        const transcript = result[0]?.transcript.trim()
-        if (!transcript) continue
-
-        if (result.isFinal) {
-          setSpokenQuery(transcript)
-          nextInterimQuery = ''
-        } else {
-          nextInterimQuery = transcript
-        }
-      }
-
-      setInterimQuery(nextInterimQuery)
-    }
-
-    recognition.onerror = (event) => {
-      setIsMicActive(false)
-      setInterimQuery('')
-      setMicError(event.error === 'not-allowed' ? 'Доступ к микрофону запрещён.' : 'Не удалось распознать речь.')
-    }
-
-    recognition.onend = () => {
-      setIsMicActive(false)
-      setInterimQuery('')
-    }
-
-    try {
-      recognitionRef.current?.abort()
-      recognitionRef.current = recognition
-      setMicError('')
-      setIsMicActive(true)
-      recognition.start()
-    } catch {
-      recognitionRef.current = null
-      setIsMicActive(false)
-      setInterimQuery('')
-      setMicError('Не удалось запустить распознавание речи.')
-    }
-  }
-
-  useEffect(() => () => recognitionRef.current?.abort(), [])
 
   return (
     <div className="space-y-4">
-      <Card className="p-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <button
-            type="button"
-            onClick={toggleMicrophone}
-            aria-pressed={isMicActive}
-            className={`flex flex-1 items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition ${
-              isMicActive ? 'bg-red-50 text-red-700 ring-1 ring-red-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-            }`}
-          >
-            <span className="min-w-0 flex-1 truncate">
-              <Sparkles size={14} className="mr-2 inline" />
-              {isMicActive ? `Спросите Сигму: ${sigmaPrompt}` : `Спросите Сигму: «${sigmaPrompt}»`}
-            </span>
-            <span className={`rounded-full p-1 ${isMicActive ? 'bg-red-100 text-red-600' : 'bg-white text-slate-500'}`}>
-              {isMicActive ? <MicOff size={16} /> : <Mic size={16} />}
-            </span>
-          </button>
-          <Badge text="данные в реальном времени" className="bg-emerald-50 text-emerald-700" />
-          <button className="rounded-xl border p-2"><BellRing size={16} /></button>
-        </div>
-        {micError && <div className="mt-2 text-sm text-red-600">{micError}</div>}
-      </Card>
-
       <Card>
         <div className="flex flex-wrap gap-2">
           <select className="rounded-xl border px-3 py-2" value={district} onChange={(e) => setDistrict(e.target.value)}>
@@ -257,7 +133,7 @@ export function MayorDashboardPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.slice(0, 4).map((k) => (
-          <Link to="/history" key={k.id}><Card><div className="text-sm text-slate-500">{k.title}</div><div className="mt-2 text-5xl font-bold">{k.value}</div><div className="mt-2 text-sm text-slate-500">{k.type.toUpperCase()}</div></Card></Link>
+          <Link to="/history" key={k.id}><Card><div className="text-sm text-slate-500">{k.title}</div><div className="mt-2 text-5xl font-bold">{k.value}</div><div className="mt-2 text-sm text-slate-500">{getDataTypeLabel(k.type)}</div></Card></Link>
         ))}
       </div>
 
@@ -348,7 +224,7 @@ export function IncidentPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-extrabold lg:text-5xl">{incident.title}</h1>
-            <div className="mt-2 text-slate-500">ID: {incident.id} · Обнаружен: {new Date(incident.detectedAt).toLocaleTimeString('ru-RU')} · Зона: {incident.district}</div>
+            <div className="mt-2 text-slate-500">ID: {incident.id} · Обнаружен: {new Date(incident.detectedAt).toLocaleTimeString('ru-RU')} · Зона: {getDistrictName(incident.district)}</div>
           </div>
           <div className="flex flex-wrap gap-2">
             <button onClick={() => escalateIncident(incident.id)} className="rounded-xl bg-slate-200 px-4 py-2 font-semibold">Эскалировать</button>

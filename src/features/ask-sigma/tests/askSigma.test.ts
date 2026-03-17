@@ -5,6 +5,7 @@ import { routeEntity } from '../router'
 import { createPlan } from '../planner'
 import { executePlan } from '../executor'
 import type { AskSigmaProvider } from '../provider'
+import { getDistrictName } from '../../../lib/districts'
 
 const provider: AskSigmaProvider = {
   getContext: () => ({
@@ -34,6 +35,11 @@ describe('ask-sigma', () => {
 
   it('role parser with district', () => {
     expect(parseRoleCommand('Сигма, диспетчер Советский район')).toEqual({ role: 'диспетчер', district: 'советский' })
+  })
+
+  it('formats district labels', () => {
+    expect(getDistrictName('sov')).toBe('Советский')
+    expect(getDistrictName('советский')).toBe('Советский')
   })
 
   it('router entity', () => {

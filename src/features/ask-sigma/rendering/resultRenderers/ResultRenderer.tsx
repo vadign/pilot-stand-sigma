@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Card } from '../../../../components/ui'
+import { getDistrictName } from '../../../../lib/districts'
 import type { AskSigmaResult } from '../../types'
-import { ResultMeta } from './common'
 
 export const ResultRenderer = ({ result, onAction }: { result: AskSigmaResult; onAction: (route?: string, district?: string) => void }) => {
   return (
@@ -22,7 +22,7 @@ export const ResultRenderer = ({ result, onAction }: { result: AskSigmaResult; o
           {result.incidents.map((incident) => (
             <div key={incident.id} className="rounded-lg border p-2 text-sm">
               <div className="font-semibold">{incident.title}</div>
-              <div>{incident.severity} · {incident.status} · {incident.district}</div>
+              <div>{incident.severity} · {incident.status} · {getDistrictName(incident.district)}</div>
               <button className="mt-2 rounded border px-2 py-1" onClick={() => onAction(`/incidents/${incident.id}`, incident.district)}>Открыть</button>
             </div>
           ))}
@@ -59,7 +59,6 @@ export const ResultRenderer = ({ result, onAction }: { result: AskSigmaResult; o
             : <Link key={action.label} to="#" className="rounded border px-3 py-1.5 text-sm">{action.label}</Link>
         ))}
       </div>
-      <ResultMeta result={result} />
     </Card>
   )
 }
