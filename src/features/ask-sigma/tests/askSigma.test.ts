@@ -92,10 +92,6 @@ describe('ask-sigma', () => {
       description: 'общая оперативная обстановка, число активных и критичных событий.',
     })
     expect(unknownResult.hints).toContainEqual({
-      question: 'открой сводку',
-      description: 'быстрый переход в соответствующий раздел, если после ответа нужно провалиться глубже.',
-    })
-    expect(unknownResult.hints).toContainEqual({
       question: 'события в кировском районе',
       description: 'поиск и фильтрация событий по конкретному району города.',
     })

@@ -10,7 +10,6 @@ const supportedQuestions: AskSigmaHint[] = [
   { question: 'инциденты по дорогам', description: 'нагрузка по дорожной подсистеме без лишних деталей.' },
   { question: 'события в кировском районе', description: 'поиск и фильтрация событий по конкретному району города.' },
   { question: 'динамика отключений за неделю', description: 'тренд и метрики по истории.' },
-  { question: 'открой сводку', description: 'быстрый переход в соответствующий раздел, если после ответа нужно провалиться глубже.' },
 ]
 
 const getRequestedDistrict = (plan: AskSigmaPlan): string | undefined => {
