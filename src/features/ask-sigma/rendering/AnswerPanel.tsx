@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { AskSigmaBar } from '../AskSigmaBar'
 import { useAskSigmaStore } from '../store'
 import { ResultRenderer } from './resultRenderers/ResultRenderer'
 
@@ -13,21 +14,26 @@ export const AnswerPanel = () => {
   if (!isOpen) return null
 
   return (
-    <aside className="fixed right-0 top-0 z-50 h-full w-full max-w-xl overflow-auto border-l border-slate-200 bg-white p-4 shadow-2xl">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-bold">Ответ Сигмы</h2>
-        <button onClick={close} className="rounded border p-1"><X size={16} /></button>
+    <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-xl flex-col border-l border-slate-200 bg-white shadow-2xl">
+      <div className="sticky top-0 z-10 border-b border-slate-200 bg-white p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-bold">Ответ Сигмы</h2>
+          <button onClick={close} className="rounded border p-1"><X size={16} /></button>
+        </div>
+        <AskSigmaBar className="mb-0" />
       </div>
-      {isLoading && <div className="rounded border p-3 text-sm">Обрабатываю запрос…</div>}
-      {!isLoading && !result && <div className="rounded border p-3 text-sm">Задайте вопрос в поле «Спросите Сигму».</div>}
-      {!isLoading && result && <ResultRenderer result={result} onAction={(route, district) => {
-        if (!route) return
-        if (district && route === '/operations') {
-          navigate(`/operations?district=${district}`)
-          return
-        }
-        navigate(route)
-      }} />}
+      <div className="flex-1 overflow-auto p-4">
+        {isLoading && <div className="rounded border p-3 text-sm">Обрабатываю запрос…</div>}
+        {!isLoading && !result && <div className="rounded border p-3 text-sm">Задайте вопрос в поле «Спросите Сигму».</div>}
+        {!isLoading && result && <ResultRenderer result={result} onAction={(route, district) => {
+          if (!route) return
+          if (district && route === '/operations') {
+            navigate(`/operations?district=${district}`)
+            return
+          }
+          navigate(route)
+        }} />}
+      </div>
     </aside>
   )
 }

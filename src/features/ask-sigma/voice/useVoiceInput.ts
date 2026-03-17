@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useAskSigmaStore } from '../store'
 import { stripWakeWord } from './voiceRegex'
 
@@ -13,6 +13,7 @@ interface BrowserSpeechRecognition extends EventTarget {
   onend: ((this: BrowserSpeechRecognition, ev: Event) => unknown) | null
   onerror: ((this: BrowserSpeechRecognition, ev: BrowserSpeechRecognitionErrorEvent) => unknown) | null
   onresult: ((this: BrowserSpeechRecognition, ev: BrowserSpeechRecognitionEvent) => unknown) | null
+  abort?(): void
   start(): void
   stop(): void
 }
@@ -31,7 +32,27 @@ export const useVoiceInput = () => {
 
   const supported = useMemo(() => Boolean(getSpeechRecognition()), [])
 
+  const stopRecognition = useCallback((immediate = false) => {
+    const recognition = recognitionRef.current
+    if (!recognition) {
+      setVoiceState('idle')
+      return
+    }
+
+    recognitionRef.current = null
+    recognition.onresult = null
+    recognition.onerror = null
+    recognition.onend = null
+
+    if (immediate && recognition.abort) recognition.abort()
+    else recognition.stop()
+
+    setVoiceState('idle')
+  }, [setVoiceState])
+
   const start = useCallback(() => {
+    if (voiceState === 'listening') return
+
     const Ctor = getSpeechRecognition()
     if (!Ctor) {
       setVoiceState('unsupported', 'Web Speech API не поддерживается')
@@ -52,22 +73,42 @@ export const useVoiceInput = () => {
     }
 
     recognition.onerror = (event) => {
+      recognitionRef.current = null
       setVoiceState('error', `Ошибка микрофона: ${event.error}`)
     }
 
     recognition.onend = () => {
+      recognitionRef.current = null
       setVoiceState('idle')
     }
 
     recognitionRef.current = recognition
     setVoiceState('listening')
     recognition.start()
-  }, [ask, setVoiceState])
+  }, [ask, setVoiceState, voiceState])
 
   const stop = useCallback(() => {
-    recognitionRef.current?.stop()
-    setVoiceState('idle')
-  }, [setVoiceState])
+    stopRecognition(false)
+  }, [stopRecognition])
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) stopRecognition(true)
+    }
+
+    const handlePageHide = () => {
+      stopRecognition(true)
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('pagehide', handlePageHide)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('pagehide', handlePageHide)
+      stopRecognition(true)
+    }
+  }, [stopRecognition])
 
   return { supported, voiceState, start, stop }
 }

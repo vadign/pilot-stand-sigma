@@ -4,6 +4,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { useSigmaStore } from '../store/useSigmaStore'
 import { AskSigmaBar } from '../features/ask-sigma/AskSigmaBar'
 import { AnswerPanel } from '../features/ask-sigma/rendering/AnswerPanel'
+import { useAskSigmaStore } from '../features/ask-sigma/store'
 
 const nav = [
   ['/mayor-dashboard', 'Панель мэра'],
@@ -13,6 +14,7 @@ const nav = [
 
 export function Layout() {
   const bump = useSigmaStore((s) => s.bumpLive)
+  const isAnswerOpen = useAskSigmaStore((s) => s.isOpen)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   useEffect(() => {
@@ -81,7 +83,7 @@ export function Layout() {
             </nav>
           </div>
         )}
-        <AskSigmaBar />
+        {!isAnswerOpen && <AskSigmaBar />}
         <Outlet />
         <AnswerPanel />
       </main>

@@ -16,7 +16,7 @@ const quickExamples = {
   аналитик: ['Что ты умеешь?', 'Динамика отключений за неделю', 'Что происходит на дорогах?', 'События в Советском районе'],
 } as const
 
-export const AskSigmaBar = () => {
+export const AskSigmaBar = ({ className = 'mb-4' }: { className?: string }) => {
   const navigate = useNavigate()
   const input = useAskSigmaStore((s) => s.input)
   const setInput = useAskSigmaStore((s) => s.setInput)
@@ -44,7 +44,7 @@ export const AskSigmaBar = () => {
   }
 
   return (
-    <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+    <div className={`${className} rounded-2xl border border-slate-200 bg-white p-3 shadow-sm`}>
       <div className="flex gap-2">
         <input
           className="flex-1 rounded-xl border border-slate-300 px-3 py-2"
