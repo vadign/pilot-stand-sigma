@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { getDistrictName } from '../../lib/districts'
 import { normalizeQuery } from './normalize'
 import { executePlan } from './executor'
 import { createPlan } from './planner'
@@ -65,7 +64,7 @@ export const useAskSigmaStore = create<AskSigmaState>((set, get) => ({
       const result: AskSigmaResult = {
         type: 'ROLE_SWITCH',
         title: 'Роль обновлена',
-        summary: `Текущая роль: ${plan.role}${plan.district ? `, район: ${getDistrictName(plan.district)}` : ''}`,
+        summary: `Текущая роль: ${plan.role}${plan.district ? `, район: ${plan.district}` : ''}`,
         explain: { dataType: 'pilot', source: 'Voice/Text command', updatedAt: new Date().toISOString() },
       }
       set({ lastResult: result, isLoading: false, isOpen: true })

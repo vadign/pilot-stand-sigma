@@ -6,7 +6,6 @@ import { Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAx
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
 import { MapView } from '../components/MapView'
 import { Badge, Card, SectionTitle } from '../components/ui'
-import { getDataTypeLabel } from '../lib/dataTypes'
 import { getDistrictName } from '../lib/districts'
 import { useSigmaStore } from '../store/useSigmaStore'
 
@@ -15,6 +14,63 @@ const severityStyles: Record<string, string> = {
   высокий: 'border-amber-200 bg-amber-50 text-amber-700',
   средний: 'border-sky-200 bg-sky-50 text-sky-700',
   низкий: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+}
+
+type MayorDashboardSubsystem = 'heat' | 'roads' | 'noise' | 'air'
+
+const mayorDashboardTabs: Array<{
+  id: MayorDashboardSubsystem
+  label: string
+  badge: string
+  title: string
+  description: string
+}> = [
+  {
+    id: 'heat',
+    label: 'Отопление',
+    badge: 'контур теплоснабжения под контролем',
+    title: 'Теплоснабжение удерживается в рабочем диапазоне',
+    description: 'Фокус на давлении в магистралях, балансировке квартальных веток и защите социального контура от недогрева.',
+  },
+  {
+    id: 'roads',
+    label: 'Дороги',
+    badge: 'дорожная обстановка управляемая',
+    title: 'Дорожный контур требует точечного приоритетного реагирования',
+    description: 'Ключевые риски связаны с гололедом, локальными заторами, светофорными циклами и временным падением пропускной способности узлов.',
+  },
+  {
+    id: 'noise',
+    label: 'Шум',
+    badge: 'шумовой контур под наблюдением',
+    title: 'Шумовые события локализуются по точкам повторных обращений',
+    description: 'Основная нагрузка идет по ночным жалобам, промышленным площадкам и точкам с повторяющимся нарушением режима тишины.',
+  },
+  {
+    id: 'air',
+    label: 'Качество воздуха',
+    badge: 'воздушная обстановка под наблюдением',
+    title: 'Контур качества воздуха работает в режиме раннего предупреждения',
+    description: 'Приоритет на PM2.5, локальные выбросы, неблагоприятные метеоусловия и перенос загрязнения вдоль транспортных коридоров.',
+  },
+]
+
+const formatCompactValue = (value: number): string => {
+  if (value >= 10000) return `${Math.round(value / 1000)} тыс.`
+  if (value >= 1000) return `${(value / 1000).toFixed(1).replace('.0', '')} тыс.`
+  return String(value)
+}
+
+const scenarioParameterLabels: Record<string, string> = {
+  temperature: 'Температура',
+  traffic: 'Транспортная нагрузка',
+}
+
+const formatScenarioParameterValue = (key: string, value: number): string => {
+  if (key === 'temperature') return `${value} °C`
+  if (key === 'traffic') return `${value}%`
+
+  return String(value)
 }
 
 export function BriefingPage() {
@@ -103,9 +159,22 @@ export function BriefingPage() {
 }
 
 export function MayorDashboardPage() {
-  const { kpis, incidents, approveIncident, districts } = useSigmaStore()
+  const { incidents, districts } = useSigmaStore()
   const [district, setDistrict] = useState('')
-  const filtered = incidents.filter((i) => !district || i.district === district)
+  const [activeSubsystem, setActiveSubsystem] = useState<MayorDashboardSubsystem>('heat')
+  const filteredByDistrict = incidents.filter((incident) => !district || incident.district === district)
+  const exactSubsystemIncidents = filteredByDistrict.filter((incident) => incident.subsystem === activeSubsystem)
+  const citywideSubsystemIncidents = incidents.filter((incident) => incident.subsystem === activeSubsystem)
+  const scopedIncidents = exactSubsystemIncidents.length > 0 ? exactSubsystemIncidents : citywideSubsystemIncidents
+  const visibleIncidents = scopedIncidents.filter((incident) => incident.status !== 'архив' && incident.status !== 'решен')
+  const dashboardIncidents = visibleIncidents.length > 0 ? visibleIncidents : scopedIncidents
+  const activeTab = mayorDashboardTabs.find((tab) => tab.id === activeSubsystem) ?? mayorDashboardTabs[0]
+  const isDistrictFallback = Boolean(district && exactSubsystemIncidents.length === 0 && citywideSubsystemIncidents.length > 0)
+  const districtName = district ? getDistrictName(district) : ''
+  const highPriorityCount = dashboardIncidents.filter((incident) => incident.severity === 'критический' || incident.severity === 'высокий').length
+  const inWorkCount = dashboardIncidents.filter((incident) => incident.status === 'в работе' || incident.status === 'эскалирован').length
+  const averageProgress = dashboardIncidents.length > 0 ? Math.round(dashboardIncidents.reduce((sum, incident) => sum + incident.progress, 0) / dashboardIncidents.length) : 0
+  const averageImpact = dashboardIncidents.length > 0 ? Math.round(dashboardIncidents.reduce((sum, incident) => sum + incident.affectedPopulation, 0) / dashboardIncidents.length) : 0
 
   return (
     <div className="space-y-4">
@@ -115,16 +184,33 @@ export function MayorDashboardPage() {
             <option value="">Все районы</option>
             {districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
-          {['Отопление', 'Дороги', 'Шум', 'Качество воздуха'].map((f, idx) => (
-            <button key={f} className={`rounded-xl border px-4 py-2 font-medium ${idx === 0 ? 'bg-blue-600 text-white' : ''}`}>{f}</button>
+          {mayorDashboardTabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveSubsystem(tab.id)}
+              className={`rounded-xl border px-4 py-2 font-medium transition ${activeSubsystem === tab.id ? 'bg-blue-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}
+            >
+              {tab.label}
+            </button>
           ))}
         </div>
+        {district && (
+          <div className={`mt-3 text-sm ${isDistrictFallback ? 'text-amber-700' : 'text-slate-500'}`}>
+            {isDistrictFallback
+              ? `В ${districtName} районе нет активных событий по направлению «${activeTab.label}». Ниже показаны приоритетные события по городу.`
+              : `Фокус по району: ${districtName}.`}
+          </div>
+        )}
       </Card>
 
       <Card className="bg-gradient-to-r from-blue-700 to-blue-600 text-white">
-        <Badge text="статус системы: стабильно" className="mb-3 border-emerald-300 bg-emerald-500/20 text-emerald-100" />
-        <h2 className="text-3xl font-extrabold leading-tight sm:text-5xl lg:text-6xl">Город функционирует в штатном режиме</h2>
-        <p className="mt-3 max-w-4xl text-lg text-blue-100 lg:text-2xl">Все основные подсистемы работают эффективно. Выявлены локальные инциденты, обработка в контуре.</p>
+        <Badge text={activeTab.badge} className="mb-3 border-emerald-300 bg-emerald-500/20 text-emerald-100" />
+        <h2 className="text-3xl font-extrabold leading-tight sm:text-5xl lg:text-6xl">{activeTab.title}</h2>
+        <p className="mt-3 max-w-4xl text-lg text-blue-100 lg:text-2xl">
+          {activeTab.description}
+          {district && !isDistrictFallback ? ` Текущий фокус управления: ${districtName}.` : ''}
+        </p>
         <div className="mt-5 flex flex-wrap gap-2">
           <Link to="/briefing" className="rounded-xl bg-white px-5 py-3 font-semibold text-blue-700">Подробный отчёт</Link>
           <Link to="/operations" className="rounded-xl border border-white/30 px-5 py-3 font-semibold">Карта здоровья систем</Link>
@@ -132,23 +218,37 @@ export function MayorDashboardPage() {
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpis.slice(0, 4).map((k) => (
-          <Link to="/history" key={k.id}><Card><div className="text-sm text-slate-500">{k.title}</div><div className="mt-2 text-5xl font-bold">{k.value}</div><div className="mt-2 text-sm text-slate-500">{getDataTypeLabel(k.type)}</div></Card></Link>
+        {[
+          { label: 'Активные события', value: String(dashboardIncidents.length), note: `по направлению «${activeTab.label}»` },
+          { label: 'Высокий приоритет', value: String(highPriorityCount), note: 'критические и высокие инциденты' },
+          { label: 'В работе служб', value: String(inWorkCount), note: 'эскалированные и выполняемые кейсы' },
+          { label: 'Средний охват', value: formatCompactValue(averageImpact), note: `потенциально затронуто, прогресс ${averageProgress}%` },
+        ].map((metric) => (
+          <Card key={metric.label}>
+            <div className="text-sm text-slate-500">{metric.label}</div>
+            <div className="mt-2 text-5xl font-bold">{metric.value}</div>
+            <div className="mt-2 text-sm text-slate-500">{metric.note}</div>
+          </Card>
         ))}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-12">
-        <div className="lg:col-span-8"><Card><div className="mb-3 text-3xl font-bold lg:text-4xl">Карта территориальных проблем</div><MapView incidents={filtered.slice(0, 12)} /></Card></div>
+        <div className="lg:col-span-8"><Card><div className="mb-3 text-3xl font-bold lg:text-4xl">Карта событий: {activeTab.label}</div><MapView incidents={dashboardIncidents.slice(0, 12)} /></Card></div>
         <div className="space-y-3 lg:col-span-4">
           <Card>
-            <div className="mb-2 text-4xl font-bold">Срочные действия</div>
-            {filtered.slice(0, 3).map((i) => (
+            <div className="mb-2 text-4xl font-bold">Важные уведомления</div>
+            <div className="mb-3 text-sm text-slate-500">{`Приоритетные события по направлению «${activeTab.label.toLowerCase()}».`}</div>
+            {dashboardIncidents.slice(0, 3).map((i) => (
               <div key={i.id} className="mb-2 rounded-xl border bg-blue-50 p-3">
-                <div className="font-bold">{i.title}</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge text={i.severity} className={severityStyles[i.severity]} />
+                  <span className="text-xs font-medium uppercase tracking-wide text-slate-500">{getDistrictName(i.district)}</span>
+                  <span className="text-xs text-slate-400">{new Date(i.detectedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div className="mt-2 font-bold">{i.title}</div>
                 <div className="text-sm text-slate-500">{i.summary}</div>
-                <div className="mt-3 flex gap-2">
-                  <button onClick={() => approveIncident(i.id)} className="flex-1 rounded-lg bg-blue-600 py-2 font-semibold text-white">Одобрить</button>
-                  <Link to={`/incidents/${i.id}`} className="rounded-lg border px-3 py-2 font-semibold">Обзор</Link>
+                <div className="mt-3 text-sm text-slate-600">
+                  <span className="font-medium">Статус:</span> {i.status}. <span className="font-medium">Ответственный:</span> {i.assignee}.
                 </div>
               </div>
             ))}
@@ -370,14 +470,19 @@ export function ScenariosPage() {
         </Card>
         <Card>
           <div className="mb-2 text-xl font-bold uppercase tracking-widest text-slate-500">Параметры</div>
-          {Object.entries(scenario.parameters).map(([k, v]) => <div key={k} className="mb-2 text-sm">{k} <b className="float-right">{v}</b></div>)}
+          {Object.entries(scenario.parameters).map(([key, value]) => (
+            <div key={key} className="mb-2 text-sm">
+              {scenarioParameterLabels[key] ?? key}
+              <b className="float-right">{formatScenarioParameterValue(key, value)}</b>
+            </div>
+          ))}
           <button onClick={() => runScenario(scenario.id)} className="mt-3 w-full rounded-xl bg-blue-600 py-3 text-lg font-bold text-white"><Play size={16} className="mr-1 inline" />Запустить симуляцию</button>
         </Card>
       </div>
 
       <div className="space-y-4 lg:col-span-9">
         <Card className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <SectionTitle title={scenario.title} subtitle="ID симуляции: SM-7742 · Движок v4.2 активен" />
+          <SectionTitle title={scenario.title} />
           <button disabled={!run} onClick={() => run && saveScenario(run.id)} className="rounded-xl border px-4 py-2 font-semibold disabled:opacity-50">Сохранить сценарий</button>
         </Card>
 
