@@ -5,9 +5,15 @@ import { useAskSigmaStore } from './store'
 import { useVoiceInput } from './voice/useVoiceInput'
 
 const placeholders = {
-  мэр: 'Спросите Сигму: что происходит сейчас?',
-  диспетчер: 'Спросите Сигму: критичные инциденты по отоплению',
-  аналитик: 'Спросите Сигму: динамика отключений за неделю',
+  мэр: 'Что сейчас происходит?',
+  диспетчер: 'Что сейчас происходит?',
+  аналитик: 'Что сейчас происходит?',
+} as const
+
+const quickExamples = {
+  мэр: ['Что ты умеешь?', 'Что происходит на дорогах?', 'События в Советском районе'],
+  диспетчер: ['Что ты умеешь?', 'Критичные инциденты по отоплению', 'Что происходит на дорогах?', 'События в Советстком районе'],
+  аналитик: ['Что ты умеешь?', 'Динамика отключений за неделю', 'Что происходит на дорогах?', 'События в Советском районе'],
 } as const
 
 export const AskSigmaBar = () => {
@@ -26,9 +32,11 @@ export const AskSigmaBar = () => {
     return () => clearTimeout(timer)
   }, [toast])
 
-  const submit = () => {
-    if (!input.trim()) return
-    const result = ask(input)
+  const submit = (value = input) => {
+    const query = value.trim()
+    if (!query) return
+
+    const result = ask(query)
     if (result.type === 'NAVIGATE') {
       const route = result.actions?.[0]?.route
       if (route) { navigate(route); setToast('Переход выполнен') }
@@ -45,7 +53,7 @@ export const AskSigmaBar = () => {
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => event.key === 'Enter' && submit()}
         />
-        <button onClick={submit} className="rounded-xl bg-blue-600 px-3 text-white"><SendHorizontal size={16} /></button>
+        <button onClick={() => submit()} className="rounded-xl bg-blue-600 px-3 text-white"><SendHorizontal size={16} /></button>
         <button
           onClick={() => (voiceState === 'listening' ? stop() : start())}
           className="rounded-xl border px-3"
@@ -53,6 +61,20 @@ export const AskSigmaBar = () => {
         >
           {voiceState === 'listening' ? <MicOff size={16} /> : <Mic size={16} />}
         </button>
+      </div>
+      <div className="mt-2">
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Быстрые вопросы</div>
+        <div className="flex flex-wrap gap-2">
+          {(quickExamples[role] ?? quickExamples.мэр).map((example) => (
+            <button
+              key={example}
+              onClick={() => submit(example)}
+              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+            >
+              {example}
+            </button>
+          ))}
+        </div>
       </div>
       {toast && <div className="mt-1 text-xs text-emerald-600">{toast}</div>}
       <div className="mt-1 text-xs text-slate-500">

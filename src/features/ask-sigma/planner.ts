@@ -15,7 +15,7 @@ export const createPlan = (query: AskSigmaQuery): AskSigmaPlan => {
 
   const { entity, subsystem } = routeEntity(query)
   const text = query.normalized
-  const isExplicitHelpRequest = /помощ|подскажи|что уме(е|)ш|что умеет сигма/i.test(text)
+  const isExplicitHelpRequest = /помощ|подскажи|что (?:ты )?уме(?:е|)шь|что умеет сигма/i.test(text)
   const district = findDistrictId(text)
 
   if (/(что происходит сейчас|что сейчас|обстановка сейчас)/i.test(text)) {

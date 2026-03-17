@@ -102,6 +102,9 @@ describe('ask-sigma', () => {
 
     const helpPlan = createPlan(normalizeQuery('что умеет сигма'))
     expect(helpPlan.operation).toBe('HELP')
+
+    const directHelpPlan = createPlan(normalizeQuery('что ты умеешь'))
+    expect(directHelpPlan.operation).toBe('HELP')
   })
 
   it('executor main cases', () => {

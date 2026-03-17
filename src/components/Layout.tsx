@@ -1,4 +1,4 @@
-import { Bell, Building2, Menu, X } from 'lucide-react'
+import { Building2, Menu, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useSigmaStore } from '../store/useSigmaStore'
@@ -12,7 +12,6 @@ const nav = [
 ]
 
 export function Layout() {
-  const notifications = useSigmaStore((s) => s.notifications)
   const bump = useSigmaStore((s) => s.bumpLive)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
@@ -59,10 +58,6 @@ export function Layout() {
           >
             {mobileNavOpen ? <X size={16} /> : <Menu size={16} />}
             Разделы
-          </button>
-          <button className="relative rounded-xl border border-slate-200 bg-white p-2.5">
-            <Bell size={18} />
-            <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-1.5 text-[10px] text-white">{notifications.length}</span>
           </button>
         </div>
 
