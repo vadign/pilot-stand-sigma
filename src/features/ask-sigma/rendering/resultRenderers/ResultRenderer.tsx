@@ -1,13 +1,27 @@
 import { Link } from 'react-router-dom'
 import { Card } from '../../../../components/ui'
+import { getDistrictAnswerName } from '../../../../lib/districts'
 import type { AskSigmaResult } from '../../types'
-import { ResultMeta } from './common'
 
 export const ResultRenderer = ({ result, onAction }: { result: AskSigmaResult; onAction: (route?: string, district?: string) => void }) => {
+  const isUnknown = result.type === 'UNKNOWN'
+  const hints = result.hints?.map((hint) => typeof hint === 'string' ? { question: hint } : hint)
+  const hintsTitle = isUnknown
+    ? 'Сейчас Сигма уже понимает такие запросы:'
+    : result.type === 'HELP'
+      ? 'Поддерживаемые запросы:'
+      : 'Похожие запросы:'
+
   return (
     <Card>
       <h3 className="text-xl font-bold">{result.title}</h3>
       {result.summary && <p className="mt-2 text-sm text-slate-600">{result.summary}</p>}
+
+      {isUnknown && (
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+          Эта тема пока не входит в поддерживаемые сценарии. Попробуйте один из запросов ниже.
+        </div>
+      )}
 
       {result.kpis && (
         <div className="mt-3 grid grid-cols-2 gap-2">
@@ -22,7 +36,7 @@ export const ResultRenderer = ({ result, onAction }: { result: AskSigmaResult; o
           {result.incidents.map((incident) => (
             <div key={incident.id} className="rounded-lg border p-2 text-sm">
               <div className="font-semibold">{incident.title}</div>
-              <div>{incident.severity} · {incident.status} · {incident.district}</div>
+              <div>{incident.severity} · {incident.status} · {getDistrictAnswerName(incident.district)}</div>
               <button className="mt-2 rounded border px-2 py-1" onClick={() => onAction(`/incidents/${incident.id}`, incident.district)}>Открыть</button>
             </div>
           ))}
@@ -50,7 +64,19 @@ export const ResultRenderer = ({ result, onAction }: { result: AskSigmaResult; o
         </div>
       )}
 
-      {result.hints && <ul className="mt-3 list-disc pl-5 text-sm">{result.hints.map((hint) => <li key={hint}>{hint}</li>)}</ul>}
+      {hints && (
+        <div className="mt-4">
+          <p className="text-sm font-semibold text-slate-900">{hintsTitle}</p>
+          <div className="mt-3 space-y-2">
+            {hints.map((hint) => (
+              <div key={hint.question} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                <div className="text-sm font-semibold text-slate-900">{hint.question}</div>
+                {hint.description && <div className="mt-1 text-sm text-slate-600">{hint.description}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mt-3 flex flex-wrap gap-2">
         {result.actions?.map((action) => (
@@ -59,7 +85,6 @@ export const ResultRenderer = ({ result, onAction }: { result: AskSigmaResult; o
             : <Link key={action.label} to="#" className="rounded border px-3 py-1.5 text-sm">{action.label}</Link>
         ))}
       </div>
-      <ResultMeta result={result} />
     </Card>
   )
 }

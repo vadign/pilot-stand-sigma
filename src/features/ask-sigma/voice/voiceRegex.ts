@@ -1,3 +1,4 @@
+import { findDistrictId, getDistrictName } from '../../../lib/districts'
 import type { SigmaRole } from '../types'
 
 export const voiceWakeWordStripRegex = /^(с(?:[ие]гма|има)[!,.]?\s*)/i
@@ -9,8 +10,6 @@ const roleMatchers: { role: SigmaRole; regex: RegExp }[] = [
   { role: 'аналитик', regex: /^(?:я\s+)?аналитик(?:\s|$)/i },
 ]
 
-const districts = ['советский', 'ленинский', 'центральный', 'кольцово', 'академгородок']
-
 export const stripWakeWord = (text: string): string => text.replace(voiceWakeWordStripRegex, '').trim()
 
 export const stripSafetyWakeWord = (text: string): string => text.replace(safetyWakeWordStripRegex, '').trim()
@@ -20,7 +19,8 @@ export const parseRoleCommand = (text: string): { role: SigmaRole; district?: st
   const roleMatch = roleMatchers.find((item) => item.regex.test(normalized))
   if (!roleMatch) return null
 
-  const district = districts.find((name) => new RegExp(`(?:^|\\s)${name}(?:\\s|$)`, 'i').test(normalized))
+  const districtId = findDistrictId(normalized)
+  const district = districtId ? getDistrictName(districtId).toLowerCase() : undefined
   return {
     role: roleMatch.role,
     district,

@@ -98,6 +98,11 @@ export interface AskSigmaExplain {
   updatedAt: string
 }
 
+export type AskSigmaHint = string | {
+  question: string
+  description?: string
+}
+
 export interface AskSigmaResult {
   type: AskSigmaResultType
   title: string
@@ -112,6 +117,6 @@ export interface AskSigmaResult {
   deputy?: Deputy
   approvals?: { id: string; reason: string; initiator: string }[]
   actions?: { label: string; route?: string; incidentId?: string; district?: string }[]
-  hints?: string[]
+  hints?: AskSigmaHint[]
   explain: AskSigmaExplain
 }

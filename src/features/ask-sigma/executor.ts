@@ -1,11 +1,30 @@
-import type { AskSigmaPlan, AskSigmaResult, SigmaRole } from './types'
+import { getDistrictAnswerName } from '../../lib/districts'
+import type { AskSigmaHint, AskSigmaPlan, AskSigmaResult, SigmaRole } from './types'
 import type { AskSigmaProvider } from './provider'
 
-const roleHints: Record<SigmaRole, string[]> = {
-  мэр: ['что происходит сейчас', 'сводка за 24 часа', 'что требует согласования', 'сценарий аномальных морозов'],
-  диспетчер: ['критичные инциденты по отоплению', 'открой инцидент INC-1001', 'что делать при прорыве теплотрассы', 'открой инциденты'],
-  аналитик: ['динамика отключений за неделю', 'какие проблемы по шуму за месяц', 'сравни без вмешательства и с вмешательством', 'какой регламент по воздуху'],
+const supportedQuestions: AskSigmaHint[] = [
+  { question: 'что происходит сейчас', description: 'общая оперативная обстановка, число активных и критичных событий.' },
+  { question: 'сводка за 24 часа', description: 'короткая управленческая сводка по последним суткам.' },
+  { question: 'что требует согласования', description: 'список инцидентов и эскалаций, где нужно управленческое решение.' },
+  { question: 'критичные инциденты по отоплению', description: 'быстрый срез по самому чувствительному контуру.' },
+  { question: 'инциденты по дорогам', description: 'нагрузка по дорожной подсистеме без лишних деталей.' },
+  { question: 'динамика отключений за неделю', description: 'тренд и метрики по истории.' },
+  { question: 'сценарий аномальных морозов', description: 'модель последствий по зимнему стресс-сценарию.' },
+  { question: 'сравни без вмешательства и с вмешательством', description: 'сравнение эффектов управленческого действия.' },
+  { question: 'что у заместителя по теплоснабжению', description: 'статус профильного цифрового заместителя.' },
+  { question: 'открой сводку', description: 'быстрый переход в соответствующий раздел, если после ответа нужно провалиться глубже.' },
+]
+
+const getRequestedDistrict = (plan: AskSigmaPlan): string | undefined => {
+  const district = String(plan.filters?.district ?? '').trim()
+  return district || undefined
 }
+
+const matchesDistrict = (district: string | undefined, incidentDistrict: string): boolean =>
+  !district || incidentDistrict === district
+
+const formatDistrictLabel = (district?: string): string =>
+  district ? `по району «${getDistrictAnswerName(district)}»` : ''
 
 export const executePlan = (plan: AskSigmaPlan, provider: AskSigmaProvider, role: SigmaRole): AskSigmaResult => {
   const context = provider.getContext()
@@ -15,18 +34,21 @@ export const executePlan = (plan: AskSigmaPlan, provider: AskSigmaProvider, role
     case 'NAVIGATE':
       return { type: 'NAVIGATE', title: 'Переход выполнен', summary: `Открываю раздел ${plan.route}`, actions: [{ label: 'Открыть', route: plan.route }], explain: explainBase }
     case 'SUMMARY': {
-      const critical = context.incidents.filter((incident) => incident.severity === 'критический').length
-      const active = context.incidents.filter((incident) => incident.status !== 'архив' && incident.status !== 'решен').length
+      const district = getRequestedDistrict(plan)
+      const scopedIncidents = context.incidents.filter((incident) => matchesDistrict(district, incident.district))
+      const districtLabel = formatDistrictLabel(district)
+      const critical = scopedIncidents.filter((incident) => incident.severity === 'критический').length
+      const active = scopedIncidents.filter((incident) => incident.status !== 'архив' && incident.status !== 'решен').length
       return {
         type: 'SUMMARY',
         title: 'Оперативная обстановка по городу',
-        summary: `Сейчас активных событий: ${active}. Критичных: ${critical}. Основная нагрузка на службы по дорожному и тепловому контурам.`,
+        summary: `${districtLabel ? `Сейчас ${districtLabel}` : 'Сейчас'} активных событий: ${active}. Критичных: ${critical}. Основная нагрузка на службы по дорожному и тепловому контурам.`,
         kpis: [
           { label: 'Активные инциденты', value: String(active) },
           { label: 'Критичные', value: String(critical) },
           { label: 'Служб с SLA>80%', value: String(context.servicePerformance.filter((item) => item.resolvedInTime >= 80).length) },
         ],
-        actions: [{ label: 'Открыть сводку', route: '/briefing' }, { label: 'Показать инциденты', route: '/operations' }, { label: 'Открыть карту', route: '/operations' }],
+        actions: [{ label: 'Открыть сводку', route: '/briefing' }, { label: 'Показать инциденты', route: '/operations', district }, { label: 'Открыть карту', route: '/operations', district }],
         explain: { ...explainBase, dataType: 'real' },
       }
     }
@@ -40,10 +62,12 @@ export const executePlan = (plan: AskSigmaPlan, provider: AskSigmaProvider, role
         explain: explainBase,
       }
     case 'FILTER': {
+      const district = getRequestedDistrict(plan)
       const filtered = context.incidents
-        .filter((incident) => (!plan.filters?.severity || incident.severity === plan.filters.severity) && (!plan.filters?.subsystem || incident.subsystem.includes(String(plan.filters?.subsystem ?? '').slice(0, 4))))
+        .filter((incident) => matchesDistrict(district, incident.district) && (!plan.filters?.severity || incident.severity === plan.filters.severity) && (!plan.filters?.subsystem || incident.subsystem.includes(String(plan.filters?.subsystem ?? '').slice(0, 4))))
         .slice(0, 6)
-      return { type: 'INCIDENT_LIST', title: 'Найденные инциденты', incidents: filtered, summary: `Найдено ${filtered.length} событий`, actions: [{ label: 'Открыть', route: '/operations' }], explain: { ...explainBase, dataType: 'real' } }
+      const districtLabel = formatDistrictLabel(district)
+      return { type: 'INCIDENT_LIST', title: 'Найденные инциденты', incidents: filtered, summary: `Найдено ${filtered.length} событий${districtLabel ? ` ${districtLabel}` : ''}`, actions: [{ label: 'Открыть', route: '/operations', district }], explain: { ...explainBase, dataType: 'real' } }
     }
     case 'INCIDENT_DETAIL': {
       const incident = context.incidents.find((item) => item.id === plan.incidentId) ?? context.incidents[0]
@@ -104,12 +128,29 @@ export const executePlan = (plan: AskSigmaPlan, provider: AskSigmaProvider, role
       return { type: 'DEPUTY_MODE_CHANGE', title: 'Режим заместителя изменен', deputy: { ...deputy, mode: 'approval' }, summary: `${deputy.name} переведен в режим подтверждения`, explain: explainBase }
     }
     case 'APPROVALS': {
-      const approvals = context.incidents.filter((item) => item.status === 'эскалирован' || item.severity === 'критический').slice(0, 5).map((item) => ({ id: item.id, reason: `${item.severity}, статус ${item.status}`, initiator: item.assignee }))
-      return { type: 'APPROVALS', title: 'Требуют согласования', approvals, summary: `Найдено ${approvals.length} объектов`, actions: [{ label: 'Открыть', route: '/operations' }], explain: explainBase }
+      const district = getRequestedDistrict(plan)
+      const approvals = context.incidents
+        .filter((item) => matchesDistrict(district, item.district) && (item.status === 'эскалирован' || item.severity === 'критический'))
+        .slice(0, 5)
+        .map((item) => ({ id: item.id, reason: `${item.severity}, статус ${item.status}`, initiator: item.assignee }))
+      const districtLabel = formatDistrictLabel(district)
+      return { type: 'APPROVALS', title: 'Требуют согласования', approvals, summary: `Найдено ${approvals.length} объектов${districtLabel ? ` ${districtLabel}` : ''}`, actions: [{ label: 'Открыть', route: '/operations', district }], explain: explainBase }
     }
     case 'HELP':
-      return { type: 'HELP', title: 'Что умеет Сигма', summary: 'Поддерживаются навигация, сводки, поиск инцидентов, регламенты и заместители.', hints: roleHints[role], explain: explainBase }
+      return {
+        type: 'HELP',
+        title: 'Что умеет Сигма',
+        summary: `Сигма сейчас поддерживает оперативные вопросы, историю, сценарии, статусы цифровых заместителей и переходы по разделам для роли «${role}».`,
+        hints: supportedQuestions,
+        explain: explainBase,
+      }
     default:
-      return { type: 'UNKNOWN', title: 'Я не понял запрос', summary: 'Попробуйте переформулировать запрос.', hints: roleHints[role], explain: explainBase }
+      return {
+        type: 'UNKNOWN',
+        title: 'Сигма пока не знает эту тему',
+        summary: 'На такой вопрос у меня пока нет готового ответа. Ниже список запросов, которые Сигма уже понимает.',
+        hints: supportedQuestions,
+        explain: explainBase,
+      }
   }
 }

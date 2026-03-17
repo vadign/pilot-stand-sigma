@@ -10,7 +10,10 @@ const provider: AskSigmaProvider = {
   getContext: () => ({
     role: 'мэр',
     now: '2026-01-01T00:00:00.000Z',
-    incidents: [{ id: 'INC-1001', title: 'Авария теплотрассы', subsystem: 'heat', severity: 'критический', status: 'эскалирован', district: 'sov', coordinates: [0, 0], createdAt: '', detectedAt: '', sourceId: 's1', summary: '', description: '', metrics: [], affectedPopulation: 12, linkedRegulationIds: ['r1'], recommendations: [], assignee: 'ЕДДС', deadline: '', progress: 50, timeline: [] }],
+    incidents: [
+      { id: 'INC-1001', title: 'Авария теплотрассы', subsystem: 'heat', severity: 'критический', status: 'эскалирован', district: 'sov', coordinates: [0, 0], createdAt: '', detectedAt: '', sourceId: 's1', summary: '', description: '', metrics: [], affectedPopulation: 12, linkedRegulationIds: ['r1'], recommendations: [], assignee: 'ЕДДС', deadline: '', progress: 50, timeline: [] },
+      { id: 'INC-1002', title: 'Сбой на дорожной развязке', subsystem: 'roads', severity: 'высокий', status: 'в работе', district: 'oct', coordinates: [0, 0], createdAt: '', detectedAt: '', sourceId: 's1', summary: '', description: '', metrics: [], affectedPopulation: 18, linkedRegulationIds: ['r1'], recommendations: [], assignee: 'ЦОДД', deadline: '', progress: 40, timeline: [] },
+    ],
     regulations: [{ id: 'r1', code: 'РГ-1', title: 'Тепло', domain: 'ЖКХ', version: '1', status: 'активен', sourceDocument: '', sourceClause: '', effectiveFrom: '', parameters: [], recommendationTemplates: [], coverageStatus: 'полное', linkedIncidentTypes: ['heat'] }],
     scenarios: [{ id: 's1', title: 'Аномальные морозы', description: 'desc', serviceLoad: 12, impacts: [{ label: 'x', value: 1 }] }],
     deputies: [{ id: 'd1', name: 'Заместитель по теплоснабжению', domain: 'ЖКХ', mode: 'recommendation', connectedSourceIds: [], activeIncidentIds: [], permissions: [], latestActions: [], constraints: [], escalationRate: 0.1 }],
@@ -34,6 +37,7 @@ describe('ask-sigma', () => {
 
   it('role parser with district', () => {
     expect(parseRoleCommand('Сигма, диспетчер Советский район')).toEqual({ role: 'диспетчер', district: 'советский' })
+    expect(parseRoleCommand('Сигма, диспетчер Академгородок')).toEqual({ role: 'диспетчер', district: 'советский' })
   })
 
   it('router entity', () => {
@@ -48,14 +52,58 @@ describe('ask-sigma', () => {
     expect(plan.incidentId).toBe('INC-1001')
   })
 
-  it('unknown/help fallback', () => {
-    const plan = createPlan(normalizeQuery('абракадабра'))
+  it('district filter is extracted from incident queries', () => {
+    const plan = createPlan(normalizeQuery('события в октрябрьском'))
+    expect(plan.operation).toBe('FILTER')
+    expect(plan.filters?.district).toBe('oct')
+
     const result = executePlan(plan, provider, 'мэр')
-    expect(['HELP', 'UNKNOWN']).toContain(result.type)
+    expect(result.type).toBe('INCIDENT_LIST')
+    expect(result.incidents).toHaveLength(1)
+    expect(result.incidents?.[0]?.district).toBe('oct')
+    expect(result.summary).toContain('Октябрьский')
+  })
+
+  it('soviet district is available by sovetsky and akademgorodok aliases', () => {
+    const sovPlan = createPlan(normalizeQuery('события в советском районе'))
+    expect(sovPlan.operation).toBe('FILTER')
+    expect(sovPlan.filters?.district).toBe('sov')
+
+    const akademPlan = createPlan(normalizeQuery('события в академгородке'))
+    expect(akademPlan.operation).toBe('FILTER')
+    expect(akademPlan.filters?.district).toBe('sov')
+
+    const result = executePlan(akademPlan, provider, 'мэр')
+    expect(result.type).toBe('INCIDENT_LIST')
+    expect(result.incidents).toHaveLength(1)
+    expect(result.incidents?.[0]?.district).toBe('sov')
+    expect(result.summary).toContain('Академгородок')
+  })
+
+  it('unknown/help fallback', () => {
+    const unknownPlan = createPlan(normalizeQuery('абракадабра'))
+    expect(unknownPlan.operation).toBe('UNKNOWN')
+
+    const unknownResult = executePlan(unknownPlan, provider, 'мэр')
+    expect(unknownResult.type).toBe('UNKNOWN')
+    expect(unknownResult.title).toBe('Сигма пока не знает эту тему')
+    expect(unknownResult.hints).toContainEqual({
+      question: 'что происходит сейчас',
+      description: 'общая оперативная обстановка, число активных и критичных событий.',
+    })
+    expect(unknownResult.hints).toContainEqual({
+      question: 'открой сводку',
+      description: 'быстрый переход в соответствующий раздел, если после ответа нужно провалиться глубже.',
+    })
+
+    const helpPlan = createPlan(normalizeQuery('что умеет сигма'))
+    expect(helpPlan.operation).toBe('HELP')
   })
 
   it('executor main cases', () => {
     expect(executePlan(createPlan(normalizeQuery('что происходит сейчас')), provider, 'мэр').type).toBe('SUMMARY')
+    expect(executePlan(createPlan(normalizeQuery('что происходит сейчас в октрябрьском')), provider, 'мэр').summary).toContain('Октябрьский')
+    expect(executePlan(createPlan(normalizeQuery('что происходит сейчас в академгородке')), provider, 'мэр').summary).toContain('Академгородок')
     expect(executePlan(createPlan(normalizeQuery('что требует согласования')), provider, 'мэр').type).toBe('APPROVALS')
     expect(executePlan(createPlan(normalizeQuery('что делать при прорыве теплотрассы')), provider, 'мэр').type).toBe('REGULATION_GUIDANCE')
     expect(executePlan(createPlan(normalizeQuery('сценарий аномальных морозов')), provider, 'мэр').type).toBe('SCENARIO_LOOKUP')

@@ -1,3 +1,4 @@
+import { findDistrictId } from '../../lib/districts'
 import { detectSpecialIntent } from './specialQueries'
 import type { AskSigmaPlan, AskSigmaQuery } from './types'
 import { routeEntity } from './router'
@@ -14,9 +15,11 @@ export const createPlan = (query: AskSigmaQuery): AskSigmaPlan => {
 
   const { entity, subsystem } = routeEntity(query)
   const text = query.normalized
+  const isExplicitHelpRequest = /помощ|подскажи|что уме(е|)ш|что умеет сигма/i.test(text)
+  const district = findDistrictId(text)
 
   if (/(что происходит сейчас|что сейчас|обстановка сейчас)/i.test(text)) {
-    return { operation: 'SUMMARY', entity: 'dashboard', text }
+    return { operation: 'SUMMARY', entity: 'dashboard', filters: { district: district ?? '' }, text }
   }
 
   if (/сводка.*24|24 часа|бриф/i.test(text)) {
@@ -57,16 +60,16 @@ export const createPlan = (query: AskSigmaQuery): AskSigmaPlan => {
   }
 
   if (/согласован|требует согласования|требует решения/i.test(text)) {
-    return { operation: 'APPROVALS', entity: 'approval', text }
+    return { operation: 'APPROVALS', entity: 'approval', filters: { district: district ?? '' }, text }
   }
 
   if (entity === 'incident') {
     const severity = /критич/i.test(text) ? 'критический' : undefined
-    return { operation: 'FILTER', entity, filters: { subsystem: subsystem ?? '', severity: severity ?? '' }, text }
+    return { operation: 'FILTER', entity, filters: { subsystem: subsystem ?? '', severity: severity ?? '', district: district ?? '' }, text }
   }
 
   if (entity === 'help') {
-    return { operation: 'HELP', entity, text }
+    return { operation: isExplicitHelpRequest ? 'HELP' : 'UNKNOWN', entity, text }
   }
 
   return { operation: 'UNKNOWN', entity, text }
