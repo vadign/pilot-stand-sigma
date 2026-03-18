@@ -10,6 +10,25 @@ export const AnswerPanel = () => {
   const isOpen = useAskSigmaStore((s) => s.isOpen)
   const close = useAskSigmaStore((s) => s.close)
   const isLoading = useAskSigmaStore((s) => s.isLoading)
+  const ask = useAskSigmaStore((s) => s.ask)
+
+  const handleAction = (route?: string, district?: string) => {
+    if (!route) return
+    if (district && route === '/operations') {
+      navigate(`/operations?district=${district}`)
+      return
+    }
+    navigate(route)
+  }
+
+  const handleHintSelect = (question: string) => {
+    const nextResult = ask(question)
+    if (nextResult.type !== 'NAVIGATE') return
+
+    const route = nextResult.actions?.[0]?.route
+    const district = nextResult.actions?.[0]?.district
+    handleAction(route, district)
+  }
 
   if (!isOpen) return null
 
@@ -25,14 +44,7 @@ export const AnswerPanel = () => {
       <div className="flex-1 overflow-auto p-4">
         {isLoading && <div className="rounded border p-3 text-sm">Обрабатываю запрос…</div>}
         {!isLoading && !result && <div className="rounded border p-3 text-sm">Задайте вопрос в поле «Спросите Сигму».</div>}
-        {!isLoading && result && <ResultRenderer result={result} onAction={(route, district) => {
-          if (!route) return
-          if (district && route === '/operations') {
-            navigate(`/operations?district=${district}`)
-            return
-          }
-          navigate(route)
-        }} />}
+        {!isLoading && result && <ResultRenderer result={result} onAction={handleAction} onHintSelect={handleHintSelect} />}
       </div>
     </aside>
   )

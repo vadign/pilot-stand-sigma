@@ -3,8 +3,17 @@ import { Card } from '../../../../components/ui'
 import { getDistrictAnswerName } from '../../../../lib/districts'
 import type { AskSigmaResult } from '../../types'
 
-export const ResultRenderer = ({ result, onAction }: { result: AskSigmaResult; onAction: (route?: string, district?: string) => void }) => {
+export const ResultRenderer = ({
+  result,
+  onAction,
+  onHintSelect,
+}: {
+  result: AskSigmaResult
+  onAction: (route?: string, district?: string) => void
+  onHintSelect?: (question: string) => void
+}) => {
   const isUnknown = result.type === 'UNKNOWN'
+  const canRunHintQuery = Boolean(onHintSelect) && (isUnknown || result.type === 'HELP')
   const hints = result.hints?.map((hint) => typeof hint === 'string' ? { question: hint } : hint)
   const hintsTitle = isUnknown
     ? 'Сейчас Сигма уже понимает такие запросы:'
@@ -69,10 +78,22 @@ export const ResultRenderer = ({ result, onAction }: { result: AskSigmaResult; o
           <p className="text-sm font-semibold text-slate-900">{hintsTitle}</p>
           <div className="mt-3 space-y-2">
             {hints.map((hint) => (
-              <div key={hint.question} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                <div className="text-sm font-semibold text-slate-900">{hint.question}</div>
-                {hint.description && <div className="mt-1 text-sm text-slate-600">{hint.description}</div>}
-              </div>
+              canRunHintQuery ? (
+                <button
+                  key={hint.question}
+                  type="button"
+                  onClick={() => onHintSelect?.(hint.question)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left transition hover:border-blue-300 hover:bg-blue-50"
+                >
+                  <div className="text-sm font-semibold text-slate-900">{hint.question}</div>
+                  {hint.description && <div className="mt-1 text-sm text-slate-600">{hint.description}</div>}
+                </button>
+              ) : (
+                <div key={hint.question} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <div className="text-sm font-semibold text-slate-900">{hint.question}</div>
+                  {hint.description && <div className="mt-1 text-sm text-slate-600">{hint.description}</div>}
+                </div>
+              )
             ))}
           </div>
         </div>

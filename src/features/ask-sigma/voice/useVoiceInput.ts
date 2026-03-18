@@ -26,11 +26,18 @@ const getSpeechRecognition = (): BrowserSpeechRecognitionConstructor | null => {
 
 export const useVoiceInput = () => {
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null)
+  const backgroundCheckTimeoutRef = useRef<number | null>(null)
   const ask = useAskSigmaStore((s) => s.ask)
   const setVoiceState = useAskSigmaStore((s) => s.setVoiceState)
   const voiceState = useAskSigmaStore((s) => s.voiceState)
 
   const supported = useMemo(() => Boolean(getSpeechRecognition()), [])
+
+  const clearBackgroundCheck = useCallback(() => {
+    if (backgroundCheckTimeoutRef.current === null) return
+    window.clearTimeout(backgroundCheckTimeoutRef.current)
+    backgroundCheckTimeoutRef.current = null
+  }, [])
 
   const stopRecognition = useCallback((immediate = false) => {
     const recognition = recognitionRef.current
@@ -49,6 +56,11 @@ export const useVoiceInput = () => {
 
     setVoiceState('idle')
   }, [setVoiceState])
+
+  const stopRecognitionIfActive = useCallback((immediate = false) => {
+    if (!recognitionRef.current) return
+    stopRecognition(immediate)
+  }, [stopRecognition])
 
   const start = useCallback(() => {
     if (voiceState === 'listening') return
@@ -92,23 +104,46 @@ export const useVoiceInput = () => {
   }, [stopRecognition])
 
   useEffect(() => {
+    const isDocumentBackgrounded = () => document.hidden || document.visibilityState !== 'visible'
+
     const handleVisibilityChange = () => {
-      if (document.hidden) stopRecognition(true)
+      clearBackgroundCheck()
+      if (isDocumentBackgrounded()) stopRecognitionIfActive(true)
+    }
+
+    const handleWindowBlur = () => {
+      clearBackgroundCheck()
+      // Mobile browsers can emit blur slightly before visibilityState flips to hidden.
+      backgroundCheckTimeoutRef.current = window.setTimeout(() => {
+        backgroundCheckTimeoutRef.current = null
+        if (isDocumentBackgrounded()) stopRecognitionIfActive(true)
+      }, 150)
     }
 
     const handlePageHide = () => {
-      stopRecognition(true)
+      clearBackgroundCheck()
+      stopRecognitionIfActive(true)
+    }
+
+    const pageLifecycleDocument = document as Document & {
+      addEventListener: Document['addEventListener'] & ((type: 'freeze', listener: EventListenerOrEventListenerObject) => void)
+      removeEventListener: Document['removeEventListener'] & ((type: 'freeze', listener: EventListenerOrEventListenerObject) => void)
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('blur', handleWindowBlur)
     window.addEventListener('pagehide', handlePageHide)
+    pageLifecycleDocument.addEventListener('freeze', handlePageHide)
 
     return () => {
+      clearBackgroundCheck()
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('blur', handleWindowBlur)
       window.removeEventListener('pagehide', handlePageHide)
-      stopRecognition(true)
+      pageLifecycleDocument.removeEventListener('freeze', handlePageHide)
+      stopRecognitionIfActive(true)
     }
-  }, [stopRecognition])
+  }, [clearBackgroundCheck, stopRecognitionIfActive])
 
   return { supported, voiceState, start, stop }
 }
