@@ -37,8 +37,10 @@ const parseLine = (text: string, outageKind: OutageKind): Power051DistrictStat |
   const timeMatch = compact.match(/(?:до|восстановление(?:\s*ожидается)?\s*до|ориентировочно\s*до)\s*([0-9]{1,2}[:.][0-9]{2}(?:\s*[0-9]{2}\.[0-9]{2}\.[0-9]{4})?)/i)
   const reasonMatch = compact.match(/(?:причина|из-за|в связи с)\s*[:-]?\s*([^.;]+)/i)
 
+  const districtFromPipe = compact.split('|')[0]?.replace(/район/i, '').trim()
+
   return {
-    district: normalizeLine(districtMatch?.[1] ?? compact.split('|')[0] ?? 'Не указан'),
+    district: normalizeLine(districtMatch?.[1]?.trim() || districtFromPipe || 'Не указан'),
     utilityType: inferUtilityType(compact),
     outageKind,
     houses: Number(housesMatch?.[1] ?? 0),

@@ -1,16 +1,49 @@
-import Papa from 'papaparse'
+const splitCsvLine = (line: string, delimiter: string): string[] => {
+  const cells: string[] = []
+  let current = ''
+  let inQuotes = false
 
-export const parseCsvDataset = <T extends Record<string, string>>(csvText: string): T[] => {
-  const parsed = Papa.parse<T>(csvText, {
-    header: true,
-    skipEmptyLines: true,
-    transformHeader: (value: string) => value.trim(),
-    delimiter: ';',
-  })
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index]
+    const next = line[index + 1]
 
-  if (parsed.errors.length > 0) {
-    throw new Error(`CSV parse error: ${parsed.errors[0]?.message ?? 'unknown error'}`)
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"'
+        index += 1
+        continue
+      }
+      inQuotes = !inQuotes
+      continue
+    }
+
+    if (char === delimiter && !inQuotes) {
+      cells.push(current)
+      current = ''
+      continue
+    }
+
+    current += char
   }
 
-  return parsed.data.map((row: T) => Object.fromEntries(Object.entries(row).map(([key, value]) => [key, String(value ?? '').trim()])) as T)
+  cells.push(current)
+  return cells
+}
+
+export const parseCsvDataset = <T extends Record<string, string>>(csvText: string, delimiter = ';'): T[] => {
+  const normalized = csvText.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  const lines = normalized.split('\n').map((line) => line.trim()).filter(Boolean)
+
+  if (lines.length === 0) return []
+
+  const headers = splitCsvLine(lines[0], delimiter).map((header) => header.trim())
+
+  return lines.slice(1).map((line) => {
+    const values = splitCsvLine(line, delimiter)
+    if (values.length !== headers.length) {
+      throw new Error(`CSV parse error: expected ${headers.length} columns, got ${values.length}`)
+    }
+
+    return Object.fromEntries(headers.map((header, index) => [header, values[index]?.trim() ?? ''])) as T
+  })
 }
