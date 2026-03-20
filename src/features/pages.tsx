@@ -8,7 +8,7 @@ import { MapView } from '../components/MapView'
 import { Badge, Card, MetaGrid, SectionTitle, SourceMetaFooter } from '../components/ui'
 import { getDistrictName } from '../lib/districts'
 import { useSigmaStore } from '../store/useSigmaStore'
-import { selectConstructionAggregates, selectDistrictOutageCards, selectIncidentById, selectIncidentViewList, selectOutageHistorySeries, selectOutageSummary, selectSourceStatuses } from '../live/selectors'
+import { selectIncidentById, selectOutageSummary, selectSourceStatuses, useConstructionAggregates, useDistrictOutageCards, useIncidentViews, useOutageHistorySeries } from '../live/selectors'
 
 const severityStyles: Record<string, string> = {
   критический: 'border-red-200 bg-red-50 text-red-700',
@@ -38,11 +38,11 @@ const formatDelta = (value?: number) => value === undefined ? '—' : `${value >
 
 const useDashboardData = () => {
   const districts = useSigmaStore((state) => state.districts)
-  const incidents = useSigmaStore(selectIncidentViewList)
+  const incidents = useIncidentViews()
   const outageSummary = useSigmaStore(selectOutageSummary)
   const sourceStatuses = useSigmaStore(selectSourceStatuses)
-  const construction = useSigmaStore(selectConstructionAggregates)
-  const districtCards = useSigmaStore(selectDistrictOutageCards)
+  const construction = useConstructionAggregates()
+  const districtCards = useDistrictOutageCards()
   const live = useSigmaStore((state) => state.live)
   return { districts, incidents, outageSummary, sourceStatuses, construction, districtCards, live }
 }
@@ -229,7 +229,7 @@ export function MayorDashboardPage() {
 }
 
 export function OperationsPage() {
-  const incidents = useSigmaStore(selectIncidentViewList)
+  const incidents = useIncidentViews()
   const assignIncident = useSigmaStore((state) => state.assignIncident)
   const escalateIncident = useSigmaStore((state) => state.escalateIncident)
   const archiveIncident = useSigmaStore((state) => state.archiveIncident)
@@ -405,9 +405,9 @@ export function IncidentPage() {
 }
 
 export function HistoryPage() {
-  const incidents = useSigmaStore(selectIncidentViewList)
-  const series = useSigmaStore(selectOutageHistorySeries)
-  const construction = useSigmaStore(selectConstructionAggregates)
+  const incidents = useIncidentViews()
+  const series = useOutageHistorySeries()
+  const construction = useConstructionAggregates()
   const live = useSigmaStore((state) => state.live)
   const [period, setPeriod] = useState('7 дней')
   const category = Object.entries(incidents.reduce<Record<string, number>>((acc, incident) => ({ ...acc, [incident.subsystem]: (acc[incident.subsystem] || 0) + 1 }), {})).map(([name, value]) => ({ name, value }))
@@ -474,9 +474,9 @@ export function HistoryPage() {
 export function ScenariosPage() {
   const { scenarios, scenarioRuns, runScenario, saveScenario } = useSigmaStore()
   const outageSummary = useSigmaStore(selectOutageSummary)
-  const construction = useSigmaStore(selectConstructionAggregates)
+  const construction = useConstructionAggregates()
   const [selectedId, setSelectedId] = useState(scenarios[0]?.id)
-  const scenarioIncidents = useSigmaStore(selectIncidentViewList)
+  const scenarioIncidents = useIncidentViews()
   const scenario = scenarios.find((item) => item.id === selectedId)!
   const run = scenarioRuns.filter((item) => item.scenarioId === selectedId).at(-1)
 
@@ -571,7 +571,7 @@ export function DeputiesPage() {
 export function RegulationsPage() {
   const { regulations, incidents, createRegulation } = useSigmaStore()
   const liveSummary = useSigmaStore(selectOutageSummary)
-  const construction = useSigmaStore(selectConstructionAggregates)
+  const construction = useConstructionAggregates()
   const [title, setTitle] = useState('')
   const [domain, setDomain] = useState('ЖКХ')
   const [selected, setSelected] = useState(regulations[0])

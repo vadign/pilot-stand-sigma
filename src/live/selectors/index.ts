@@ -1,5 +1,7 @@
+import { useMemo } from 'react'
 import { getDistrictName } from '../../lib/districts'
 import type { SigmaState } from '../../store/useSigmaStore'
+import { useSigmaStore } from '../../store/useSigmaStore'
 import type { LiveIncidentView } from '../types'
 
 export const selectSourceStatuses = (state: SigmaState) => state.live.sourceStatuses
@@ -57,3 +59,32 @@ export const selectDistrictOutageCards = (state: SigmaState) =>
     ...item,
     districtName: getDistrictName(item.districtId ?? item.district),
   }))
+
+export const useIncidentViews = (): LiveIncidentView[] => {
+  const incidents = useSigmaStore((state) => state.incidents)
+  const live = useSigmaStore((state) => state.live)
+  return useMemo(() => selectIncidentViewList({ ...useSigmaStore.getState(), incidents, live }), [incidents, live])
+}
+
+export const useConstructionAggregates = () => {
+  const construction = useSigmaStore((state) => state.live.construction)
+  return useMemo(() => construction?.payload.aggregates ?? [], [construction])
+}
+
+export const useDistrictOutageCards = () => {
+  const outages = useSigmaStore((state) => state.live.outages)
+  return useMemo(() => {
+    const topDistricts = outages?.payload.summary.topDistricts ?? []
+    return topDistricts.map((item) => ({ ...item, districtName: getDistrictName(item.districtId ?? item.district) }))
+  }, [outages])
+}
+
+export const useOutageHistorySeries = () => {
+  const history = useSigmaStore((state) => state.live.liveHistory)
+  return useMemo(() => history.map((snapshot) => ({
+    label: new Date(snapshot.snapshotAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
+    planned: snapshot.totals.planned,
+    emergency: snapshot.totals.emergency,
+    total: snapshot.totals.houses,
+  })), [history])
+}

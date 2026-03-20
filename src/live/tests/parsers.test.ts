@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { parse051OffPage } from '../parsers/parse051OffPage'
 import { parseCsvDataset } from '../parsers/parseCsvDataset'
 import { parseOpendataPassport } from '../parsers/parseOpendataPassport'
 import { calculateActiveConstruction, extractDistrictFromAddress, normalizeCommissionedRecord, normalizePermitRecord } from '../normalizers/normalizeConstructionToSigma'
 
-const base = join(fileURLToPath(new URL('.', import.meta.url)), 'fixtures')
+const base = join(process.cwd(), 'src/live/tests/fixtures')
 
 describe('parse051OffPage', () => {
   it('parses planned and emergency blocks', () => {
