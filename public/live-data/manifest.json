@@ -1,0 +1,61 @@
+{
+  "generatedAt": "2026-03-20T06:44:02.044Z",
+  "parseVersion": "1.0.0",
+  "records": [
+    {
+      "key": "051-latest",
+      "title": "051 latest snapshot",
+      "path": "/live-data/051/latest.json",
+      "updatedAt": "20.03.2026 09:30",
+      "fetchedAt": "2026-03-20T06:44:01.047Z",
+      "ttlMinutes": 30,
+      "sourceUrl": "https://051.novo-sibirsk.ru/SitePages/off.aspx",
+      "type": "real",
+      "status": "ready"
+    },
+    {
+      "key": "051-history",
+      "title": "051 snapshot history",
+      "path": "/live-data/051/history/index.json",
+      "updatedAt": "20.03.2026 09:30",
+      "fetchedAt": "2026-03-20T06:44:01.047Z",
+      "ttlMinutes": 30,
+      "sourceUrl": "https://051.novo-sibirsk.ru/SitePages/off.aspx",
+      "type": "real",
+      "status": "ready"
+    },
+    {
+      "key": "opendata-permits",
+      "title": "OpenData permits",
+      "path": "/live-data/opendata/construction-permits.json",
+      "updatedAt": "19.03.2026",
+      "fetchedAt": "2026-03-20T06:44:01.057Z",
+      "ttlMinutes": 1440,
+      "sourceUrl": "https://opendata.novo-sibirsk.ru/pass.aspx?ID=124",
+      "type": "real",
+      "status": "ready"
+    },
+    {
+      "key": "opendata-commissioned",
+      "title": "OpenData commissioned",
+      "path": "/live-data/opendata/construction-commissioned.json",
+      "updatedAt": "18.03.2026",
+      "fetchedAt": "2026-03-20T06:44:01.057Z",
+      "ttlMinutes": 1440,
+      "sourceUrl": "https://opendata.novo-sibirsk.ru/pass.aspx?ID=125",
+      "type": "real",
+      "status": "ready"
+    },
+    {
+      "key": "opendata-active",
+      "title": "OpenData active construction",
+      "path": "/live-data/opendata/construction-active.json",
+      "updatedAt": "2026-03-20T06:44:01.057Z",
+      "fetchedAt": "2026-03-20T06:44:01.057Z",
+      "ttlMinutes": 1440,
+      "sourceUrl": "https://opendata.novo-sibirsk.ru/pass.aspx?ID=124",
+      "type": "calculated",
+      "status": "ready"
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { selectConstructionAggregates, selectIncidentViewList, selectOutageSummary, selectSourceStatuses } from '../../live/selectors'
 import { useSigmaStore } from '../../store/useSigmaStore'
 import type { AskSigmaContext } from './types'
 
@@ -11,12 +12,15 @@ export class LocalAskSigmaProvider implements AskSigmaProvider {
     const state = useSigmaStore.getState()
     return {
       role: 'мэр',
-      incidents: state.incidents,
+      incidents: selectIncidentViewList(state),
       regulations: state.regulations,
       scenarios: state.scenarios,
       deputies: state.deputies,
       servicePerformance: state.servicePerformance,
       notifications: state.notifications,
+      liveSummary: selectOutageSummary(state),
+      constructionAggregates: selectConstructionAggregates(state),
+      sourceStatuses: selectSourceStatuses(state),
       now: new Date().toISOString(),
     }
   }

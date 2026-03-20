@@ -57,6 +57,28 @@ export const ResultRenderer = ({
           {result.approvals.map((item) => <li key={item.id} className="rounded border p-2">{item.id}: {item.reason} · {item.initiator}</li>)}
         </ul>
       )}
+      {result.sourceStatuses && (
+        <div className="mt-3 space-y-2 text-sm">
+          {result.sourceStatuses.map((status) => (
+            <div key={status.key} className="rounded border p-2">
+              <div className="font-semibold">{status.title}</div>
+              <div>{status.source}/{status.status} · {status.type}</div>
+              <div className="text-slate-500">Обновлено: {status.updatedAt ? new Date(status.updatedAt).toLocaleString('ru-RU') : '—'}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {result.constructionAggregates && (
+        <div className="mt-3 space-y-2 text-sm">
+          {result.constructionAggregates.map((item) => (
+            <div key={item.districtName} className="rounded border p-2">
+              <div className="font-semibold">{item.districtName}</div>
+              <div>Разрешения: {item.permits} · Ввод: {item.commissioned} · Active: {item.activeConstruction}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {result.regulations && (
         <ul className="mt-3 space-y-2 text-sm">

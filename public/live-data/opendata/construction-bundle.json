@@ -1,0 +1,239 @@
+{
+  "permitsMeta": {
+    "id": "124",
+    "title": "Разрешения на строительство",
+    "rows": 3,
+    "passportUrl": "https://opendata.novo-sibirsk.ru/pass.aspx?ID=124",
+    "csvUrl": "https://opendata.novo-sibirsk.ru/datasets/124.csv",
+    "updatedAt": "19.03.2026",
+    "fetchedAt": "2026-03-20T06:44:01.057Z",
+    "ttlMinutes": 1440
+  },
+  "commissionedMeta": {
+    "id": "125",
+    "title": "Ввод в эксплуатацию",
+    "rows": 2,
+    "passportUrl": "https://opendata.novo-sibirsk.ru/pass.aspx?ID=125",
+    "csvUrl": "https://opendata.novo-sibirsk.ru/datasets/125.csv",
+    "updatedAt": "18.03.2026",
+    "fetchedAt": "2026-03-20T06:44:01.057Z",
+    "ttlMinutes": 1440
+  },
+  "permits": [
+    {
+      "id": "permit-0",
+      "NomRazr": "54-001",
+      "DatRazr": "11.01.2026",
+      "Zastr": "ООО Сибирь Девелопмент",
+      "NameOb": "Жилой комплекс Берег",
+      "AdrOr": "Советский район, ул. Ильича, 10",
+      "KadNom": "54:35:091230:100",
+      "districtId": "sov",
+      "districtName": "Советский",
+      "raw": {
+        "NomRazr": "54-001",
+        "DatRazr": "11.01.2026",
+        "Zastr": "ООО Сибирь Девелопмент",
+        "NameOb": "Жилой комплекс Берег",
+        "AdrOr": "Советский район, ул. Ильича, 10",
+        "KadNom": "54:35:091230:100"
+      }
+    },
+    {
+      "id": "permit-1",
+      "NomRazr": "54-002",
+      "DatRazr": "15.01.2026",
+      "Zastr": "АО ЦентрСтрой",
+      "NameOb": "Школа на 1100 мест",
+      "AdrOr": "Ленинский район, ул. Титова, 99",
+      "KadNom": "54:35:062500:201",
+      "districtId": "len",
+      "districtName": "Ленинский",
+      "raw": {
+        "NomRazr": "54-002",
+        "DatRazr": "15.01.2026",
+        "Zastr": "АО ЦентрСтрой",
+        "NameOb": "Школа на 1100 мест",
+        "AdrOr": "Ленинский район, ул. Титова, 99",
+        "KadNom": "54:35:062500:201"
+      }
+    },
+    {
+      "id": "permit-2",
+      "NomRazr": "54-003",
+      "DatRazr": "20.01.2026",
+      "Zastr": "ООО Академ Парк",
+      "NameOb": "Лабораторный корпус",
+      "AdrOr": "Академгородок, пр. Лаврентьева, 12",
+      "KadNom": "54:35:091240:500",
+      "districtId": "sov",
+      "districtName": "Советский",
+      "raw": {
+        "NomRazr": "54-003",
+        "DatRazr": "20.01.2026",
+        "Zastr": "ООО Академ Парк",
+        "NameOb": "Лабораторный корпус",
+        "AdrOr": "Академгородок, пр. Лаврентьева, 12",
+        "KadNom": "54:35:091240:500"
+      }
+    }
+  ],
+  "commissioned": [
+    {
+      "id": "commissioned-0",
+      "NomRazr": "55-001",
+      "DatRazr": "01.02.2026",
+      "Zastr": "АО ЦентрСтрой",
+      "NameOb": "Школа на 1100 мест",
+      "Raion": "Ленинский",
+      "AdrOb": "Ленинский район, ул. Титова, 99",
+      "KadNom": "54:35:062500:201",
+      "districtId": "len",
+      "districtName": "Ленинский",
+      "raw": {
+        "NomRazr": "55-001",
+        "DatRazr": "01.02.2026",
+        "Zastr": "АО ЦентрСтрой",
+        "NameOb": "Школа на 1100 мест",
+        "Raion": "Ленинский",
+        "AdrOb": "Ленинский район, ул. Титова, 99",
+        "KadNom": "54:35:062500:201"
+      }
+    },
+    {
+      "id": "commissioned-1",
+      "NomRazr": "55-002",
+      "DatRazr": "02.02.2026",
+      "Zastr": "ООО Север",
+      "NameOb": "Спортивный блок",
+      "Raion": "Калининский",
+      "AdrOb": "Калининский район, ул. Богдана Хмельницкого, 3",
+      "KadNom": "54:35:041100:777",
+      "districtId": "kal",
+      "districtName": "Калининский",
+      "raw": {
+        "NomRazr": "55-002",
+        "DatRazr": "02.02.2026",
+        "Zastr": "ООО Север",
+        "NameOb": "Спортивный блок",
+        "Raion": "Калининский",
+        "AdrOb": "Калининский район, ул. Богдана Хмельницкого, 3",
+        "KadNom": "54:35:041100:777"
+      }
+    }
+  ],
+  "active": [
+    {
+      "id": "active-0",
+      "KadNom": "54:35:091230:100",
+      "permit": {
+        "id": "permit-0",
+        "NomRazr": "54-001",
+        "DatRazr": "11.01.2026",
+        "Zastr": "ООО Сибирь Девелопмент",
+        "NameOb": "Жилой комплекс Берег",
+        "AdrOr": "Советский район, ул. Ильича, 10",
+        "KadNom": "54:35:091230:100",
+        "districtId": "sov",
+        "districtName": "Советский",
+        "raw": {
+          "NomRazr": "54-001",
+          "DatRazr": "11.01.2026",
+          "Zastr": "ООО Сибирь Девелопмент",
+          "NameOb": "Жилой комплекс Берег",
+          "AdrOr": "Советский район, ул. Ильича, 10",
+          "KadNom": "54:35:091230:100"
+        }
+      },
+      "status": "active",
+      "districtId": "sov",
+      "districtName": "Советский",
+      "address": "Советский район, ул. Ильича, 10",
+      "developer": "ООО Сибирь Девелопмент",
+      "objectName": "Жилой комплекс Берег"
+    },
+    {
+      "id": "active-1",
+      "KadNom": "54:35:091240:500",
+      "permit": {
+        "id": "permit-2",
+        "NomRazr": "54-003",
+        "DatRazr": "20.01.2026",
+        "Zastr": "ООО Академ Парк",
+        "NameOb": "Лабораторный корпус",
+        "AdrOr": "Академгородок, пр. Лаврентьева, 12",
+        "KadNom": "54:35:091240:500",
+        "districtId": "sov",
+        "districtName": "Советский",
+        "raw": {
+          "NomRazr": "54-003",
+          "DatRazr": "20.01.2026",
+          "Zastr": "ООО Академ Парк",
+          "NameOb": "Лабораторный корпус",
+          "AdrOr": "Академгородок, пр. Лаврентьева, 12",
+          "KadNom": "54:35:091240:500"
+        }
+      },
+      "status": "active",
+      "districtId": "sov",
+      "districtName": "Советский",
+      "address": "Академгородок, пр. Лаврентьева, 12",
+      "developer": "ООО Академ Парк",
+      "objectName": "Лабораторный корпус"
+    },
+    {
+      "id": "active-comm-0",
+      "KadNom": "54:35:041100:777",
+      "commissioned": {
+        "id": "commissioned-1",
+        "NomRazr": "55-002",
+        "DatRazr": "02.02.2026",
+        "Zastr": "ООО Север",
+        "NameOb": "Спортивный блок",
+        "Raion": "Калининский",
+        "AdrOb": "Калининский район, ул. Богдана Хмельницкого, 3",
+        "KadNom": "54:35:041100:777",
+        "districtId": "kal",
+        "districtName": "Калининский",
+        "raw": {
+          "NomRazr": "55-002",
+          "DatRazr": "02.02.2026",
+          "Zastr": "ООО Север",
+          "NameOb": "Спортивный блок",
+          "Raion": "Калининский",
+          "AdrOb": "Калининский район, ул. Богдана Хмельницкого, 3",
+          "KadNom": "54:35:041100:777"
+        }
+      },
+      "status": "commissioned_without_permit",
+      "districtId": "kal",
+      "districtName": "Калининский",
+      "address": "Калининский район, ул. Богдана Хмельницкого, 3",
+      "developer": "ООО Север",
+      "objectName": "Спортивный блок"
+    }
+  ],
+  "aggregates": [
+    {
+      "districtId": "sov",
+      "districtName": "Советский",
+      "permits": 2,
+      "commissioned": 0,
+      "activeConstruction": 2
+    },
+    {
+      "districtId": "kal",
+      "districtName": "Калининский",
+      "permits": 0,
+      "commissioned": 1,
+      "activeConstruction": 1
+    },
+    {
+      "districtId": "len",
+      "districtName": "Ленинский",
+      "permits": 1,
+      "commissioned": 1,
+      "activeConstruction": 0
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "id": "125",
+    "title": "Ввод в эксплуатацию",
+    "rows": 2,
+    "passportUrl": "https://opendata.novo-sibirsk.ru/pass.aspx?ID=125",
+    "csvUrl": "https://opendata.novo-sibirsk.ru/datasets/125.csv",
+    "updatedAt": "18.03.2026",
+    "fetchedAt": "2026-03-20T06:44:01.057Z",
+    "ttlMinutes": 1440
+  },
+  "records": [
+    {
+      "id": "commissioned-0",
+      "NomRazr": "55-001",
+      "DatRazr": "01.02.2026",
+      "Zastr": "АО ЦентрСтрой",
+      "NameOb": "Школа на 1100 мест",
+      "Raion": "Ленинский",
+      "AdrOb": "Ленинский район, ул. Титова, 99",
+      "KadNom": "54:35:062500:201",
+      "districtId": "len",
+      "districtName": "Ленинский",
+      "raw": {
+        "NomRazr": "55-001",
+        "DatRazr": "01.02.2026",
+        "Zastr": "АО ЦентрСтрой",
+        "NameOb": "Школа на 1100 мест",
+        "Raion": "Ленинский",
+        "AdrOb": "Ленинский район, ул. Титова, 99",
+        "KadNom": "54:35:062500:201"
+      }
+    },
+    {
+      "id": "commissioned-1",
+      "NomRazr": "55-002",
+      "DatRazr": "02.02.2026",
+      "Zastr": "ООО Север",
+      "NameOb": "Спортивный блок",
+      "Raion": "Калининский",
+      "AdrOb": "Калининский район, ул. Богдана Хмельницкого, 3",
+      "KadNom": "54:35:041100:777",
+      "districtId": "kal",
+      "districtName": "Калининский",
+      "raw": {
+        "NomRazr": "55-002",
+        "DatRazr": "02.02.2026",
+        "Zastr": "ООО Север",
+        "NameOb": "Спортивный блок",
+        "Raion": "Калининский",
+        "AdrOb": "Калининский район, ул. Богдана Хмельницкого, 3",
+        "KadNom": "54:35:041100:777"
+      }
+    }
+  ]
+}
