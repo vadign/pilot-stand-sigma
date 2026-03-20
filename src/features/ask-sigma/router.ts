@@ -1,7 +1,7 @@
 import type { AskSigmaEntity, AskSigmaQuery } from './types'
 
 const entityKeywords: Record<AskSigmaEntity, string[]> = {
-  incident: ['инцидент', 'событи', 'авар', 'отключен', 'прорыв', 'сбой'],
+  incident: ['инцидент', 'событи', 'авар', 'отключен', 'прорыв', 'сбой', 'жкх'],
   regulation: ['регламент', 'правил', 'норм', 'предписан', 'что делать'],
   history: ['истори', 'аналит', 'динамик', 'тренд', 'за неделю', 'за месяц'],
   scenario: ['сценар', 'прогноз', 'что будет', 'смоделируй'],
@@ -10,6 +10,8 @@ const entityKeywords: Record<AskSigmaEntity, string[]> = {
   dashboard: ['сводка', 'панель', 'сейчас'],
   briefing: ['бриф', '24 часа'],
   map: ['карта', 'на карте', 'координат'],
+  construction: ['стройк', 'строительств', 'разрешен', 'ввод в эксплуатац'],
+  sources: ['источник', 'live-источник', 'когда обновлялись', 'обновлялись данные', 'freshness'],
   help: ['помощь', 'подскажи', 'что умеешь'],
 }
 
@@ -38,10 +40,6 @@ export const routeEntity = (query: AskSigmaQuery): { entity: AskSigmaEntity; sub
   }
 
   const subsystem = Object.entries(subsystemKeywords).find(([, keywords]) => keywords.some((keyword) => includesKeyword(query, keyword)))?.[0]
-
-  if (bestScore <= 0) {
-    return { entity: 'help', subsystem }
-  }
-
+  if (bestScore <= 0) return { entity: 'help', subsystem }
   return { entity: best, subsystem }
 }

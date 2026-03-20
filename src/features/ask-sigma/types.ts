@@ -1,4 +1,5 @@
 import type { Deputy, Incident, Regulation, ServicePerformance } from '../../types'
+import type { DistrictConstructionAggregate, SigmaLiveOutageSummary, SourceStatusCard } from '../../live/types'
 
 export type SigmaRole = 'мэр' | 'диспетчер' | 'аналитик'
 export type VoiceState = 'idle' | 'listening' | 'processing' | 'error' | 'unsupported'
@@ -21,6 +22,8 @@ export type AskSigmaEntity =
   | 'dashboard'
   | 'briefing'
   | 'map'
+  | 'construction'
+  | 'sources'
   | 'help'
 
 export interface AskSigmaIntent {
@@ -48,6 +51,8 @@ export type AskSigmaOperation =
   | 'DEPUTY_MODE_CHANGE'
   | 'APPROVALS'
   | 'NAVIGATE'
+  | 'LIVE_SOURCES'
+  | 'CONSTRUCTION'
   | 'HELP'
   | 'UNKNOWN'
 
@@ -77,6 +82,8 @@ export type AskSigmaResultType =
   | 'SCENARIO_COMPARE'
   | 'DEPUTY_STATUS'
   | 'DEPUTY_MODE_CHANGE'
+  | 'LIVE_SOURCE_STATUS'
+  | 'CONSTRUCTION_AGGREGATES'
   | 'HELP'
   | 'UNKNOWN'
 
@@ -89,11 +96,14 @@ export interface AskSigmaContext {
   deputies: Deputy[]
   servicePerformance: ServicePerformance[]
   notifications: { id: string; text: string; level: string; createdAt: string }[]
+  liveSummary?: SigmaLiveOutageSummary
+  constructionAggregates?: DistrictConstructionAggregate[]
+  sourceStatuses?: SourceStatusCard[]
   now: string
 }
 
 export interface AskSigmaExplain {
-  dataType: 'real' | 'calculated' | 'simulation' | 'pilot'
+  dataType: 'real' | 'calculated' | 'simulation' | 'pilot' | 'mock-fallback'
   source: string
   updatedAt: string
 }
@@ -116,6 +126,8 @@ export interface AskSigmaResult {
   compare?: { baseline: string; intervention: string; effects: string[] }
   deputy?: Deputy
   approvals?: { id: string; reason: string; initiator: string }[]
+  constructionAggregates?: DistrictConstructionAggregate[]
+  sourceStatuses?: SourceStatusCard[]
   actions?: { label: string; route?: string; incidentId?: string; district?: string }[]
   hints?: AskSigmaHint[]
   explain: AskSigmaExplain

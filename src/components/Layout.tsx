@@ -1,21 +1,29 @@
-import { Building2, Menu, X } from 'lucide-react'
+import { Building2, Menu, Radio, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useSigmaStore } from '../store/useSigmaStore'
 import { AskSigmaBar } from '../features/ask-sigma/AskSigmaBar'
 import { AnswerPanel } from '../features/ask-sigma/rendering/AnswerPanel'
 import { useAskSigmaStore } from '../features/ask-sigma/store'
+import { Badge } from './ui'
+import { useLiveDataBootstrap } from '../live/hooks/useLiveDataBootstrap'
 
 const nav = [
   ['/mayor-dashboard', 'Панель мэра'],
   ['/briefing', 'Управленческий бриф'],
   ['/history', 'История и аналитика'],
+  ['/operations', 'Оперативный монитор'],
+  ['/deputies', 'Цифровые заместители'],
+  ['/regulations', 'Реестр регламентов'],
 ]
 
 export function Layout() {
   const bump = useSigmaStore((s) => s.bumpLive)
+  const live = useSigmaStore((s) => s.live)
+  const sourceMode = useSigmaStore((s) => s.sourceMode)
   const isAnswerOpen = useAskSigmaStore((s) => s.isOpen)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  useLiveDataBootstrap()
 
   useEffect(() => {
     const timer = setInterval(() => bump(), 12000)
@@ -32,6 +40,16 @@ export function Layout() {
           <div>
             <div className="text-3xl font-bold">Сигма City</div>
             <div className="text-sm text-slate-500">Кабинет руководителя</div>
+          </div>
+        </div>
+
+        <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+          <div className="flex items-center gap-2 text-sm font-semibold text-slate-900"><Radio size={14} />Источник данных</div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Badge text={`режим: ${sourceMode}`} className="bg-blue-50 text-blue-700" />
+            {live.sourceStatuses.map((status) => (
+              <Badge key={status.key} text={`${status.key}: ${status.source}/${status.status}`} className={status.status === 'ready' ? 'bg-emerald-50 text-emerald-700' : status.status === 'stale' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'} />
+            ))}
           </div>
         </div>
 
@@ -90,3 +108,4 @@ export function Layout() {
     </div>
   )
 }
+

@@ -1,0 +1,103 @@
+{
+  "sourceUrl": "https://051.novo-sibirsk.ru/SitePages/off.aspx",
+  "snapshotAt": "20.03.2026 09:30",
+  "fetchedAt": "2026-03-20T06:59:02.413Z",
+  "parseVersion": "1.0.0",
+  "rawHash": "e18f759d1ee72056ab987a041c7fbce76854b462bae4a58aadc44c3a018b727e",
+  "planned": [
+    {
+      "district": "",
+      "utilityType": "hot_water",
+      "outageKind": "planned",
+      "houses": 12,
+      "recoveryTime": "18:00",
+      "reason": "плановые работы на теплотрассе",
+      "description": "Ленинский район | Горячая вода | 12 домов | до 18:00 | причина: плановые работы на теплотрассе"
+    },
+    {
+      "district": "",
+      "utilityType": "heating",
+      "outageKind": "planned",
+      "houses": 6,
+      "recoveryTime": "17:30",
+      "reason": "переключение квартального контура",
+      "description": "Советский район | Отопление | 6 домов | до 17:30 | причина: переключение квартального контура"
+    },
+    {
+      "district": "",
+      "utilityType": "electricity",
+      "outageKind": "planned",
+      "houses": 8,
+      "recoveryTime": "15:00",
+      "reason": "ремонт сети",
+      "description": "Калининский район | Электроснабжение | 8 домов | до 15:00 | причина: ремонт сети"
+    }
+  ],
+  "emergency": [
+    {
+      "district": "",
+      "utilityType": "cold_water",
+      "outageKind": "emergency",
+      "houses": 14,
+      "recoveryTime": "13:30",
+      "reason": "повреждение трубопровода",
+      "description": "Кировский район | Холодная вода | 14 домов | до 13:30 | причина: повреждение трубопровода"
+    },
+    {
+      "district": "",
+      "utilityType": "heating",
+      "outageKind": "emergency",
+      "houses": 9,
+      "recoveryTime": "14:00",
+      "reason": "порыв на магистрали",
+      "description": "Ленинский район | Отопление | 9 домов | до 14:00 | причина: порыв на магистрали"
+    },
+    {
+      "district": "",
+      "utilityType": "sewer",
+      "outageKind": "emergency",
+      "houses": 5,
+      "recoveryTime": "16:00",
+      "reason": "авария на коллекторе",
+      "description": "Октябрьский район | Водоотведение | 5 домов | до 16:00 | причина: авария на коллекторе"
+    }
+  ],
+  "utilities": [
+    {
+      "utilityType": "heating",
+      "plannedHouses": 6,
+      "emergencyHouses": 9,
+      "incidents": 2
+    },
+    {
+      "utilityType": "cold_water",
+      "plannedHouses": 0,
+      "emergencyHouses": 14,
+      "incidents": 1
+    },
+    {
+      "utilityType": "hot_water",
+      "plannedHouses": 12,
+      "emergencyHouses": 0,
+      "incidents": 1
+    },
+    {
+      "utilityType": "electricity",
+      "plannedHouses": 8,
+      "emergencyHouses": 0,
+      "incidents": 1
+    },
+    {
+      "utilityType": "sewer",
+      "plannedHouses": 0,
+      "emergencyHouses": 5,
+      "incidents": 1
+    }
+  ],
+  "totals": {
+    "houses": 54,
+    "planned": 26,
+    "emergency": 28,
+    "incidents": 6
+  }
+}
