@@ -25,7 +25,9 @@ export const selectIncidentViewList = (state: SigmaState): LiveIncidentView[] =>
     timeline: [...incident.timeline, ...(workflow[incident.id] ?? []).map((entry) => ({ id: entry.id, at: entry.at, author: entry.author, text: entry.text }))],
   }))
 
-  const mockViews = state.incidents.map((incident) => ({
+  const mockViews = state.incidents
+    .filter((incident) => incident.subsystem !== 'heat')
+    .map((incident) => ({
     ...incident,
     sourceKind: 'mock' as const,
     sourceBadge: 'mock',
