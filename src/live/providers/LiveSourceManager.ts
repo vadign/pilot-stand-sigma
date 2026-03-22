@@ -14,6 +14,13 @@ interface ManagerOptions {
   runtimeEnabled: boolean
 }
 
+const resolveFreshnessStatus = (updatedAt: string | undefined, ttlMinutes: number): { status: 'ready' | 'stale'; isStale: boolean } => {
+  if (!updatedAt) return { status: 'stale', isStale: true }
+  const ageMs = Date.now() - new Date(updatedAt).getTime()
+  const isStale = Number.isNaN(ageMs) || ageMs > ttlMinutes * 60 * 1000
+  return { status: isStale ? 'stale' : 'ready', isStale }
+}
+
 const createCacheEntry = <T,>(key: string, payload: T, ttlMinutes: number, sourceUrl: string) => ({
   key,
   payload,
@@ -91,6 +98,7 @@ export class LiveSourceManager {
 
     if (mode !== 'mock' && snapshot.latest) {
       const current = snapshot.latest
+      const freshness = resolveFreshnessStatus(current.snapshotAt, sourceRegistry.power051.ttlMinutes)
       return {
         payload: {
           snapshot: current,
@@ -104,8 +112,8 @@ export class LiveSourceManager {
           fetchedAt: current.fetchedAt,
           updatedAt: current.snapshotAt,
           sourceUrl: current.sourceUrl,
-          status: 'ready',
-          message: 'Показан последний локальный snapshot 051.',
+          status: freshness.status,
+          message: freshness.isStale ? 'Показан локальный snapshot 051, но он устарел по TTL.' : 'Показан последний локальный snapshot 051.',
         },
       }
     }
@@ -167,16 +175,17 @@ export class LiveSourceManager {
     if (mode !== 'mock') {
       try {
         const bundle = await this.snapshotProvider.getConstructionBundle()
+        const freshness = resolveFreshnessStatus(bundle.permitsMeta.updatedAt ?? bundle.permitsMeta.fetchedAt, sourceRegistry.constructionActive.ttlMinutes)
         return {
           payload: { ...bundle, aggregates: bundle.aggregates.length > 0 ? bundle.aggregates : aggregateConstructionByDistrict(bundle.permits, bundle.commissioned, bundle.active) },
           meta: {
             source: 'snapshot',
             type: 'real',
             fetchedAt: bundle.permitsMeta.fetchedAt,
-            updatedAt: bundle.permitsMeta.updatedAt,
+            updatedAt: bundle.permitsMeta.updatedAt ?? bundle.permitsMeta.fetchedAt,
             sourceUrl: bundle.permitsMeta.passportUrl,
-            status: 'ready',
-            message: 'Показан последний локальный snapshot OpenData.',
+            status: freshness.status,
+            message: freshness.isStale ? 'Показан локальный snapshot OpenData, но он устарел по TTL.' : 'Показан последний локальный snapshot OpenData.',
           },
         }
       } catch {

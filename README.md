@@ -62,8 +62,9 @@ VITE_OPENDATA_PROXY_URL=
 
 ### Поведение env
 - `VITE_ENABLE_RUNTIME_LIVE_FETCH=false` — только snapshot + cache + mock.
-- если `true`, клиент сначала пробует runtime-refresh;
-- если прямой fetch не проходит из-за CORS/timeout/parser error, приложение откатывается на snapshot/cache/mock и показывает это в UI.
+- если `true`, клиент сначала пробует прямой runtime-refresh к официальному домену;
+- если прямой fetch не проходит из-за CORS/timeout/parser error, клиент автоматически пробует `VITE_*_PROXY_URL`;
+- если и proxy недоступен, приложение откатывается на snapshot/cache/mock и показывает это в UI.
 
 ## Синхронизация live snapshots
 

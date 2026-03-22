@@ -70,7 +70,7 @@
 - `errorState`
 
 ### Priority
-1. runtime live fetch
+1. runtime live fetch (direct URL → optional proxy fallback)
 2. snapshot asset
 3. IndexedDB cache
 4. mock fallback
@@ -78,7 +78,7 @@
 ## 4. Known limitations
 
 - В текущем demo 051 чаще всего дает районный уровень, а не дом.
-- Runtime fetch может упереться в CORS/сетевые ограничения браузера или среды.
+- Runtime fetch сначала идет в прямой официальный URL и только затем в optional proxy; оба шага могут упереться в CORS/сетевые ограничения браузера или среды.
 - История 051 начинает накапливаться только после первых запусков sync.
 - Координаты для OpenData не додумываются, если в исходном наборе их нет.
 - В sandbox CI/agent среда может не иметь доступа к официальным доменам; для этого в репозитории лежат fixture snapshots.

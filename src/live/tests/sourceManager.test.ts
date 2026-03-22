@@ -21,30 +21,38 @@ const constructionBundle: ConstructionDatasetBundle = {
   aggregates: [],
 }
 
-const makeManager = ({ runtimeOk }: { runtimeOk: boolean }) => new LiveSourceManager(
-  {
-    getManifest: async () => ({ generatedAt: '2026-03-20T09:31:00.000Z', parseVersion: '1.0.0', records: [] }),
-    get051Latest: async () => snapshot051,
-    get051History: async () => [snapshot051],
-    getConstructionBundle: async () => constructionBundle,
-  } as never,
-  {
-    read: async () => ({ entry: undefined, fresh: false }),
-    write: async () => undefined,
-  } as never,
-  {
-    fetchRuntime: async () => {
-      if (!runtimeOk) throw new Error('runtime down')
-      return { payload: { snapshot: snapshot051, incidents: [], summary: { totalHouses: 5, plannedHouses: 2, emergencyHouses: 3, activeIncidents: 2, topDistricts: [], utilities: [] }, }, meta: { source: 'runtime', type: 'real', fetchedAt: snapshot051.fetchedAt, updatedAt: snapshot051.snapshotAt, sourceUrl: snapshot051.sourceUrl, status: 'ready', message: 'ok' } }
-    },
-  } as never,
-  {
-    fetchRuntime: async () => {
-      if (!runtimeOk) throw new Error('runtime down')
-      return { payload: constructionBundle, meta: { source: 'runtime', type: 'real', fetchedAt: constructionBundle.permitsMeta.fetchedAt, updatedAt: constructionBundle.permitsMeta.fetchedAt, sourceUrl: constructionBundle.permitsMeta.passportUrl, status: 'ready', message: 'ok' } }
-    },
-  } as never,
-)
+const makeManager = ({ runtimeOk, snapshotAt = snapshot051.snapshotAt, permitsUpdatedAt = constructionBundle.permitsMeta.fetchedAt }: { runtimeOk: boolean; snapshotAt?: string; permitsUpdatedAt?: string }) => {
+  const localSnapshot = { ...snapshot051, snapshotAt }
+  const localBundle: ConstructionDatasetBundle = {
+    ...constructionBundle,
+    permitsMeta: { ...constructionBundle.permitsMeta, updatedAt: permitsUpdatedAt },
+  }
+
+  return new LiveSourceManager(
+    {
+      getManifest: async () => ({ generatedAt: '2026-03-20T09:31:00.000Z', parseVersion: '1.0.0', records: [] }),
+      get051Latest: async () => localSnapshot,
+      get051History: async () => [localSnapshot],
+      getConstructionBundle: async () => localBundle,
+    } as never,
+    {
+      read: async () => ({ entry: undefined, fresh: false }),
+      write: async () => undefined,
+    } as never,
+    {
+      fetchRuntime: async () => {
+        if (!runtimeOk) throw new Error('runtime down')
+        return { payload: { snapshot: localSnapshot, incidents: [], summary: { totalHouses: 5, plannedHouses: 2, emergencyHouses: 3, activeIncidents: 2, topDistricts: [], utilities: [] }, }, meta: { source: 'runtime', type: 'real', fetchedAt: localSnapshot.fetchedAt, updatedAt: localSnapshot.snapshotAt, sourceUrl: localSnapshot.sourceUrl, status: 'ready', message: 'ok' } }
+      },
+    } as never,
+    {
+      fetchRuntime: async () => {
+        if (!runtimeOk) throw new Error('runtime down')
+        return { payload: localBundle, meta: { source: 'runtime', type: 'real', fetchedAt: localBundle.permitsMeta.fetchedAt, updatedAt: localBundle.permitsMeta.fetchedAt, sourceUrl: localBundle.permitsMeta.passportUrl, status: 'ready', message: 'ok' } }
+      },
+    } as never,
+  )
+}
 
 describe('LiveSourceManager', () => {
   it('prefers runtime over snapshot when enabled', async () => {
@@ -69,5 +77,18 @@ describe('LiveSourceManager', () => {
     const bundle: LiveBundle = await makeManager({ runtimeOk: false }).loadBundle({ mode: 'hybrid', runtimeEnabled: false })
     expect(bundle.sourceStatuses).toHaveLength(2)
     expect(bundle.sourceStatuses[0]?.ttlMinutes).toBe(30)
+  })
+
+  it('marks stale snapshots when ttl is exceeded', async () => {
+    const bundle = await makeManager({
+      runtimeOk: false,
+      snapshotAt: '2026-03-18T09:30:00.000Z',
+      permitsUpdatedAt: '2026-03-18T09:00:00.000Z',
+    }).loadBundle({ mode: 'hybrid', runtimeEnabled: false })
+
+    expect(bundle.outages.meta.source).toBe('snapshot')
+    expect(bundle.outages.meta.status).toBe('stale')
+    expect(bundle.outages.meta.message).toContain('устарел')
+    expect(bundle.construction.meta.status).toBe('stale')
   })
 })
