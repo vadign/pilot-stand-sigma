@@ -6,7 +6,7 @@
     "passportUrl": "https://opendata.novo-sibirsk.ru/pass.aspx?ID=124",
     "csvUrl": "https://opendata.novo-sibirsk.ru/datasets/124.csv",
     "updatedAt": "19.03.2026",
-    "fetchedAt": "2026-03-20T07:01:07.707Z",
+    "fetchedAt": "2026-03-23T05:59:51.399Z",
     "ttlMinutes": 1440
   },
   "commissionedMeta": {
@@ -16,7 +16,7 @@
     "passportUrl": "https://opendata.novo-sibirsk.ru/pass.aspx?ID=125",
     "csvUrl": "https://opendata.novo-sibirsk.ru/datasets/125.csv",
     "updatedAt": "18.03.2026",
-    "fetchedAt": "2026-03-20T07:01:07.707Z",
+    "fetchedAt": "2026-03-23T05:59:51.399Z",
     "ttlMinutes": 1440
   },
   "permits": [

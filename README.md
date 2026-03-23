@@ -37,8 +37,18 @@ Sigma остается frontend-only приложением на React + Vite + 
 ```bash
 npm install
 cp .env.example .env
-npm run sync:live
 npm run dev
+```
+
+`npm run dev` теперь:
+- делает стартовую синхронизацию snapshots;
+- поднимает Vite;
+- повторяет `sync:live` автоматически раз в час.
+
+Если нужен только UI без фонового обновления snapshots, используйте:
+
+```bash
+npm run dev:vite
 ```
 
 Сборка не требует сети, если snapshots уже лежат в `public/live-data`:
@@ -83,12 +93,19 @@ VITE_OPENDATA_PROXY_URL=
 ### `npm run sync:live`
 Запускает обе синхронизации и пересобирает `public/live-data/manifest.json`.
 
+### `npm run sync:live:hourly`
+Запускает стартовую синхронизацию, затем повторяет `sync:live` раз в час в фоновом long-running процессе.
+
+Интервал можно переопределить так: `SIGMA_SNAPSHOT_SYNC_INTERVAL_MS=1800000 npm run dev`.
+По умолчанию используется `3600000` миллисекунд, то есть 1 час.
+
 > В sandbox этого задания внешние сайты были недоступны, поэтому sync-скрипты автоматически откатились на fixture snapshots. В обычной среде с доступом к доменам они используют реальные официальные источники.
 
 ## Структура live-модуля
 
 ```text
 scripts/
+  dev.mts
   sync-051.mts
   sync-opendata.mts
   sync-live.mts
@@ -190,8 +207,7 @@ npm run build
 
 ## Проверка live-интеграции локально
 
-1. Синхронизировать snapshots: `npm run sync:live`
-2. Запустить UI: `npm run dev`
+1. Запустить UI: `npm run dev`
 3. Проверить:
    - `/mayor-dashboard` — KPI и карта 051;
    - `/briefing` — блок строительства;
