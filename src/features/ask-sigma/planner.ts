@@ -22,6 +22,23 @@ export const createPlan = (query: AskSigmaQuery): AskSigmaPlan => {
   if (/(стройки по районам|активные стройки|ввод в эксплуатацию|что по строительству)/i.test(text)) {
     return { operation: 'CONSTRUCTION', entity: 'construction', filters: { district: district ?? '' }, text }
   }
+
+  if (/(общественный транспорт|покажи общественный транспорт на карте|покажи транспорт на карте)/i.test(text)) {
+    return { operation: 'PUBLIC_TRANSPORT_SUMMARY', entity: 'transport', text }
+  }
+  if (/(какой тариф на автобус|тарифы на проезд|тариф на транспорт|социальный тариф)/i.test(text)) {
+    return { operation: 'TRANSIT_FARES', entity: 'transport', text }
+  }
+  if (/(какие остановки у маршрута|маршрут\s*\d+|какие маршруты есть в|топ транспортных узлов)/i.test(text)) {
+    return { operation: 'TRANSIT_ROUTE_LOOKUP', entity: 'transport', text }
+  }
+  if (/(сколько общих маршрутов между|связность районов)/i.test(text)) {
+    return { operation: 'TRANSIT_DISTRICT_COMPARE', entity: 'transport', text }
+  }
+  if (/(остановки в|остановки с павильоном|сколько остановок в)/i.test(text)) {
+    return { operation: 'TRANSIT_STOPS', entity: 'transport', text }
+  }
+
   if (/(покажи live-источники|когда обновлялись данные|источники данных|live-источники)/i.test(text)) {
     return { operation: 'LIVE_SOURCES', entity: 'sources', text }
   }
@@ -42,6 +59,7 @@ export const createPlan = (query: AskSigmaQuery): AskSigmaPlan => {
 
   if (entity === 'incident') return { operation: 'FILTER', entity, filters: { subsystem: subsystem ?? '', district: district ?? '' }, text }
   if (entity === 'construction') return { operation: 'CONSTRUCTION', entity, filters: { district: district ?? '' }, text }
+  if (entity === 'transport') return { operation: 'PUBLIC_TRANSPORT_SUMMARY', entity, text }
   if (entity === 'sources') return { operation: 'LIVE_SOURCES', entity, text }
   if (entity === 'help') return { operation: isExplicitHelpRequest ? 'HELP' : 'UNKNOWN', entity, text }
   return { operation: 'UNKNOWN', entity, text }

@@ -1,4 +1,6 @@
 import { getDistrictAnswerName } from '../../lib/districts'
+import { defaultTransportFares, defaultTransportStops } from '../public-transport/data/defaultTransportData'
+import { getTransportDistrictLabel, selectCurrentFareCards, selectDistrictConnectivity, selectFilteredStops, selectGlobalTransportMetrics, selectRouteDetails, selectStopsForRoute } from '../public-transport/selectors'
 import type { AskSigmaHint, AskSigmaPlan, AskSigmaResult, SigmaRole } from './types'
 import type { AskSigmaProvider } from './provider'
 
@@ -7,15 +9,50 @@ const supportedQuestions: AskSigmaHint[] = [
   { question: 'отключения сейчас', description: 'текущая live-сводка по 051 и fallback-режим.' },
   { question: 'аварийные отключения', description: 'аварийные live-события по 051.' },
   { question: 'стройки по районам', description: 'агрегаты по open data 124/125.' },
-  { question: 'покажи live-источники', description: 'статус источников, TTL и обновление.' },
-  { question: 'когда обновлялись данные', description: 'последняя актуализация snapshot/cache/runtime.' },
-  { question: 'что сейчас в жкх', description: 'общая картина по ЖКХ и отоплению.' },
   { question: 'события в кировском районе', description: 'поиск и фильтрация событий по конкретному району города.' },
+  { question: 'общественный транспорт', description: 'сводка по остановкам, маршрутам и тарифам.' },
+  { question: 'остановки в советском районе', description: 'поиск остановок по району.' },
+  { question: 'какой тариф на автобус', description: 'карточки тарифов из dataset 51.' },
+  { question: 'сколько общих маршрутов между советским и центральным', description: 'связность районов по пересечению маршрутов.' },
 ]
 
 const getRequestedDistrict = (plan: AskSigmaPlan): string | undefined => String(plan.filters?.district ?? '').trim() || undefined
 const matchesDistrict = (district: string | undefined, incidentDistrict: string): boolean => !district || incidentDistrict === district
 const formatDistrictLabel = (district?: string): string => district ? `по району «${getDistrictAnswerName(district)}»` : ''
+const normalize = (value: string): string => value.toLowerCase().replace(/ё/g, 'е')
+
+const getTransportData = (provider: AskSigmaProvider) => {
+  const context = provider.getContext()
+  return {
+    context,
+    stops: context.publicTransport?.stops ?? defaultTransportStops,
+    fares: context.publicTransport?.fares ?? defaultTransportFares,
+  }
+}
+
+const detectTransportRoute = (text: string): string | undefined => text.match(/маршрут[а-я\s]*?(\d+[a-zа-я-]*)/i)?.[1] ?? text.match(/\b(\d+[a-zа-я-]*)\b/i)?.[1]
+
+const buildDistrictAliases = (district: string): string[] => {
+  const normalized = normalize(district)
+  const aliases = [normalized]
+  if (normalized.endsWith('ский')) {
+    const base = normalized.slice(0, -2)
+    aliases.push(`${base}ого`, `${base}ому`, `${base}ом`, `${base}им`)
+  }
+  if (normalized.endsWith('ный')) {
+    const base = normalized.slice(0, -2)
+    aliases.push(`${base}ого`, `${base}ому`, `${base}ом`, `${base}ым`)
+  }
+  if (normalized.includes('совет')) aliases.push('академгородок', 'академгородке', 'академгородка')
+  return aliases
+}
+
+const detectTransportDistricts = (text: string, availableDistricts: string[]): string[] => {
+  const normalized = normalize(text)
+  const aliases = availableDistricts.flatMap((district) => buildDistrictAliases(district).map((alias) => ({ alias, district })))
+
+  return aliases.filter((item) => normalized.includes(item.alias)).map((item) => item.district).filter((district, index, list) => list.indexOf(district) === index)
+}
 
 export const executePlan = (plan: AskSigmaPlan, provider: AskSigmaProvider, role: SigmaRole): AskSigmaResult => {
   const context = provider.getContext()
@@ -139,8 +176,92 @@ export const executePlan = (plan: AskSigmaPlan, provider: AskSigmaProvider, role
         explain: { ...explainBase, source: 'OpenData Novosibirsk', dataType: 'real' },
       }
     }
+    case 'PUBLIC_TRANSPORT_SUMMARY': {
+      const { stops, fares } = getTransportData(provider)
+      const metrics = selectGlobalTransportMetrics(stops, fares)
+      return {
+        type: 'PUBLIC_TRANSPORT_SUMMARY',
+        title: 'Общественный транспорт',
+        summary: `Остановок: ${metrics.totalStops}, уникальных маршрутов: ${metrics.totalUniqueRoutes}, доля павильонов: ${(metrics.pavilionShare * 100).toFixed(1)}%.`,
+        kpis: [
+          { label: 'Остановки', value: String(metrics.totalStops) },
+          { label: 'Маршруты', value: String(metrics.totalUniqueRoutes) },
+          { label: 'Павильоны', value: `${(metrics.pavilionShare * 100).toFixed(1)}%` },
+        ],
+        actions: [{ label: 'Открыть вкладку', route: '/public-transport' }, { label: 'Показать на карте', route: '/public-transport?map=1' }],
+        explain: { source: 'opendata.novo-sibirsk.ru datasets 49/51', updatedAt: stops[0]?.updatedAt ?? context.now, dataType: 'mock-fallback' },
+      }
+    }
+    case 'TRANSIT_STOPS': {
+      const { stops } = getTransportData(provider)
+      const districts = detectTransportDistricts(plan.text, Array.from(new Set(stops.map((stop) => stop.district))))
+      const district = districts[0] ?? ''
+      const withPavilion = /павильон/i.test(plan.text)
+      const filtered = selectFilteredStops(stops, { district, mode: 'all', search: '', route: '', onlyPavilion: withPavilion }).slice(0, 8)
+      return {
+        type: 'TRANSIT_STOPS',
+        title: district ? `Остановки: ${getTransportDistrictLabel(district)}` : 'Остановки общественного транспорта',
+        summary: district ? `Найдено ${filtered.length} остановок ${withPavilion ? 'с павильоном ' : ''}в районе ${getTransportDistrictLabel(district)}.` : `Найдено ${filtered.length} остановок по заданному фильтру.`,
+        transportStops: filtered,
+        actions: [{ label: 'Открыть вкладку', route: `/public-transport${district ? `?district=${encodeURIComponent(district)}` : ''}` }],
+        explain: { source: 'opendata.novo-sibirsk.ru dataset 49', updatedAt: stops[0]?.updatedAt ?? context.now, dataType: 'mock-fallback' },
+      }
+    }
+    case 'TRANSIT_ROUTE_LOOKUP': {
+      const { stops, fares } = getTransportData(provider)
+      const routeNumber = detectTransportRoute(plan.text)
+      if (/топ транспортных узлов/i.test(plan.text) || !routeNumber) {
+        const metrics = selectGlobalTransportMetrics(stops, fares)
+        return {
+          type: 'TRANSIT_ROUTE_LOOKUP',
+          title: 'Топ транспортных узлов',
+          summary: metrics.topStopsByRouteCount.slice(0, 3).map((stop) => `${stop.name} (${stop.routesParsed.length})`).join(' · '),
+          transportStops: metrics.topStopsByRouteCount.slice(0, 8),
+          actions: [{ label: 'Открыть вкладку', route: '/public-transport' }],
+          explain: { source: 'opendata.novo-sibirsk.ru dataset 49', updatedAt: stops[0]?.updatedAt ?? context.now, dataType: 'mock-fallback' },
+        }
+      }
+
+      const route = selectRouteDetails(stops, routeNumber)
+      const routeStops = selectStopsForRoute(stops, routeNumber).slice(0, 8)
+      return {
+        type: 'TRANSIT_ROUTE_LOOKUP',
+        title: `Маршрут ${routeNumber}`,
+        summary: route ? `Маршрут встречается на ${route.stopCount} остановках в ${route.districtCount} районах.` : 'Маршрут не найден в локальном наборе.',
+        transportStops: routeStops,
+        transportRoute: route ? { route: route.routeId, stopCount: route.stopCount, districts: route.districts.map(getTransportDistrictLabel) } : undefined,
+        actions: [{ label: 'Открыть вкладку', route: `/public-transport?route=${encodeURIComponent(routeNumber)}` }],
+        explain: { source: 'opendata.novo-sibirsk.ru dataset 49', updatedAt: stops[0]?.updatedAt ?? context.now, dataType: 'mock-fallback' },
+      }
+    }
+    case 'TRANSIT_DISTRICT_COMPARE': {
+      const { stops } = getTransportData(provider)
+      const districts = detectTransportDistricts(plan.text, Array.from(new Set(stops.map((stop) => stop.district))))
+      const [from, to] = districts
+      const compare = selectDistrictConnectivity(stops, from ?? '', to ?? '')
+      return {
+        type: 'TRANSIT_DISTRICT_COMPARE',
+        title: 'Связность районов',
+        summary: from && to ? `Между районами ${getTransportDistrictLabel(from)} и ${getTransportDistrictLabel(to)} найдено ${compare.count} общих маршрутов.` : 'Уточните два района для сравнения.',
+        districtCompare: from && to ? { from: getTransportDistrictLabel(from), to: getTransportDistrictLabel(to), commonRoutes: compare.commonRoutes, count: compare.count } : undefined,
+        actions: from && to ? [{ label: 'Открыть вкладку', route: `/public-transport?district=${encodeURIComponent(from)}&compareTo=${encodeURIComponent(to)}` }] : [{ label: 'Открыть вкладку', route: '/public-transport' }],
+        explain: { source: 'opendata.novo-sibirsk.ru dataset 49', updatedAt: stops[0]?.updatedAt ?? context.now, dataType: 'calculated' },
+      }
+    }
+    case 'TRANSIT_FARES': {
+      const { fares } = getTransportData(provider)
+      const cards = selectCurrentFareCards(fares).slice(0, 6)
+      return {
+        type: 'TRANSIT_FARES',
+        title: 'Тарифы общественного транспорта',
+        summary: cards.map((fare) => `${fare.fareType}: ${fare.amount} ₽`).join(' · '),
+        transportFares: cards,
+        actions: [{ label: 'Открыть вкладку', route: '/public-transport' }],
+        explain: { source: 'opendata.novo-sibirsk.ru dataset 51', updatedAt: fares[0]?.updatedAt ?? context.now, dataType: 'mock-fallback' },
+      }
+    }
     case 'HELP':
-      return { type: 'HELP', title: 'Что умеет Сигма', summary: `Сигма понимает live-запросы по 051, open data, истории и навигации для роли «${role}».`, hints: supportedQuestions, explain: explainBase }
+      return { type: 'HELP', title: 'Что умеет Сигма', summary: `Сигма понимает live-запросы по 051, open data, истории, транспорту и навигации для роли «${role}».`, hints: supportedQuestions, explain: explainBase }
     default:
       return { type: 'UNKNOWN', title: 'Сигма пока не знает эту тему', summary: 'Попробуйте один из поддерживаемых live-запросов ниже.', hints: supportedQuestions, explain: explainBase }
   }

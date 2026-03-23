@@ -4,6 +4,7 @@ Sigma остается frontend-only приложением на React + Vite + 
 
 - **051** — отключения ЖКХ: `https://051.novo-sibirsk.ru/SitePages/off.aspx`
 - **OpenData Novosibirsk** — строительные наборы 124/125: `https://opendata.novo-sibirsk.ru`
+- **OpenData Novosibirsk** — транспортные наборы 49/51: остановки наземного транспорта и тарифы на проезд.
 
 ## Что теперь умеет приложение
 
@@ -30,7 +31,8 @@ Sigma остается frontend-only приложением на React + Vite + 
 - `/history` — тренд по накопленным snapshot 051 и строительная аналитика по open data.
 - `/deputies` — live-показатели для ЖКХ/теплоснабжения.
 - `/regulations` — live linkage `utilityType/outageType -> регламент`, `active construction -> контроль`.
-- Ask Sigma — live-вопросы по отключениям, стройке, freshness и статусам источников.
+- `/public-transport` — карта Яндекса со слоем остановок, фильтрами, метриками, тарифами, карточками остановок и блоком «Связность районов».
+- Ask Sigma — live-вопросы по отключениям, стройке, freshness, статусам источников и общественному транспорту.
 
 ## Запуск
 
@@ -90,6 +92,8 @@ VITE_OPENDATA_PROXY_URL=
 - сохраняет raw HTML/CSV;
 - строит `construction-permits.json`, `construction-commissioned.json`, `construction-active.json`, `construction-bundle.json`.
 
+> Транспортный модуль использует тот же frontend-паттерн `runtime -> snapshot -> cache -> mock`, но в этом коммите реализован без отдельного sync-скрипта: провайдеры dataset 49/51 готовы к прямому fetch, чтению локальных snapshots (`/live-data/opendata/transport-stops.json`, `/live-data/opendata/transport-fares.json`) и IndexedDB cache.
+
 ### `npm run sync:live`
 Запускает обе синхронизации и пересобирает `public/live-data/manifest.json`.
 
@@ -134,6 +138,44 @@ public/live-data/
 - `public/live-data/opendata/construction-active.json`
 - `public/live-data/opendata/construction-bundle.json`
 
+## Общественный транспорт: источники и ограничения
+
+### Route
+- `/public-transport`
+
+### Источники
+- **Dataset 49** — остановки наземного городского пассажирского транспорта. Используются поля `OstName`, `AdrDistr`, `AdrStreet`, `Pavilion`, `Marshryt` и координаты, если они присутствуют в CSV.
+- **Dataset 51** — тарифы на проезд в городском пассажирском транспорте. Парсер нормализует вид транспорта, тип тарифа, стоимость, дату/условие действия и перевозчика, если поле выделяется из CSV.
+
+### Что считается на вкладке
+Из открытых данных и поля `Marshryt` вычисляются:
+- `totalStops`;
+- `districtStopCounts`;
+- `districtCount`;
+- `totalUniqueRoutes`;
+- `routesByMode`;
+- `pavilionShare`;
+- `topStopsByRouteCount`;
+- `topDistrictsByStopCount`;
+- `topDistrictsByUniqueRoutes`;
+- `routeCoverageByDistrict`;
+- `selectedDistrictSummary`;
+- `currentFareCards`;
+- `transportInfrastructureIndex` — помечен как `calculated`, а не внешний официальный KPI.
+
+### Честные ограничения данных
+- Вкладка **не рисует live moving vehicles** и **не показывает ETA**, потому что в проекте нет официального GTFS-RT/partner feed.
+- Если для остановки нет координат, она остаётся в списке и метриках, но не попадает в слой маркеров на карте.
+- Если runtime fetch dataset 49/51 не удался, UI откатывается на snapshot/cache/mock-fallback и явно показывает это в source badges.
+- Выбор маршрута без официальной геометрии лишь подсвечивает остановки, где этот номер найден в `Marshryt`; полилинии не рисуются.
+
+### Как добавить новый транспортный dataset
+1. Добавьте parser/normalizer в `src/features/public-transport/parsers/*`.
+2. Создайте provider по шаблону `NovosibirskStopsProvider` / `NovosibirskTariffsProvider`.
+3. Подключите snapshot/cache/runtime fallback.
+4. Протяните derived selectors и source badges в UI.
+5. При наличии официального realtime feed реализуйте `TransportRealtimeProvider`, не смешивая real и simulation без маркировки.
+
 ## Как добавить новый dataset из OpenData
 
 1. Добавьте описание в `src/live/config/opendataDatasets.ts`.
@@ -148,6 +190,7 @@ Sigma **не подменяет реальность симуляцией**.
 
 - если 051 доступен только на районном уровне — карта и карточка показывают именно уровень района;
 - если OpenData не дал координаты — они не придумываются;
+- если нет официального realtime feed по транспорту — на карте нет движущихся автобусов и ETA;
 - если данные старые — возраст виден в мета-блоке;
 - если runtime fetch не удался — Ask Sigma и UI пишут, что показан snapshot/cache/mock fallback.
 
@@ -166,6 +209,16 @@ Sigma **не подменяет реальность симуляцией**.
 - `покажи live-источники`
 - `когда обновлялись данные`
 - `что сейчас в жкх`
+- `общественный транспорт`
+- `остановки в советском районе`
+- `остановки с павильоном`
+- `сколько остановок в ленинском районе`
+- `какие маршруты есть в академгородке`
+- `топ транспортных узлов`
+- `какой тариф на автобус`
+- `какие остановки у маршрута 36`
+- `сколько общих маршрутов между советским и центральным`
+- `покажи общественный транспорт на карте`
 
 ## Тесты
 
@@ -179,7 +232,9 @@ npm run build
 
 - parsing 051 (`planned/emergency`, district breakdown, graceful degradation),
 - parsing OpenData passport/CSV,
+- parsing dataset 49/51 для общественного транспорта,
 - active construction по `KadNom`,
+- route parsing, district connectivity и transport selectors,
 - district extraction из адресов,
 - priority order `runtime -> snapshot -> cache -> mock`.
 
@@ -212,6 +267,12 @@ npm run build
    - `/mayor-dashboard` — KPI и карта 051;
    - `/briefing` — блок строительства;
    - `/operations` — фильтры `source/planned/emergency/utility`;
+   - `/public-transport` — карта Яндекса, фильтры, список остановок, тарифы и блок связности районов;
    - `/incidents/051-...` — карточку live-инцидента;
    - Ask Sigma запросами из списка выше.
-4. Для проверки fallback выставить `VITE_ENABLE_RUNTIME_LIVE_FETCH=false` или заблокировать доступ к источникам и убедиться, что UI остается рабочим.
+4. Для транспортной вкладки проверьте сценарии:
+   - фильтр по району, типу транспорта, номеру маршрута и павильону;
+   - клик по остановке и открытие карточки маршрута;
+   - тарифные карточки и source badges;
+   - отсутствие live moving vehicles и ETA без официального realtime feed.
+5. Для проверки fallback выставить `VITE_ENABLE_RUNTIME_LIVE_FETCH=false` или заблокировать доступ к источникам и убедиться, что UI остается рабочим.

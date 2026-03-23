@@ -103,6 +103,26 @@ describe('ask-sigma', () => {
     expect(directHelpPlan.operation).toBe('HELP')
   })
 
+
+  it('supports public transport queries', () => {
+    const summary = executePlan(createPlan(normalizeQuery('общественный транспорт')), provider, 'мэр')
+    expect(summary.type).toBe('PUBLIC_TRANSPORT_SUMMARY')
+
+    const stops = executePlan(createPlan(normalizeQuery('остановки в советском районе')), provider, 'мэр')
+    expect(stops.type).toBe('TRANSIT_STOPS')
+    expect(stops.transportStops?.length).toBeGreaterThan(0)
+
+    const fares = executePlan(createPlan(normalizeQuery('какой тариф на автобус')), provider, 'мэр')
+    expect(fares.type).toBe('TRANSIT_FARES')
+
+    const route = executePlan(createPlan(normalizeQuery('какие остановки у маршрута 36')), provider, 'мэр')
+    expect(route.type).toBe('TRANSIT_ROUTE_LOOKUP')
+
+    const compare = executePlan(createPlan(normalizeQuery('сколько общих маршрутов между советским и центральным')), provider, 'мэр')
+    expect(compare.type).toBe('TRANSIT_DISTRICT_COMPARE')
+    expect(compare.districtCompare?.count).toBeGreaterThan(0)
+  })
+
   it('executor main cases', () => {
     expect(executePlan(createPlan(normalizeQuery('что происходит сейчас')), provider, 'мэр').type).toBe('SUMMARY')
     expect(executePlan(createPlan(normalizeQuery('что происходит сейчас в октрябрьском')), provider, 'мэр').summary).toContain('Октябрьский')

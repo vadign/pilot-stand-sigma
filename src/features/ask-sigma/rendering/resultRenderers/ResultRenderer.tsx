@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Card } from '../../../../components/ui'
 import { getDistrictAnswerName } from '../../../../lib/districts'
+import { getTransportDistrictLabel } from '../../../public-transport/selectors'
 import type { AskSigmaResult } from '../../types'
 
 export const ResultRenderer = ({
@@ -47,6 +48,45 @@ export const ResultRenderer = ({
               <div className="font-semibold">{incident.title}</div>
               <div>{incident.severity} · {incident.status} · {getDistrictAnswerName(incident.district)}</div>
               <button className="mt-2 rounded border px-2 py-1" onClick={() => onAction(`/incidents/${incident.id}`, incident.district)}>Открыть</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {result.transportStops && (
+        <div className="mt-3 space-y-2 text-sm">
+          {result.transportStops.map((stop) => (
+            <div key={stop.id} className="rounded border p-2">
+              <div className="font-semibold">{stop.name}</div>
+              <div>{getTransportDistrictLabel(stop.district)} · {stop.street || 'адрес не указан'}</div>
+              <div className="text-slate-500">Маршруты: {stop.routesParsed.map((route) => route.number).join(', ') || '—'}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {result.transportRoute && (
+        <div className="mt-3 rounded border p-2 text-sm">
+          <div className="font-semibold">Маршрут {result.transportRoute.route}</div>
+          <div>Остановок: {result.transportRoute.stopCount}</div>
+          <div>Районы: {result.transportRoute.districts.join(', ')}</div>
+        </div>
+      )}
+
+      {result.districtCompare && (
+        <div className="mt-3 rounded border p-2 text-sm">
+          <div className="font-semibold">{result.districtCompare.from} → {result.districtCompare.to}</div>
+          <div>Общих маршрутов: {result.districtCompare.count}</div>
+          <div>Номера: {result.districtCompare.commonRoutes.join(', ') || 'нет'}</div>
+        </div>
+      )}
+
+      {result.transportFares && (
+        <div className="mt-3 space-y-2 text-sm">
+          {result.transportFares.map((fare) => (
+            <div key={fare.id} className="rounded border p-2">
+              <div className="font-semibold">{fare.fareType}</div>
+              <div>{fare.amount} ₽ · {fare.mode}</div>
             </div>
           ))}
         </div>

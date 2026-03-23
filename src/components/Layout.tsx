@@ -15,6 +15,7 @@ const nav = [
   ['/operations', 'Оперативный монитор'],
   ['/deputies', 'Цифровые заместители'],
   ['/regulations', 'Реестр регламентов'],
+  ['/public-transport', 'Общественный транспорт'],
 ]
 
 export function Layout() {

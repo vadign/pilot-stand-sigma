@@ -1,4 +1,5 @@
 import { selectConstructionAggregates, selectIncidentViewList, selectOutageSummary, selectSourceStatuses } from '../../live/selectors'
+import { defaultTransportFares, defaultTransportStops } from '../public-transport/data/defaultTransportData'
 import { useSigmaStore } from '../../store/useSigmaStore'
 import type { AskSigmaContext } from './types'
 
@@ -21,6 +22,14 @@ export class LocalAskSigmaProvider implements AskSigmaProvider {
       liveSummary: selectOutageSummary(state),
       constructionAggregates: selectConstructionAggregates(state),
       sourceStatuses: selectSourceStatuses(state),
+      publicTransport: {
+        stops: defaultTransportStops,
+        fares: defaultTransportFares,
+        statuses: [
+          { key: 'transport-stops', datasetId: '49', title: 'Остановки наземного транспорта', sourceUrl: 'https://opendata.novo-sibirsk.ru/pass.aspx?ID=49', source: 'mock', dataType: 'mock-fallback', status: 'stale', updatedAt: defaultTransportStops[0]?.updatedAt, fetchedAt: new Date().toISOString(), ttlHours: 24, message: 'Локальный fallback dataset 49' },
+          { key: 'transport-fares', datasetId: '51', title: 'Тарифы на проезд', sourceUrl: 'https://opendata.novo-sibirsk.ru/pass.aspx?ID=51', source: 'mock', dataType: 'mock-fallback', status: 'stale', updatedAt: defaultTransportFares[0]?.updatedAt, fetchedAt: new Date().toISOString(), ttlHours: 24, message: 'Локальный fallback dataset 51' },
+        ],
+      },
       now: new Date().toISOString(),
     }
   }
