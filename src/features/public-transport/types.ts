@@ -37,6 +37,32 @@ export interface TransportFare {
   raw: Record<string, string>
 }
 
+export interface TransportVehicle {
+  id: string
+  lat: number
+  lon: number
+  route: string
+  speed: number
+  azimuth: number
+  timetable: string
+  updatedAt: string
+}
+
+export interface LiveTransportRoute {
+  routeId: string
+  type: number
+  marsh: string
+  number: string
+  stopA: string
+  stopB: string
+}
+
+export interface LiveTransportVehiclesResponse {
+  routeId: string
+  updatedAt: string
+  vehicles: TransportVehicle[]
+}
+
 export interface DistrictTransportMetrics {
   district: string
   stopCount: number

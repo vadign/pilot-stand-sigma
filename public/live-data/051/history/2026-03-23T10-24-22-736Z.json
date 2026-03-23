@@ -1,9 +1,9 @@
 {
   "sourceUrl": "https://map.novo-sibirsk.ru/portal/disconnections?t=",
-  "snapshotAt": "2026-03-23T11:34:23.917Z",
-  "fetchedAt": "2026-03-23T11:34:23.917Z",
+  "snapshotAt": "2026-03-23T10:24:22.736Z",
+  "fetchedAt": "2026-03-23T10:24:22.736Z",
   "parseVersion": "1.1.0",
-  "rawHash": "e06a48f713fccc7aa7a50013861dfe671159c856d14ee85c6cbd4c0c7b5cd11e",
+  "rawHash": "fd02d3ef9f7152078d6b11745a29260adc3bf19da1a509f7d4b02f4cbe03dbe0",
   "planned": [
     {
       "district": "Заельцовский район",
@@ -123,17 +123,7 @@
       "description": "Первомайский район | Плановое | отопление | 4 домов | до 23.03.2026 19:00 | причина: Замена участков трубопроводов с отводами на Т1,Т2 д-100мм между ТК08/4-143 и ТК08/4-145 (ул.Шукшина,20).Котельная ООО\"СТК\""
     }
   ],
-  "emergency": [
-    {
-      "district": "Октябрьский район",
-      "utilityType": "electricity",
-      "outageKind": "emergency",
-      "reason": "Аварийное отключение ТП-1799",
-      "recoveryTime": "23.03.2026 19:50",
-      "houses": 2,
-      "description": "Октябрьский район | Аварийное | электроснабжение | 2 домов | до 23.03.2026 19:50 | причина: Аварийное отключение ТП-1799"
-    }
-  ],
+  "emergency": [],
   "utilities": [
     {
       "utilityType": "heating",
@@ -146,18 +136,12 @@
       "plannedHouses": 334,
       "emergencyHouses": 0,
       "incidents": 6
-    },
-    {
-      "utilityType": "electricity",
-      "plannedHouses": 0,
-      "emergencyHouses": 2,
-      "incidents": 1
     }
   ],
   "totals": {
-    "houses": 674,
+    "houses": 672,
     "planned": 672,
-    "emergency": 2,
-    "incidents": 14
+    "emergency": 0,
+    "incidents": 13
   }
 }

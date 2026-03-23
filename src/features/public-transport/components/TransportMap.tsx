@@ -1,16 +1,52 @@
-import { useMemo } from 'react'
-import { Clusterer, Map, Placemark, YMaps } from '@pbe/react-yandex-maps'
+import { useEffect, useRef, useState } from 'react'
 import { districts } from '../../../mocks/data'
-import type { TransitStop } from '../types'
+import type { LiveTransportRoute, LiveTransportVehiclesResponse, TransitStop, TransportVehicle } from '../types'
+
+type YMapsPlacemark = {
+  geometry?: {
+    setCoordinates: (coordinates: [number, number]) => void
+  }
+  properties: {
+    set: (key: string, value: string) => void
+  }
+}
+
+type YMapsMap = {
+  setCenter: (center: [number, number], zoom?: number, options?: { duration?: number }) => void
+  destroy: () => void
+  geoObjects: {
+    add: (geoObject: YMapsPlacemark) => void
+    remove: (geoObject: YMapsPlacemark) => void
+  }
+}
+
+type YMapsApi = {
+  ready: (callback: () => void) => void
+  Map: new (element: HTMLElement, state: { center: [number, number]; zoom: number }, options?: Record<string, unknown>) => YMapsMap
+  Placemark: new (
+    geometry: [number, number],
+    properties?: { hintContent?: string },
+    options?: { preset?: string },
+  ) => YMapsPlacemark
+}
+
+const mapOptions: Record<string, unknown> & { yandexMapType: 'transit' } = {
+  suppressMapOpenBlock: true,
+  yandexMapType: 'transit',
+}
+
+let yandexMapsApiPromise: Promise<YMapsApi> | null = null
+
+const hasCoordinates = (stop: TransitStop): stop is TransitStop & { coordinates: [number, number] } => Array.isArray(stop.coordinates)
 
 const getBoundsState = (stops: TransitStop[], selectedStop?: TransitStop) => {
-  const visibleStops = stops.filter((stop) => stop.coordinates)
+  const visibleStops = stops.filter(hasCoordinates)
   if (selectedStop?.coordinates) return { center: selectedStop.coordinates, zoom: 14 }
   if (visibleStops.length === 0) return { center: [55.03, 82.92] as [number, number], zoom: 10 }
-  if (visibleStops.length === 1) return { center: visibleStops[0].coordinates!, zoom: 13 }
+  if (visibleStops.length === 1) return { center: visibleStops[0].coordinates, zoom: 13 }
 
-  const latitudes = visibleStops.map((stop) => stop.coordinates?.[0] ?? 0)
-  const longitudes = visibleStops.map((stop) => stop.coordinates?.[1] ?? 0)
+  const latitudes = visibleStops.map((stop) => stop.coordinates[0])
+  const longitudes = visibleStops.map((stop) => stop.coordinates[1])
   const minLat = Math.min(...latitudes)
   const maxLat = Math.max(...latitudes)
   const minLon = Math.min(...longitudes)
@@ -24,56 +60,225 @@ const getBoundsState = (stops: TransitStop[], selectedStop?: TransitStop) => {
   }
 }
 
+const getMapState = (stops: TransitStop[], selectedDistrict?: string, selectedStop?: TransitStop) => {
+  if (selectedDistrict && !selectedStop) {
+    const districtCenter = districts.find((district) => district.name === selectedDistrict || district.id === selectedDistrict)?.center
+    if (districtCenter) return { center: districtCenter, zoom: 12 }
+  }
+
+  return getBoundsState(stops, selectedStop)
+}
+
+const loadYandexMapsApi = (): Promise<YMapsApi> => {
+  const win = window as unknown as Window & { ymaps?: YMapsApi }
+  if (win.ymaps) return Promise.resolve(win.ymaps)
+  if (yandexMapsApiPromise) return yandexMapsApiPromise
+
+  yandexMapsApiPromise = new Promise((resolve, reject) => {
+    const scriptId = 'sigma-yandex-maps-api'
+    const existingScript = document.getElementById(scriptId) as HTMLScriptElement | null
+    const apiKey = import.meta.env.VITE_YANDEX_MAPS_API_KEY?.trim()
+    const scriptSrc = `https://api-maps.yandex.ru/2.1/?lang=ru_RU${apiKey ? `&apikey=${apiKey}` : ''}`
+
+    const onReady = () => {
+      if (!win.ymaps) {
+        yandexMapsApiPromise = null
+        reject(new Error('Yandex Maps API is unavailable'))
+        return
+      }
+
+      win.ymaps.ready(() => resolve(win.ymaps!))
+    }
+
+    const onError = () => {
+      yandexMapsApiPromise = null
+      reject(new Error('Failed to load Yandex Maps API'))
+    }
+
+    if (existingScript) {
+      existingScript.addEventListener('load', onReady, { once: true })
+      existingScript.addEventListener('error', onError, { once: true })
+      return
+    }
+
+    const script = document.createElement('script')
+    script.id = scriptId
+    script.src = scriptSrc
+    script.async = true
+    script.onload = onReady
+    script.onerror = onError
+    document.head.appendChild(script)
+  })
+
+  return yandexMapsApiPromise
+}
+
+const getYMapsApi = (): YMapsApi | undefined => (window as unknown as Window & { ymaps?: YMapsApi }).ymaps
+
 export const TransportMap = ({
   stops,
   selectedStop,
   selectedDistrict,
   selectedRoute,
-  onSelectStop,
+  liveRoutes,
 }: {
   stops: TransitStop[]
   selectedStop?: TransitStop
   selectedDistrict?: string
   selectedRoute?: string
+  liveRoutes: LiveTransportRoute[]
   onSelectStop: (stop: TransitStop) => void
 }) => {
-  const state = useMemo(() => {
-    if (selectedDistrict && !selectedStop) {
-      const districtCenter = districts.find((district) => district.name === selectedDistrict || district.id === selectedDistrict)?.center
-      if (districtCenter) return { center: districtCenter, zoom: 12 }
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const mapRef = useRef<YMapsMap | null>(null)
+  const vehiclesRef = useRef<Map<string, YMapsPlacemark>>(new Map())
+  const selectedStopRef = useRef<YMapsPlacemark | null>(null)
+  const [vehicles, setVehicles] = useState<TransportVehicle[]>([])
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [mapReady, setMapReady] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+
+    void loadYandexMapsApi()
+      .then((api) => {
+        if (cancelled || mapRef.current || !containerRef.current) return
+        mapRef.current = new api.Map(containerRef.current, getMapState(stops, selectedDistrict, selectedStop), mapOptions)
+        setMapReady(true)
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError('Не удалось загрузить Yandex Maps JS API 2.1.')
+      })
+
+    return () => {
+      cancelled = true
+      vehiclesRef.current.clear()
+      selectedStopRef.current = null
+      mapRef.current?.destroy()
+      mapRef.current = null
+      setMapReady(false)
     }
-    return getBoundsState(stops, selectedStop)
-  }, [selectedDistrict, selectedStop, stops])
+  }, [])
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return
+    const nextState = getMapState(stops, selectedDistrict, selectedStop)
+    mapRef.current.setCenter(nextState.center, nextState.zoom, { duration: 250 })
+  }, [mapReady, selectedDistrict, selectedStop, stops])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadVehicles = async () => {
+      try {
+        if (liveRoutes.length === 0) {
+          if (!cancelled) setVehicles([])
+          return
+        }
+
+        const responses = await Promise.all(
+          liveRoutes.map(async (route) => {
+            const response = await fetch(`/api/vehicles?routeId=${encodeURIComponent(route.routeId)}`, { cache: 'no-store' })
+            if (!response.ok) throw new Error(`vehicles feed failed: ${response.status}`)
+            return response.json() as Promise<LiveTransportVehiclesResponse>
+          }),
+        )
+
+        const nextVehicles = responses.flatMap((item) => item.vehicles)
+        if (!cancelled) setVehicles(nextVehicles)
+      } catch {
+        if (!cancelled) setVehicles([])
+      }
+    }
+
+    if (selectedRoute) {
+      void loadVehicles()
+    } else {
+      setVehicles([])
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (!selectedRoute) return
+      void loadVehicles()
+    }, 5_000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+    }
+  }, [liveRoutes, selectedRoute])
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return
+
+    const alive = new Set<string>()
+
+    vehicles.forEach((vehicle) => {
+      alive.add(vehicle.id)
+      const coordinates: [number, number] = [vehicle.lat, vehicle.lon]
+      const existingPlacemark = vehiclesRef.current.get(vehicle.id)
+      const ymapsApi = getYMapsApi()
+
+      if (!ymapsApi) return
+
+      if (!existingPlacemark) {
+        const placemark = new ymapsApi.Placemark(
+          coordinates,
+          { hintContent: `Маршрут ${vehicle.route}` },
+          { preset: 'islands#blueCircleDotIcon' },
+        )
+        vehiclesRef.current.set(vehicle.id, placemark)
+        mapRef.current?.geoObjects.add(placemark)
+        return
+      }
+
+      existingPlacemark.geometry?.setCoordinates(coordinates)
+      existingPlacemark.properties.set('hintContent', `Маршрут ${vehicle.route}`)
+    })
+
+    for (const [id, placemark] of vehiclesRef.current.entries()) {
+      if (alive.has(id)) continue
+      mapRef.current.geoObjects.remove(placemark)
+      vehiclesRef.current.delete(id)
+    }
+  }, [mapReady, vehicles])
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return
+
+    if (!selectedStop?.coordinates) {
+      if (selectedStopRef.current) {
+        mapRef.current.geoObjects.remove(selectedStopRef.current)
+        selectedStopRef.current = null
+      }
+      return
+    }
+
+    if (!selectedStopRef.current) {
+      const ymapsApi = getYMapsApi()
+      if (!ymapsApi) return
+
+      selectedStopRef.current = new ymapsApi.Placemark(
+        selectedStop.coordinates,
+        { hintContent: selectedStop.name },
+        { preset: 'islands#redCircleDotIcon' },
+      )
+      mapRef.current.geoObjects.add(selectedStopRef.current)
+      return
+    }
+
+    selectedStopRef.current.geometry?.setCoordinates(selectedStop.coordinates)
+    selectedStopRef.current.properties.set('hintContent', selectedStop.name)
+  }, [mapReady, selectedStop])
 
   return (
-    <div className="h-[420px] overflow-hidden rounded-2xl border border-slate-200">
-      <YMaps query={{ lang: 'ru_RU', load: 'package.full' }}>
-        <Map state={state} width="100%" height="100%" options={{ suppressMapOpenBlock: true }} modules={['control.ZoomControl', 'control.FullscreenControl']}>
-          <Clusterer options={{ preset: 'islands#blueClusterIcons', groupByCoordinates: false }}>
-            {stops.filter((stop) => stop.coordinates).map((stop) => {
-              const isSelected = selectedStop?.id === stop.id
-              const isRouteMatch = selectedRoute ? stop.routesParsed.some((route) => route.number === selectedRoute) : false
-              return (
-                <Placemark
-                  key={stop.id}
-                  geometry={stop.coordinates!}
-                  properties={{
-                    balloonContentHeader: stop.name,
-                    balloonContentBody: `${stop.street || 'Адрес не указан'} · маршрутов: ${stop.routesParsed.length}`,
-                    iconCaption: stop.name,
-                  }}
-                  options={{
-                    preset: isSelected ? 'islands#redIcon' : isRouteMatch ? 'islands#greenCircleIcon' : 'islands#blueCircleDotIcon',
-                    iconColor: isSelected ? '#dc2626' : isRouteMatch ? '#16a34a' : '#2563eb',
-                  }}
-                  modules={['geoObject.addon.balloon']}
-                  onClick={() => onSelectStop(stop)}
-                />
-              )
-            })}
-          </Clusterer>
-        </Map>
-      </YMaps>
+    <div className="relative h-[420px] overflow-hidden rounded-2xl border border-slate-200">
+      <div ref={containerRef} className="h-full w-full" />
+      {loadError && (
+        <div className="absolute inset-3 rounded-xl border border-red-200 bg-white/95 p-3 text-sm text-red-700">
+          {loadError}
+        </div>
+      )}
     </div>
   )
 }

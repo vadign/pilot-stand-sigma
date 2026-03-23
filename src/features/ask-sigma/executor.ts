@@ -31,6 +31,15 @@ const getTransportData = (provider: AskSigmaProvider) => {
 }
 
 const detectTransportRoute = (text: string): string | undefined => text.match(/маршрут[а-я\s]*?(\d+[a-zа-я-]*)/i)?.[1] ?? text.match(/\b(\d+[a-zа-я-]*)\b/i)?.[1]
+const buildTransportDashboardRoute = (params?: Record<string, string | undefined>): string => {
+  const searchParams = new URLSearchParams({ subsystem: 'transport' })
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value) searchParams.set(key, value)
+    })
+  }
+  return `/mayor-dashboard?${searchParams.toString()}`
+}
 
 const buildDistrictAliases = (district: string): string[] => {
   const normalized = normalize(district)
@@ -188,7 +197,7 @@ export const executePlan = (plan: AskSigmaPlan, provider: AskSigmaProvider, role
           { label: 'Маршруты', value: String(metrics.totalUniqueRoutes) },
           { label: 'Павильоны', value: `${(metrics.pavilionShare * 100).toFixed(1)}%` },
         ],
-        actions: [{ label: 'Открыть вкладку', route: '/public-transport' }, { label: 'Показать на карте', route: '/public-transport?map=1' }],
+        actions: [{ label: 'Открыть вкладку', route: buildTransportDashboardRoute() }, { label: 'Показать на карте', route: buildTransportDashboardRoute({ map: '1' }) }],
         explain: { source: 'opendata.novo-sibirsk.ru datasets 49/51', updatedAt: stops[0]?.updatedAt ?? context.now, dataType: 'mock-fallback' },
       }
     }
@@ -203,7 +212,7 @@ export const executePlan = (plan: AskSigmaPlan, provider: AskSigmaProvider, role
         title: district ? `Остановки: ${getTransportDistrictLabel(district)}` : 'Остановки общественного транспорта',
         summary: district ? `Найдено ${filtered.length} остановок ${withPavilion ? 'с павильоном ' : ''}в районе ${getTransportDistrictLabel(district)}.` : `Найдено ${filtered.length} остановок по заданному фильтру.`,
         transportStops: filtered,
-        actions: [{ label: 'Открыть вкладку', route: `/public-transport${district ? `?district=${encodeURIComponent(district)}` : ''}` }],
+        actions: [{ label: 'Открыть вкладку', route: buildTransportDashboardRoute({ district, pavilion: withPavilion ? '1' : undefined }) }],
         explain: { source: 'opendata.novo-sibirsk.ru dataset 49', updatedAt: stops[0]?.updatedAt ?? context.now, dataType: 'mock-fallback' },
       }
     }
@@ -217,7 +226,7 @@ export const executePlan = (plan: AskSigmaPlan, provider: AskSigmaProvider, role
           title: 'Топ транспортных узлов',
           summary: metrics.topStopsByRouteCount.slice(0, 3).map((stop) => `${stop.name} (${stop.routesParsed.length})`).join(' · '),
           transportStops: metrics.topStopsByRouteCount.slice(0, 8),
-          actions: [{ label: 'Открыть вкладку', route: '/public-transport' }],
+          actions: [{ label: 'Открыть вкладку', route: buildTransportDashboardRoute() }],
           explain: { source: 'opendata.novo-sibirsk.ru dataset 49', updatedAt: stops[0]?.updatedAt ?? context.now, dataType: 'mock-fallback' },
         }
       }
@@ -230,7 +239,7 @@ export const executePlan = (plan: AskSigmaPlan, provider: AskSigmaProvider, role
         summary: route ? `Маршрут встречается на ${route.stopCount} остановках в ${route.districtCount} районах.` : 'Маршрут не найден в локальном наборе.',
         transportStops: routeStops,
         transportRoute: route ? { route: route.routeId, stopCount: route.stopCount, districts: route.districts.map(getTransportDistrictLabel) } : undefined,
-        actions: [{ label: 'Открыть вкладку', route: `/public-transport?route=${encodeURIComponent(routeNumber)}` }],
+        actions: [{ label: 'Открыть вкладку', route: buildTransportDashboardRoute({ route: routeNumber }) }],
         explain: { source: 'opendata.novo-sibirsk.ru dataset 49', updatedAt: stops[0]?.updatedAt ?? context.now, dataType: 'mock-fallback' },
       }
     }
@@ -244,7 +253,7 @@ export const executePlan = (plan: AskSigmaPlan, provider: AskSigmaProvider, role
         title: 'Связность районов',
         summary: from && to ? `Между районами ${getTransportDistrictLabel(from)} и ${getTransportDistrictLabel(to)} найдено ${compare.count} общих маршрутов.` : 'Уточните два района для сравнения.',
         districtCompare: from && to ? { from: getTransportDistrictLabel(from), to: getTransportDistrictLabel(to), commonRoutes: compare.commonRoutes, count: compare.count } : undefined,
-        actions: from && to ? [{ label: 'Открыть вкладку', route: `/public-transport?district=${encodeURIComponent(from)}&compareTo=${encodeURIComponent(to)}` }] : [{ label: 'Открыть вкладку', route: '/public-transport' }],
+        actions: from && to ? [{ label: 'Открыть вкладку', route: buildTransportDashboardRoute({ district: from, compareTo: to }) }] : [{ label: 'Открыть вкладку', route: buildTransportDashboardRoute() }],
         explain: { source: 'opendata.novo-sibirsk.ru dataset 49', updatedAt: stops[0]?.updatedAt ?? context.now, dataType: 'calculated' },
       }
     }
@@ -256,7 +265,7 @@ export const executePlan = (plan: AskSigmaPlan, provider: AskSigmaProvider, role
         title: 'Тарифы общественного транспорта',
         summary: cards.map((fare) => `${fare.fareType}: ${fare.amount} ₽`).join(' · '),
         transportFares: cards,
-        actions: [{ label: 'Открыть вкладку', route: '/public-transport' }],
+        actions: [{ label: 'Открыть вкладку', route: buildTransportDashboardRoute() }],
         explain: { source: 'opendata.novo-sibirsk.ru dataset 51', updatedAt: fares[0]?.updatedAt ?? context.now, dataType: 'mock-fallback' },
       }
     }

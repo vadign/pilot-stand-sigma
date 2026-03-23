@@ -9,7 +9,7 @@ const navigationMap: Record<string, string> = {
   'открой регламенты': '/regulations',
   'открой цифровых заместителей': '/deputies',
   'открой инциденты': '/operations',
-  'открой общественный транспорт': '/public-transport',
+  'открой общественный транспорт': '/mayor-dashboard?subsystem=transport',
 }
 
 const districtRegex = /(советский|ленинский|центральный|кольцово|академгородок)/i

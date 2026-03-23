@@ -6,6 +6,7 @@ import { Bar, BarChart, Cell, Line, LineChart, Pie, PieChart, ResponsiveContaine
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
 import { MapView } from '../components/MapView'
 import { Badge, Card, MetaGrid, SectionTitle, SourceMetaFooter } from '../components/ui'
+import { PublicTransportPage } from './public-transport'
 import { getDistrictName } from '../lib/districts'
 import { useSigmaStore } from '../store/useSigmaStore'
 import { selectIncidentById, selectOutageSummary, selectSourceStatuses, useConstructionAggregates, useDistrictOutageCards, useIncidentViews, useOutageHistorySeries } from '../live/selectors'
@@ -37,10 +38,13 @@ const utilityLabels: Record<string, string> = {
 
 const subsystemTabs = [
   { id: 'heat', title: 'Теплоснабжение' },
+  { id: 'transport', title: 'Общественный транспорт' },
   { id: 'roads', title: 'Дороги' },
   { id: 'noise', title: 'Шум' },
   { id: 'air', title: 'Воздух' },
 ] as const
+
+const operationalSubsystemTabs = subsystemTabs.filter((tab) => tab.id !== 'transport')
 
 type SubsystemTabId = (typeof subsystemTabs)[number]['id']
 
@@ -61,6 +65,10 @@ const subsystemTabDescriptions: Record<SubsystemTabId, { title: string; descript
     title: 'Экология и качество воздуха',
     description: 'Вкладка показывает контур качества воздуха, сигналы постов наблюдения и экологические риски по районам.',
   },
+  transport: {
+    title: 'Общественный транспорт в управленческом контуре мэра',
+    description: 'Остановки, маршруты и тарифы теперь открываются внутри панели мэра вместе с отраслевыми кнопками, без отдельного левого раздела.',
+  },
 }
 
 const severityPriority: Record<string, number> = {
@@ -71,10 +79,21 @@ const severityPriority: Record<string, number> = {
 }
 
 const isHeatSubsystemTab = (tab: SubsystemTabId): boolean => tab === 'heat'
+const isTransportSubsystemTab = (tab: SubsystemTabId): boolean => tab === 'transport'
 
 const matchesSubsystemTab = (incident: LiveIncidentView, tab: SubsystemTabId): boolean => {
   if (tab === 'heat') return incident.sourceKind === 'live' || incident.subsystem === 'heat' || incident.subsystem === 'utilities'
+  if (tab === 'transport') return false
   return incident.subsystem === tab
+}
+
+const transportQueryParamKeys = ['mode', 'search', 'route', 'pavilion', 'compareTo', 'map'] as const
+
+const isSubsystemTabId = (value: string | null): value is SubsystemTabId => subsystemTabs.some((tab) => tab.id === value)
+
+const readSubsystemFromParams = (params: URLSearchParams): SubsystemTabId => {
+  const value = params.get('subsystem')
+  return isSubsystemTabId(value) ? value : 'heat'
 }
 
 const sortIncidentsByPriority = (incidents: LiveIncidentView[]): LiveIncidentView[] =>
@@ -116,9 +135,17 @@ const buildStatusCards = (incidents: LiveIncidentView[]) => {
     .sort((left, right) => right.count - left.count)
 }
 
-const SubsystemTabs = ({ value, onChange }: { value: SubsystemTabId; onChange: (tab: SubsystemTabId) => void }) => (
+const SubsystemTabs = ({
+  value,
+  onChange,
+  tabs = subsystemTabs,
+}: {
+  value: SubsystemTabId
+  onChange: (tab: SubsystemTabId) => void
+  tabs?: readonly { id: SubsystemTabId; title: string }[]
+}) => (
   <div className="flex flex-wrap gap-2">
-    {subsystemTabs.map((tab) => (
+    {tabs.map((tab) => (
       <button
         key={tab.id}
         onClick={() => onChange(tab.id)}
@@ -245,8 +272,9 @@ export function BriefingPage() {
 
 export function MayorDashboardPage() {
   const { districts, incidents, outageSummary, districtCards, sourceStatuses } = useDashboardData()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [district, setDistrict] = useState('')
-  const [subsystem, setSubsystem] = useState<SubsystemTabId>('heat')
+  const subsystem = readSubsystemFromParams(searchParams)
   const subsystemIncidents = incidents.filter((incident) => matchesSubsystemTab(incident, subsystem))
   const visibleIncidents = subsystemIncidents.filter((incident) => !district || incident.district === district)
   const liveIncidents = visibleIncidents.filter((incident) => incident.sourceKind === 'live')
@@ -260,23 +288,51 @@ export function MayorDashboardPage() {
   const status051 = sourceStatuses.find((item) => item.key === '051')
   const selectedSubsystemMeta = subsystemTabDescriptions[subsystem]
   const isHeatTab = isHeatSubsystemTab(subsystem)
+  const isTransportTab = isTransportSubsystemTab(subsystem)
+
+  const handleSubsystemChange = (nextSubsystem: SubsystemTabId) => {
+    const nextParams = new URLSearchParams(searchParams)
+    if (nextSubsystem === 'heat') {
+      nextParams.delete('subsystem')
+    } else {
+      nextParams.set('subsystem', nextSubsystem)
+    }
+
+    if (!isTransportSubsystemTab(nextSubsystem)) {
+      transportQueryParamKeys.forEach((key) => nextParams.delete(key))
+    }
+
+    setSearchParams(nextParams, { replace: true })
+  }
 
   return (
     <div className="space-y-4">
       <Card>
         <div className="flex flex-col gap-3">
-          <SubsystemTabs value={subsystem} onChange={setSubsystem} />
+          <SubsystemTabs value={subsystem} onChange={handleSubsystemChange} />
           <div className="flex flex-wrap gap-2">
-            <select className="rounded-xl border px-3 py-2" value={district} onChange={(event) => setDistrict(event.target.value)}>
-              <option value="">Все районы</option>
-              {districts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-            </select>
+            {!isTransportTab && (
+              <select className="rounded-xl border px-3 py-2" value={district} onChange={(event) => setDistrict(event.target.value)}>
+                <option value="">Все районы</option>
+                {districts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              </select>
+            )}
             <Badge text={subsystemTabs.find((item) => item.id === subsystem)?.title ?? 'Контур'} className="bg-slate-900 text-white" />
-            <Badge text="051 live outages" className="bg-blue-50 text-blue-700" />
-            <Badge text="OpenData construction" className="bg-emerald-50 text-emerald-700" />
+            {isTransportTab ? (
+              <>
+                <Badge text="dataset 49 остановки" className="bg-blue-50 text-blue-700" />
+                <Badge text="dataset 51 тарифы" className="bg-emerald-50 text-emerald-700" />
+                <Badge text="без live GPS/ETA" className="bg-amber-50 text-amber-700" />
+              </>
+            ) : (
+              <>
+                <Badge text="051 live outages" className="bg-blue-50 text-blue-700" />
+                <Badge text="OpenData construction" className="bg-emerald-50 text-emerald-700" />
+              </>
+            )}
           </div>
         </div>
-        {status051 && <SourceMetaFooter source="051.novo-sibirsk.ru/SitePages/off.aspx" updatedAt={status051.updatedAt} ttl={`${status051.ttlMinutes} мин`} type={sourceTypeLabels[status051.type] ?? status051.type} status={status051.status} />}
+        {!isTransportTab && status051 && <SourceMetaFooter source="051.novo-sibirsk.ru/SitePages/off.aspx" updatedAt={status051.updatedAt} ttl={`${status051.ttlMinutes} мин`} type={sourceTypeLabels[status051.type] ?? status051.type} status={status051.status} />}
       </Card>
 
       <Card className="bg-gradient-to-r from-blue-700 to-blue-600 text-white">
@@ -287,86 +343,92 @@ export function MayorDashboardPage() {
         </p>
       </Card>
 
-      {isHeatTab ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Card><div className="text-sm text-slate-500">Активные отключения</div><div className="mt-2 text-5xl font-bold">{outageSummary?.activeIncidents ?? 0}</div><div className="mt-2 text-sm text-slate-500">аварийных: {urgent.length}</div></Card>
-          <Card><div className="text-sm text-slate-500">Отключено домов</div><div className="mt-2 text-5xl font-bold">{outageSummary?.totalHouses ?? 0}</div><div className="mt-2 text-sm text-slate-500">planned/emergency отдельно</div></Card>
-          <Card><div className="text-sm text-slate-500">Аварийный контур</div><div className="mt-2 text-5xl font-bold text-red-600">{outageSummary?.emergencyHouses ?? 0}</div><div className="mt-2 text-sm text-slate-500">домов под аварийным воздействием</div></Card>
-          <Card><div className="text-sm text-slate-500">Плановый контур</div><div className="mt-2 text-5xl font-bold text-amber-600">{outageSummary?.plannedHouses ?? 0}</div><div className="mt-2 text-sm text-slate-500">домов в плановых окнах</div></Card>
-        </div>
+      {isTransportTab ? (
+        <PublicTransportPage embedded />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Card><div className="text-sm text-slate-500">Активные события</div><div className="mt-2 text-5xl font-bold">{visibleIncidents.length}</div><div className="mt-2 text-sm text-slate-500">в выбранном контуре</div></Card>
-          <Card><div className="text-sm text-slate-500">Критические</div><div className="mt-2 text-5xl font-bold text-red-600">{criticalIncidents}</div><div className="mt-2 text-sm text-slate-500">требуют приоритетного внимания</div></Card>
-          <Card><div className="text-sm text-slate-500">В работе / эскалированы</div><div className="mt-2 text-5xl font-bold text-amber-600">{activeInWork}</div><div className="mt-2 text-sm text-slate-500">операционный контур</div></Card>
-          <Card><div className="text-sm text-slate-500">Население в зоне</div><div className="mt-2 text-5xl font-bold text-emerald-600">{affectedPopulation}</div><div className="mt-2 text-sm text-slate-500">оценка по карточкам событий</div></Card>
-        </div>
+        <>
+          {isHeatTab ? (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <Card><div className="text-sm text-slate-500">Активные отключения</div><div className="mt-2 text-5xl font-bold">{outageSummary?.activeIncidents ?? 0}</div><div className="mt-2 text-sm text-slate-500">аварийных: {urgent.length}</div></Card>
+              <Card><div className="text-sm text-slate-500">Отключено домов</div><div className="mt-2 text-5xl font-bold">{outageSummary?.totalHouses ?? 0}</div><div className="mt-2 text-sm text-slate-500">planned/emergency отдельно</div></Card>
+              <Card><div className="text-sm text-slate-500">Аварийный контур</div><div className="mt-2 text-5xl font-bold text-red-600">{outageSummary?.emergencyHouses ?? 0}</div><div className="mt-2 text-sm text-slate-500">домов под аварийным воздействием</div></Card>
+              <Card><div className="text-sm text-slate-500">Плановый контур</div><div className="mt-2 text-5xl font-bold text-amber-600">{outageSummary?.plannedHouses ?? 0}</div><div className="mt-2 text-sm text-slate-500">домов в плановых окнах</div></Card>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <Card><div className="text-sm text-slate-500">Активные события</div><div className="mt-2 text-5xl font-bold">{visibleIncidents.length}</div><div className="mt-2 text-sm text-slate-500">в выбранном контуре</div></Card>
+              <Card><div className="text-sm text-slate-500">Критические</div><div className="mt-2 text-5xl font-bold text-red-600">{criticalIncidents}</div><div className="mt-2 text-sm text-slate-500">требуют приоритетного внимания</div></Card>
+              <Card><div className="text-sm text-slate-500">В работе / эскалированы</div><div className="mt-2 text-5xl font-bold text-amber-600">{activeInWork}</div><div className="mt-2 text-sm text-slate-500">операционный контур</div></Card>
+              <Card><div className="text-sm text-slate-500">Население в зоне</div><div className="mt-2 text-5xl font-bold text-emerald-600">{affectedPopulation}</div><div className="mt-2 text-sm text-slate-500">оценка по карточкам событий</div></Card>
+            </div>
+          )}
+
+          <div className="grid gap-4 lg:grid-cols-12">
+            <div className="lg:col-span-8"><Card><div className="mb-3 text-3xl font-bold">Карта территориальных проблем</div><MapView incidents={visibleIncidents.slice(0, 20)} /></Card></div>
+            <div className="space-y-3 lg:col-span-4">
+              <Card>
+                <div className="mb-2 text-2xl font-bold">{isHeatTab ? 'Срочные действия' : 'Приоритетные события'}</div>
+                {(isHeatTab ? urgent : prioritizedIncidents).slice(0, 4).map((incident) => (
+                  <div key={incident.id} className="mb-2 rounded-xl border bg-blue-50 p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge text={isHeatTab ? (incident.liveMeta?.outageKind === 'emergency' ? 'аварийное' : 'плановое') : incident.severity} className="bg-red-50 text-red-700" />
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-500">{getDistrictName(incident.district)}</span>
+                    </div>
+                    <div className="mt-2 font-bold">{incident.title}</div>
+                    <div className="text-sm text-slate-500">{incident.summary}</div>
+                  </div>
+                ))}
+              </Card>
+              <Card>
+                <div className="mb-2 text-2xl font-bold">{isHeatTab ? 'Топ-районы по отключенным домам' : 'Топ-районы по концентрации'}</div>
+                {isHeatTab ? districtCards.map((item) => (
+                  <div key={item.districtName} className="mb-2 rounded-xl border p-3">
+                    <div className="flex items-center justify-between"><span className="font-semibold">{item.districtName}</span><span className="text-sm text-slate-500">{item.houses} домов</span></div>
+                    <div className="mt-1 text-sm text-slate-500">Инцидентов: {item.incidents}</div>
+                  </div>
+                )) : subsystemDistrictCards.slice(0, 5).map((item) => (
+                  <div key={item.districtName} className="mb-2 rounded-xl border p-3">
+                    <div className="flex items-center justify-between"><span className="font-semibold">{item.districtName}</span><span className="text-sm text-slate-500">{item.incidents} событий</span></div>
+                    <div className="mt-1 text-sm text-slate-500">Население в зоне: {item.affectedPopulation}</div>
+                  </div>
+                ))}
+              </Card>
+            </div>
+          </div>
+
+          <Card>
+            {isHeatTab ? (
+              <>
+                <div className="mb-3 text-2xl font-bold">Разбивка по ресурсам</div>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {outageSummary?.utilities.map((item) => (
+                    <div key={item.utilityType} className="rounded-xl border p-3">
+                      <div className="font-semibold">{utilityLabels[item.utilityType] ?? item.utilityType}</div>
+                      <div className="mt-2 text-sm text-slate-500">planned: {item.plannedHouses} · emergency: {item.emergencyHouses}</div>
+                      <div className="mt-2 text-sm text-slate-500">событий: {item.incidents}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-3 text-2xl font-bold">Разбивка по статусам</div>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  {statusCards.map((item) => (
+                    <div key={item.status} className="rounded-xl border p-3">
+                      <div className="font-semibold">{item.status}</div>
+                      <div className="mt-2 text-3xl font-bold">{item.count}</div>
+                      <div className="mt-2 text-sm text-slate-500">событий в контуре</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </Card>
+
+          <DataSourcePanel />
+        </>
       )}
-
-      <div className="grid gap-4 lg:grid-cols-12">
-        <div className="lg:col-span-8"><Card><div className="mb-3 text-3xl font-bold">Карта территориальных проблем</div><MapView incidents={visibleIncidents.slice(0, 20)} /></Card></div>
-        <div className="space-y-3 lg:col-span-4">
-          <Card>
-            <div className="mb-2 text-2xl font-bold">{isHeatTab ? 'Срочные действия' : 'Приоритетные события'}</div>
-            {(isHeatTab ? urgent : prioritizedIncidents).slice(0, 4).map((incident) => (
-              <div key={incident.id} className="mb-2 rounded-xl border bg-blue-50 p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge text={isHeatTab ? (incident.liveMeta?.outageKind === 'emergency' ? 'аварийное' : 'плановое') : incident.severity} className="bg-red-50 text-red-700" />
-                  <span className="text-xs font-medium uppercase tracking-wide text-slate-500">{getDistrictName(incident.district)}</span>
-                </div>
-                <div className="mt-2 font-bold">{incident.title}</div>
-                <div className="text-sm text-slate-500">{incident.summary}</div>
-              </div>
-            ))}
-          </Card>
-          <Card>
-            <div className="mb-2 text-2xl font-bold">{isHeatTab ? 'Топ-районы по отключенным домам' : 'Топ-районы по концентрации'}</div>
-            {isHeatTab ? districtCards.map((item) => (
-              <div key={item.districtName} className="mb-2 rounded-xl border p-3">
-                <div className="flex items-center justify-between"><span className="font-semibold">{item.districtName}</span><span className="text-sm text-slate-500">{item.houses} домов</span></div>
-                <div className="mt-1 text-sm text-slate-500">Инцидентов: {item.incidents}</div>
-              </div>
-            )) : subsystemDistrictCards.slice(0, 5).map((item) => (
-              <div key={item.districtName} className="mb-2 rounded-xl border p-3">
-                <div className="flex items-center justify-between"><span className="font-semibold">{item.districtName}</span><span className="text-sm text-slate-500">{item.incidents} событий</span></div>
-                <div className="mt-1 text-sm text-slate-500">Население в зоне: {item.affectedPopulation}</div>
-              </div>
-            ))}
-          </Card>
-        </div>
-      </div>
-
-      <Card>
-        {isHeatTab ? (
-          <>
-            <div className="mb-3 text-2xl font-bold">Разбивка по ресурсам</div>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {outageSummary?.utilities.map((item) => (
-                <div key={item.utilityType} className="rounded-xl border p-3">
-                  <div className="font-semibold">{utilityLabels[item.utilityType] ?? item.utilityType}</div>
-                  <div className="mt-2 text-sm text-slate-500">planned: {item.plannedHouses} · emergency: {item.emergencyHouses}</div>
-                  <div className="mt-2 text-sm text-slate-500">событий: {item.incidents}</div>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="mb-3 text-2xl font-bold">Разбивка по статусам</div>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              {statusCards.map((item) => (
-                <div key={item.status} className="rounded-xl border p-3">
-                  <div className="font-semibold">{item.status}</div>
-                  <div className="mt-2 text-3xl font-bold">{item.count}</div>
-                  <div className="mt-2 text-sm text-slate-500">событий в контуре</div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </Card>
-
-      <DataSourcePanel />
     </div>
   )
 }
@@ -410,7 +472,7 @@ export function OperationsPage() {
         <Card>
           <div className="mb-3 text-3xl font-bold">Оперативный монитор</div>
           <div className="mb-3">
-            <SubsystemTabs value={subsystem} onChange={handleSubsystemChange} />
+            <SubsystemTabs value={subsystem} onChange={handleSubsystemChange} tabs={operationalSubsystemTabs} />
           </div>
           <div className="grid gap-2">
             <select className="rounded-xl border px-3 py-2" value={severity} onChange={(event) => setSeverity(event.target.value)}>

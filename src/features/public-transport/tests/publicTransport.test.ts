@@ -4,6 +4,7 @@ import { parseStopsCsv } from '../parsers/parseStopsCsv'
 import { parseTariffsCsv } from '../parsers/parseTariffsCsv'
 import { NovosibirskStopsProvider } from '../providers/NovosibirskStopsProvider'
 import { selectDistrictConnectivity, selectFilteredStops, selectGlobalTransportMetrics, selectRouteDetails } from '../selectors'
+import { flattenRoutes } from '../server/nskgortransProxy'
 import { buildDistrictMetrics } from '../utils/buildDistrictMetrics'
 import { buildRouteMetrics } from '../utils/buildRouteMetrics'
 import { inferTransitMode, parseRoutes } from '../utils/parseRoutes'
@@ -65,5 +66,22 @@ describe('public transport', () => {
     expect(filtered).toHaveLength(1)
     expect(global.totalStops).toBe(4)
     expect(route?.stopCount).toBe(2)
+  })
+
+  it('flattens nskgortrans route groups into proxy route ids', () => {
+    const routes = flattenRoutes([
+      {
+        type: 0,
+        ways: [{ marsh: '10', name: '10', stopb: 'ЖК Парус', stope: 'Вокзал' }],
+      },
+      {
+        type: 1,
+        ways: [{ marsh: '5', name: '5', stopb: 'Линия А', stope: 'Линия Б' }],
+      },
+    ])
+
+    expect(routes).toHaveLength(2)
+    expect(routes[0]).toEqual({ routeId: '2-5-W-5', type: 1, marsh: '5', number: '5', stopA: 'Линия А', stopB: 'Линия Б' })
+    expect(routes[1]).toEqual({ routeId: '1-10-W-10', type: 0, marsh: '10', number: '10', stopA: 'ЖК Парус', stopB: 'Вокзал' })
   })
 })

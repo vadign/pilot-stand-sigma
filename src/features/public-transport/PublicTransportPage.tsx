@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Card, SectionTitle } from '../../components/ui'
 import { useSigmaStore } from '../../store/useSigmaStore'
@@ -12,23 +12,45 @@ import { NovosibirskStopsProvider } from './providers/NovosibirskStopsProvider'
 import { NovosibirskTariffsProvider } from './providers/NovosibirskTariffsProvider'
 import { TransportRealtimeProvider } from './providers/TransportRealtimeProvider'
 import { getTransportDistrictLabel, selectCurrentFareCards, selectDistrictConnectivity, selectFilteredStops, selectGlobalTransportMetrics, selectRouteDetails, selectSelectedDistrictSummary, selectStopsForRoute, selectTransportFilterOptions } from './selectors'
-import type { PublicTransportBundle, PublicTransportFiltersValue, TransitStop } from './types'
+import type { LiveTransportRoute, PublicTransportBundle, PublicTransportFiltersValue, TransitMode, TransitStop } from './types'
 
-const defaultFilters: PublicTransportFiltersValue = { district: '', mode: 'all', search: '', route: '', onlyPavilion: false }
+const defaultFilters: PublicTransportFiltersValue = { district: '', mode: 'minibus', search: '', route: '35', onlyPavilion: false }
+const transportFilterParamKeys = ['district', 'mode', 'search', 'route', 'pavilion'] as const
 const stopsProvider = new NovosibirskStopsProvider()
 const tariffsProvider = new NovosibirskTariffsProvider()
 const realtimeProvider = new TransportRealtimeProvider()
 
-const readFiltersFromParams = (params: URLSearchParams): PublicTransportFiltersValue => ({
-  district: params.get('district') ?? '',
-  mode: (params.get('mode') as PublicTransportFiltersValue['mode']) || 'all',
-  search: params.get('search') ?? '',
-  route: params.get('route') ?? '',
+const normalize = (value: string) => value.trim().toLowerCase().replace(/ё/g, 'е')
+const transportModeByRouteType = (type: number): TransitMode => {
+  if (type === 1) return 'trolleybus'
+  if (type === 2) return 'tram'
+  if (type === 7) return 'minibus'
+  return 'bus'
+}
+
+const transportLabelByRouteType = (type: number): string => {
+  if (type === 1) return 'Троллейбус'
+  if (type === 2) return 'Трамвай'
+  if (type === 7) return 'Маршрутка'
+  return 'Автобус'
+}
+
+const readFiltersFromParams = (params: URLSearchParams, withDefaults = false): PublicTransportFiltersValue => ({
+  district: params.get('district') ?? (withDefaults ? defaultFilters.district : ''),
+  mode: (params.get('mode') as PublicTransportFiltersValue['mode']) || (withDefaults ? defaultFilters.mode : 'all'),
+  search: params.get('search') ?? (withDefaults ? defaultFilters.search : ''),
+  route: params.get('route') ?? (withDefaults ? defaultFilters.route : ''),
   onlyPavilion: params.get('pavilion') === '1',
 })
 
-const writeFiltersToParams = (filters: PublicTransportFiltersValue): URLSearchParams => {
-  const params = new URLSearchParams()
+const readConnectivityFromParams = (params: URLSearchParams) => ({
+  from: params.get('district') ?? '',
+  to: params.get('compareTo') ?? '',
+})
+
+const writeFiltersToParams = (filters: PublicTransportFiltersValue, currentParams: URLSearchParams): URLSearchParams => {
+  const params = new URLSearchParams(currentParams)
+  transportFilterParamKeys.forEach((key) => params.delete(key))
   if (filters.district) params.set('district', filters.district)
   if (filters.mode !== 'all') params.set('mode', filters.mode)
   if (filters.search) params.set('search', filters.search)
@@ -37,17 +59,26 @@ const writeFiltersToParams = (filters: PublicTransportFiltersValue): URLSearchPa
   return params
 }
 
-export const PublicTransportPage = () => {
+export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }) => {
   const sourceMode = useSigmaStore((state) => state.sourceMode)
   const [searchParams, setSearchParams] = useSearchParams()
-  const [filters, setFilters] = useState<PublicTransportFiltersValue>(() => readFiltersFromParams(searchParams))
+  const isFirstParamsSync = useRef(true)
+  const [filters, setFilters] = useState<PublicTransportFiltersValue>(() => readFiltersFromParams(searchParams, true))
   const [bundle, setBundle] = useState<PublicTransportBundle>()
   const [loading, setLoading] = useState(true)
   const [selectedStop, setSelectedStop] = useState<TransitStop>()
-  const [connectivity, setConnectivity] = useState({ from: '', to: '' })
+  const [connectivity, setConnectivity] = useState(() => readConnectivityFromParams(searchParams))
+  const [liveRoutes, setLiveRoutes] = useState<LiveTransportRoute[]>([])
+  const [liveRoutesError, setLiveRoutesError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (isFirstParamsSync.current) {
+      isFirstParamsSync.current = false
+      return
+    }
+
     setFilters(readFiltersFromParams(searchParams))
+    setConnectivity(readConnectivityFromParams(searchParams))
   }, [searchParams])
 
   useEffect(() => {
@@ -69,6 +100,31 @@ export const PublicTransportPage = () => {
     }
   }, [sourceMode])
 
+  useEffect(() => {
+    let cancelled = false
+
+    const loadLiveRoutes = async () => {
+      try {
+        const response = await fetch('/api/routes', { cache: 'no-store' })
+        if (!response.ok) throw new Error(`routes feed failed: ${response.status}`)
+        const routes = await response.json() as LiveTransportRoute[]
+        if (cancelled) return
+        setLiveRoutes(routes)
+        setLiveRoutesError(null)
+      } catch (error) {
+        if (cancelled) return
+        setLiveRoutes([])
+        setLiveRoutesError(error instanceof Error ? error.message : 'Не удалось загрузить /api/routes')
+      }
+    }
+
+    void loadLiveRoutes()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const filterOptions = useMemo(() => selectTransportFilterOptions(bundle?.stops ?? []), [bundle?.stops])
   const filteredStops = useMemo(() => selectFilteredStops(bundle?.stops ?? [], filters), [bundle?.stops, filters])
   const globalMetrics = useMemo(() => selectGlobalTransportMetrics(bundle?.stops ?? [], bundle?.fares ?? []), [bundle?.fares, bundle?.stops])
@@ -82,16 +138,46 @@ export const PublicTransportPage = () => {
   const stopsForSelectedRoute = useMemo(() => selectStopsForRoute(bundle?.stops ?? [], filters.route), [bundle?.stops, filters.route])
   const visibleStopsForMap = filters.route ? stopsForSelectedRoute : filteredStops
   const fareCards = useMemo(() => selectCurrentFareCards(bundle?.fares ?? []), [bundle?.fares])
+  const liveRouteMatches = useMemo(() =>
+    !filters.route
+      ? []
+      : liveRoutes.filter((route) =>
+        normalize(route.number) === normalize(filters.route)
+        && (filters.mode === 'all' || transportModeByRouteType(route.type) === filters.mode),
+      )
+  , [filters.mode, filters.route, liveRoutes])
+  const routeSuggestions = useMemo(() =>
+    liveRoutes.map((route) => ({
+      key: route.routeId,
+      value: route.number,
+      mode: transportModeByRouteType(route.type),
+      label: `${transportLabelByRouteType(route.type)} ${route.number}: ${route.stopA} → ${route.stopB}`,
+      searchValue: `${transportLabelByRouteType(route.type)} ${route.number}: ${route.stopA} → ${route.stopB}`,
+    }))
+  , [liveRoutes])
+  const realtimeNotice = liveRoutesError
+    ? `Realtime proxy недоступен: ${liveRoutesError}`
+    : !filters.route
+      ? 'Чтобы показать реальные машины на карте, выберите номер маршрута. Карта будет запрашивать `/api/vehicles?routeId=...` только для совпавших routeId.'
+      : liveRouteMatches.length > 0
+        ? `Показываю реальные машины для ${liveRouteMatches.length} routeId из maps.nskgortrans.ru через backend-proxy.`
+        : 'Для выбранного номера маршрута нет совпадений в live-списке `/api/routes`. Уточните номер или тип транспорта.'
+
+  useEffect(() => {
+    if (selectedStop && !filteredStops.some((stop) => stop.id === selectedStop.id)) {
+      setSelectedStop(undefined)
+    }
+  }, [filteredStops, selectedStop])
 
   const handleFiltersChange = (next: PublicTransportFiltersValue) => {
     setFilters(next)
-    setSearchParams(writeFiltersToParams(next), { replace: true })
+    setSearchParams(writeFiltersToParams(next, searchParams), { replace: true })
   }
 
   return (
     <div className="space-y-4">
-      <SectionTitle title="Общественный транспорт" subtitle="Остановки и тарифы из официальных открытых наборов Новосибирска без симуляции live GPS." />
-      <TransportFilters filters={filters} districts={filterOptions.districts} onChange={handleFiltersChange} onReset={() => handleFiltersChange(defaultFilters)} />
+      {!embedded && <SectionTitle title="Общественный транспорт" subtitle="Остановки и тарифы из официальных открытых наборов Новосибирска без симуляции live GPS." />}
+      <TransportFilters filters={filters} districts={filterOptions.districts} routeSuggestions={routeSuggestions} onChange={handleFiltersChange} onReset={() => handleFiltersChange(defaultFilters)} />
 
       {loading && <Card>Загружаю транспортные данные…</Card>}
 
@@ -103,15 +189,27 @@ export const PublicTransportPage = () => {
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">Яндекс.Карта</div>
-                    <div className="text-2xl font-bold">Слой остановок общественного транспорта</div>
+                    <div className="text-2xl font-bold">Карта общественного транспорта</div>
                   </div>
-                  <div className="text-sm text-slate-500">Текущий набор на карте: {visibleStopsForMap.length}</div>
+                  <div className="text-sm text-slate-500">
+                    {filters.route ? `Фокус на маршруте № ${filters.route}` : filters.district ? `Фокус на районе ${filters.district}` : 'Весь город'}
+                  </div>
                 </div>
-                <TransportMap stops={visibleStopsForMap} selectedStop={selectedStop} selectedDistrict={filters.district} selectedRoute={filters.route} onSelectStop={setSelectedStop} />
+                <TransportMap
+                  stops={visibleStopsForMap}
+                  selectedStop={selectedStop}
+                  selectedDistrict={filters.district}
+                  selectedRoute={filters.route}
+                  liveRoutes={liveRouteMatches}
+                  onSelectStop={setSelectedStop}
+                />
                 <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
-                  <span className="rounded-full bg-slate-100 px-2 py-1">Синий: остановка</span>
-                  <span className="rounded-full bg-slate-100 px-2 py-1">Зелёный: остановка выбранного маршрута</span>
-                  <span className="rounded-full bg-slate-100 px-2 py-1">Красный: выбранная остановка</span>
+                  <span className="rounded-full bg-slate-100 px-2 py-1">Подложка: Yandex transit</span>
+                  <span className="rounded-full bg-slate-100 px-2 py-1">Красная точка: вручную выбранная остановка</span>
+                  <span className="rounded-full bg-slate-100 px-2 py-1">Реальные машины грузятся только после выбора маршрута</span>
+                </div>
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                  {realtimeNotice}
                 </div>
               </Card>
 
