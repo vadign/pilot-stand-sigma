@@ -1,0 +1,16 @@
+{
+  "latitude": 55.028,
+  "longitude": 82.92,
+  "current": {
+    "european_aqi": 78,
+    "pm2_5": 38,
+    "pm10": 54,
+    "nitrogen_dioxide": 31
+  },
+  "current_units": {
+    "european_aqi": "index",
+    "pm2_5": "µg/m³",
+    "pm10": "µg/m³",
+    "nitrogen_dioxide": "µg/m³"
+  }
+}

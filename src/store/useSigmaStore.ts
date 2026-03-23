@@ -10,6 +10,13 @@ const initialLiveState: SigmaLiveState = {
   liveIncidents: [],
   liveHistory: [],
   workflow: {},
+  indicators: [],
+  referenceObjects: [],
+  districtBoundaries: [],
+  riskCards: [],
+  transitRoutes: [],
+  constructionObjects: [],
+  trafficIndex: [],
 }
 
 export interface SigmaState {
@@ -139,6 +146,13 @@ export const useSigmaStore = create<SigmaState>((set, get) => ({
       sourceStatuses: bundle.sourceStatuses,
       liveIncidents: bundle.outages.payload.incidents,
       liveHistory: bundle.outages.payload.history,
+      indicators: bundle.domain.indicators,
+      referenceObjects: bundle.domain.referenceObjects,
+      districtBoundaries: bundle.domain.districtBoundaries,
+      riskCards: bundle.domain.riskCards,
+      transitRoutes: bundle.domain.transitRoutes,
+      constructionObjects: bundle.domain.constructionObjects,
+      trafficIndex: bundle.domain.trafficIndex,
       lastError: undefined,
     },
   })),

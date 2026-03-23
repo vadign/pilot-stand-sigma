@@ -38,4 +38,23 @@ describe('App smoke render', () => {
       root.unmount()
     })
   })
+
+  it('renders sources route without crashing', async () => {
+    const root = createRoot(container)
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={['/sources']}>
+          <App />
+        </MemoryRouter>,
+      )
+    })
+
+    expect(container.textContent).toContain('Источники данных')
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
 })

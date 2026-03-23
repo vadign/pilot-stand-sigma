@@ -15,6 +15,7 @@ const nav = [
   ['/operations', 'Оперативный монитор'],
   ['/deputies', 'Цифровые заместители'],
   ['/regulations', 'Реестр регламентов'],
+  ['/sources', 'Источники данных'],
 ]
 
 export function Layout() {
@@ -48,7 +49,7 @@ export function Layout() {
           <div className="mt-2 flex flex-wrap gap-2">
             <Badge text={`режим: ${sourceMode}`} className="bg-blue-50 text-blue-700" />
             {live.sourceStatuses.map((status) => (
-              <Badge key={status.key} text={`${status.key}: ${status.source}/${status.status}`} className={status.status === 'ready' ? 'bg-emerald-50 text-emerald-700' : status.status === 'stale' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'} />
+              <Badge key={status.id} text={`${status.id}: ${status.origin}/${status.status}`} className={status.status === 'ready' ? 'bg-emerald-50 text-emerald-700' : status.status === 'stale' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'} />
             ))}
           </div>
         </div>

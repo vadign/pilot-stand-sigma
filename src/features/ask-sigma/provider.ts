@@ -1,4 +1,4 @@
-import { selectConstructionAggregates, selectIncidentViewList, selectOutageSummary, selectSourceStatuses } from '../../live/selectors'
+import { selectConstructionAggregates, selectIncidentViewList, selectIndicators, selectOutageSummary, selectReferenceObjects, selectRiskCards, selectSourceStatuses, selectTrafficIndex, selectTransitRoutes } from '../../live/selectors'
 import { useSigmaStore } from '../../store/useSigmaStore'
 import type { AskSigmaContext } from './types'
 
@@ -21,6 +21,11 @@ export class LocalAskSigmaProvider implements AskSigmaProvider {
       liveSummary: selectOutageSummary(state),
       constructionAggregates: selectConstructionAggregates(state),
       sourceStatuses: selectSourceStatuses(state),
+      indicators: selectIndicators(state),
+      referenceObjects: selectReferenceObjects(state),
+      riskCards: selectRiskCards(state),
+      trafficIndex: selectTrafficIndex(state),
+      transitRoutes: selectTransitRoutes(state),
       now: new Date().toISOString(),
     }
   }

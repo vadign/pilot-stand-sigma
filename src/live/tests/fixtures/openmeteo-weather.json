@@ -1,0 +1,14 @@
+{
+  "latitude": 55.028,
+  "longitude": 82.92,
+  "current": {
+    "temperature_2m": -14,
+    "wind_speed_10m": 1.8,
+    "relative_humidity_2m": 88
+  },
+  "current_units": {
+    "temperature_2m": "°C",
+    "wind_speed_10m": "м/с",
+    "relative_humidity_2m": "%"
+  }
+}

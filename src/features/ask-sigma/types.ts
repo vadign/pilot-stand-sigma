@@ -1,5 +1,5 @@
 import type { Deputy, Incident, Regulation, ServicePerformance } from '../../types'
-import type { DistrictConstructionAggregate, SigmaLiveOutageSummary, SourceStatusCard } from '../../live/types'
+import type { DistrictConstructionAggregate, SigmaIndicator, SigmaLiveOutageSummary, SigmaReferenceObject, SigmaRiskCard, SigmaTrafficIndex, SigmaTransitRoute, SourceStatusCard } from '../../live/types'
 
 export type SigmaRole = 'мэр' | 'диспетчер' | 'аналитик'
 export type VoiceState = 'idle' | 'listening' | 'processing' | 'error' | 'unsupported'
@@ -24,6 +24,11 @@ export type AskSigmaEntity =
   | 'map'
   | 'construction'
   | 'sources'
+  | 'ecology'
+  | 'transport'
+  | 'medical'
+  | 'directory'
+  | 'safety'
   | 'help'
 
 export interface AskSigmaIntent {
@@ -53,6 +58,24 @@ export type AskSigmaOperation =
   | 'NAVIGATE'
   | 'LIVE_SOURCES'
   | 'CONSTRUCTION'
+  | 'UTILITIES_STATUS'
+  | 'UTILITIES_PLANNED'
+  | 'UTILITIES_HISTORY'
+  | 'ECO_STATUS'
+  | 'ECO_PDK'
+  | 'ECO_HISTORY'
+  | 'ECO_RISKS'
+  | 'TRAFFIC_INDEX'
+  | 'TRANSIT_ROUTE'
+  | 'TRANSIT_DISTRICTS'
+  | 'CAMERAS_FILTER'
+  | 'MEDICAL_FILTER'
+  | 'CONSTRUCTION_ACTIVE'
+  | 'CONSTRUCTION_GROUP'
+  | 'CONSTRUCTION_COMMISSIONED'
+  | 'DIRECTORY_FILTER'
+  | 'DIRECTORY_TOP_N'
+  | 'SOURCE_STATUS'
   | 'HELP'
   | 'UNKNOWN'
 
@@ -84,6 +107,12 @@ export type AskSigmaResultType =
   | 'DEPUTY_MODE_CHANGE'
   | 'LIVE_SOURCE_STATUS'
   | 'CONSTRUCTION_AGGREGATES'
+  | 'ECOLOGY_STATUS'
+  | 'ECOLOGY_RISKS'
+  | 'TRAFFIC_INDEX'
+  | 'REFERENCE_MAP'
+  | 'DIRECTORY_LIST'
+  | 'TRANSIT_ROUTE'
   | 'HELP'
   | 'UNKNOWN'
 
@@ -99,6 +128,11 @@ export interface AskSigmaContext {
   liveSummary?: SigmaLiveOutageSummary
   constructionAggregates?: DistrictConstructionAggregate[]
   sourceStatuses?: SourceStatusCard[]
+  indicators?: SigmaIndicator[]
+  referenceObjects?: SigmaReferenceObject[]
+  riskCards?: SigmaRiskCard[]
+  trafficIndex?: SigmaTrafficIndex[]
+  transitRoutes?: SigmaTransitRoute[]
   now: string
 }
 
@@ -128,6 +162,11 @@ export interface AskSigmaResult {
   approvals?: { id: string; reason: string; initiator: string }[]
   constructionAggregates?: DistrictConstructionAggregate[]
   sourceStatuses?: SourceStatusCard[]
+  indicators?: SigmaIndicator[]
+  referenceObjects?: SigmaReferenceObject[]
+  riskCards?: SigmaRiskCard[]
+  trafficIndex?: SigmaTrafficIndex[]
+  transitRoutes?: SigmaTransitRoute[]
   actions?: { label: string; route?: string; incidentId?: string; district?: string }[]
   hints?: AskSigmaHint[]
   explain: AskSigmaExplain
