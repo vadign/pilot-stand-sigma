@@ -1,0 +1,6 @@
+{
+  "elements": [
+    { "id": 101, "lat": 55.03, "lon": 82.92, "tags": { "name": "Камера 1", "highway": "speed_camera" } },
+    { "id": 102, "lat": 55.04, "lon": 82.94, "tags": { "name": "Камера 2", "highway": "speed_camera" } }
+  ]
+}

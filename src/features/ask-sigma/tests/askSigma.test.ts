@@ -19,6 +19,12 @@ const provider: AskSigmaProvider = {
     deputies: [{ id: 'd1', name: 'Заместитель по теплоснабжению', domain: 'ЖКХ', mode: 'recommendation', connectedSourceIds: [], activeIncidentIds: [], permissions: [], latestActions: [], constraints: [], escalationRate: 0.1 }],
     servicePerformance: [{ id: 'sp1', service: 'ЕДДС', resolvedInTime: 80, avgMinutes: 10, incidents: 1 }],
     notifications: [{ id: 'n1', text: 'x', level: 'высокий', createdAt: '' }],
+    sourceStatuses: [],
+    indicators: [],
+    referenceObjects: [],
+    riskCards: [],
+    trafficIndex: [],
+    transitRoutes: [],
   }),
   setDeputyMode: () => undefined,
 }

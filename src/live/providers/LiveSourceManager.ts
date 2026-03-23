@@ -1,13 +1,24 @@
-import { sourceRegistry } from '../config/sourceRegistry'
+import { districts } from '../../mocks/data'
+import { sigmaSourceRegistry, sourceRegistry } from '../config/sourceRegistry'
+import { buildEcologyRiskCards, buildDistrictTransitRoutes, classifyDistrictByPoint } from '../domain/geo'
 import { build051Snapshot, normalize051ToSigmaIncidents, summarize051Snapshot } from '../normalizers/normalize051ToSigma'
 import { aggregateConstructionByDistrict } from '../normalizers/normalizeConstructionToSigma'
-import type { ConstructionDatasetBundle, LiveBundle, LiveSourceMode, LiveSourceResult, Power051Snapshot, SigmaLiveOutageIncident, SourceStatusCard } from '../types'
+import type { ConstructionDatasetBundle, LiveBundle, LiveSourceMode, LiveSourceResult, Power051Snapshot, SigmaLiveOutageIncident, SigmaSourceStatus } from '../types'
 import { LiveCacheProvider } from './LiveCacheProvider'
 import { LiveSnapshotProvider } from './LiveSnapshotProvider'
 import { NovosibirskOpenDataProvider } from './NovosibirskOpenDataProvider'
 import { Power051Provider } from './Power051Provider'
+import { OpenMeteoAirProvider } from './OpenMeteoAirProvider'
+import { OpenMeteoWeatherProvider } from './OpenMeteoWeatherProvider'
+import { CityAirProvider } from './CityAirProvider'
+import { OverpassCamerasProvider } from './OverpassCamerasProvider'
+import { OverpassMedicalProvider } from './OverpassMedicalProvider'
+import { OpendataTopicProvider } from './OpendataTopicProvider'
+import { ConstructionDerivedProvider } from './ConstructionDerivedProvider'
+import { TrafficIndexProvider } from './TrafficIndexProvider'
+import { DistrictBoundaryProvider } from './DistrictBoundaryProvider'
 
-const PARSE_VERSION = '1.0.0'
+const PARSE_VERSION = '2.0.0'
 
 interface ManagerOptions {
   mode: LiveSourceMode
@@ -23,55 +34,132 @@ const createCacheEntry = <T,>(key: string, payload: T, ttlMinutes: number, sourc
   parseVersion: PARSE_VERSION,
 })
 
+const createStatus = (id: string, patch: Partial<SigmaSourceStatus>): SigmaSourceStatus => {
+  const registry = sigmaSourceRegistry.find((item) => item.id === id)
+  if (!registry) throw new Error(`Unknown source ${id}`)
+  return {
+    ...registry,
+    origin: 'snapshot',
+    message: 'Источник зарегистрирован.',
+    parseVersion: PARSE_VERSION,
+    freshnessLabel: `${Math.round(registry.ttlMs / 60000)} мин`,
+    ...patch,
+  }
+}
+
 export class LiveSourceManager {
   private readonly snapshotProvider
   private readonly cacheProvider
   private readonly powerProvider
   private readonly openDataProvider
+  private readonly openMeteoAirProvider
+  private readonly openMeteoWeatherProvider
+  private readonly cityAirProvider
+  private readonly overpassCamerasProvider
+  private readonly overpassMedicalProvider
+  private readonly opendataTopicProvider
+  private readonly constructionDerivedProvider
+  private readonly trafficIndexProvider
+  private readonly districtBoundaryProvider
 
   constructor(
     snapshotProvider = new LiveSnapshotProvider(),
     cacheProvider = new LiveCacheProvider(),
     powerProvider = new Power051Provider(),
     openDataProvider = new NovosibirskOpenDataProvider(),
+    openMeteoAirProvider = new OpenMeteoAirProvider(),
+    openMeteoWeatherProvider = new OpenMeteoWeatherProvider(),
+    cityAirProvider = new CityAirProvider(),
+    overpassCamerasProvider = new OverpassCamerasProvider(),
+    overpassMedicalProvider = new OverpassMedicalProvider(),
+    opendataTopicProvider = new OpendataTopicProvider(),
+    constructionDerivedProvider = new ConstructionDerivedProvider(),
+    trafficIndexProvider = new TrafficIndexProvider(),
+    districtBoundaryProvider = new DistrictBoundaryProvider(),
   ) {
     this.snapshotProvider = snapshotProvider
     this.cacheProvider = cacheProvider
     this.powerProvider = powerProvider
     this.openDataProvider = openDataProvider
+    this.openMeteoAirProvider = openMeteoAirProvider
+    this.openMeteoWeatherProvider = openMeteoWeatherProvider
+    this.cityAirProvider = cityAirProvider
+    this.overpassCamerasProvider = overpassCamerasProvider
+    this.overpassMedicalProvider = overpassMedicalProvider
+    this.opendataTopicProvider = opendataTopicProvider
+    this.constructionDerivedProvider = constructionDerivedProvider
+    this.trafficIndexProvider = trafficIndexProvider
+    this.districtBoundaryProvider = districtBoundaryProvider
   }
 
   async loadBundle({ mode, runtimeEnabled }: ManagerOptions): Promise<LiveBundle> {
     const outages = await this.resolveOutages(mode, runtimeEnabled)
     const construction = await this.resolveConstruction(mode, runtimeEnabled)
-    const sourceStatuses: SourceStatusCard[] = [
-      {
-        key: '051',
-        title: sourceRegistry.power051.title,
-        sourceUrl: outages.meta.sourceUrl,
-        updatedAt: outages.meta.updatedAt,
-        fetchedAt: outages.meta.fetchedAt,
-        ttlMinutes: sourceRegistry.power051.ttlMinutes,
+    const [airIndicators, weatherIndicators, cityAirIndicators, cameras, medical, directories, districtBoundaries] = await Promise.all([
+      this.openMeteoAirProvider.fetchSnapshot(),
+      this.openMeteoWeatherProvider.fetchSnapshot(),
+      this.cityAirProvider.fetchSnapshot(),
+      this.overpassCamerasProvider.fetchSnapshot(),
+      this.overpassMedicalProvider.fetchSnapshot(),
+      this.opendataTopicProvider.fetchSnapshot(),
+      this.districtBoundaryProvider.fetchSnapshot(),
+    ])
+
+    const indicators = [...airIndicators, ...weatherIndicators, ...cityAirIndicators]
+    const allReferences = [...cameras, ...medical, ...directories].map((item) => {
+      if (item.districtId) return item
+      const classified = classifyDistrictByPoint(item.coordinates, districtBoundaries)
+      return { ...item, districtId: classified.districtId, districtName: classified.districtName }
+    })
+    const riskCards = buildEcologyRiskCards(indicators)
+    const trafficIndex = this.trafficIndexProvider.build(indicators, districts.map((item) => item.id))
+    const transitRoutes = buildDistrictTransitRoutes(allReferences)
+    const constructionObjects = this.constructionDerivedProvider.buildObjects(construction.payload)
+
+    const sourceStatuses: SigmaSourceStatus[] = [
+      createStatus('source-051', {
         status: outages.meta.status,
-        type: outages.meta.type,
+        origin: outages.meta.source,
         message: outages.meta.message,
-        source: outages.meta.source,
-      },
-      {
-        key: 'opendata',
-        title: sourceRegistry.constructionActive.title,
-        sourceUrl: construction.meta.sourceUrl,
-        updatedAt: construction.meta.updatedAt,
-        fetchedAt: construction.meta.fetchedAt,
-        ttlMinutes: sourceRegistry.constructionActive.ttlMinutes,
-        status: construction.meta.status,
-        type: construction.meta.type,
-        message: construction.meta.message,
-        source: construction.meta.source,
-      },
+        lastUpdated: outages.meta.updatedAt,
+        lastSuccess: outages.meta.status === 'ready' ? outages.meta.updatedAt : undefined,
+        objectCount: outages.payload.incidents.length,
+      }),
+      createStatus('source-openmeteo-air', { status: 'ready', origin: 'snapshot', message: 'Снимок качества воздуха подготовлен.', lastUpdated: indicators.find((item) => item.sourceId === 'source-openmeteo-air')?.updatedAt, objectCount: airIndicators.length }),
+      createStatus('source-openmeteo-weather', { status: 'ready', origin: 'snapshot', message: 'Снимок погоды подготовлен.', lastUpdated: indicators.find((item) => item.sourceId === 'source-openmeteo-weather')?.updatedAt, objectCount: weatherIndicators.length }),
+      createStatus('source-cityair', { status: this.cityAirProvider.isEnabled() ? 'ready' : 'stale', origin: this.cityAirProvider.isEnabled() ? 'snapshot' : 'mock', message: this.cityAirProvider.isEnabled() ? 'CityAir включен конфигурацией.' : 'CityAir отключен: API key не задан.', lastUpdated: cityAirIndicators[0]?.updatedAt, objectCount: cityAirIndicators.length, enabled: this.cityAirProvider.isEnabled() }),
+      createStatus('source-overpass-cameras', { status: 'ready', origin: 'snapshot', message: 'Справочный слой камер ПДД загружен.', lastUpdated: cameras[0]?.updatedAt, objectCount: cameras.length }),
+      createStatus('source-overpass-medical', { status: 'ready', origin: 'snapshot', message: 'Справочный слой медучреждений загружен.', lastUpdated: medical[0]?.updatedAt, objectCount: medical.length }),
+      createStatus('source-opendata-stops', { status: 'ready', origin: 'snapshot', message: 'Слой остановок и справочных объектов загружен.', lastUpdated: directories[0]?.updatedAt, objectCount: directories.filter((item) => item.category === 'stop').length }),
+      createStatus('source-opendata-schools', { status: 'ready', origin: 'snapshot', message: 'Слой школ загружен.', lastUpdated: directories.find((item) => item.category === 'school')?.updatedAt, objectCount: directories.filter((item) => item.category === 'school').length }),
+      createStatus('source-opendata-kindergartens', { status: 'ready', origin: 'snapshot', message: 'Слой детсадов загружен.', lastUpdated: directories.find((item) => item.category === 'kindergarten')?.updatedAt, objectCount: directories.filter((item) => item.category === 'kindergarten').length }),
+      createStatus('source-opendata-libraries', { status: 'ready', origin: 'snapshot', message: 'Слой библиотек загружен.', lastUpdated: directories.find((item) => item.category === 'library')?.updatedAt, objectCount: directories.filter((item) => item.category === 'library').length }),
+      createStatus('source-opendata-pharmacies', { status: 'ready', origin: 'snapshot', message: 'Слой аптек загружен.', lastUpdated: directories.find((item) => item.category === 'pharmacy')?.updatedAt, objectCount: directories.filter((item) => item.category === 'pharmacy').length }),
+      createStatus('source-opendata-sport-grounds', { status: 'ready', origin: 'snapshot', message: 'Слой спортплощадок загружен.', lastUpdated: directories.find((item) => item.category === 'sport_ground')?.updatedAt, objectCount: directories.filter((item) => item.category === 'sport_ground').length }),
+      createStatus('source-opendata-sport-orgs', { status: 'ready', origin: 'snapshot', message: 'Слой спортивных организаций загружен.', lastUpdated: directories.find((item) => item.category === 'sport_org')?.updatedAt, objectCount: directories.filter((item) => item.category === 'sport_org').length }),
+      createStatus('source-opendata-culture', { status: 'ready', origin: 'snapshot', message: 'Слой культурных объектов загружен.', lastUpdated: directories.find((item) => item.category === 'culture')?.updatedAt, objectCount: directories.filter((item) => item.category === 'culture').length }),
+      createStatus('source-opendata-parking', { status: 'ready', origin: 'snapshot', message: 'Слой муниципальных парковок загружен.', lastUpdated: directories.find((item) => item.category === 'parking')?.updatedAt, objectCount: directories.filter((item) => item.category === 'parking').length }),
+      createStatus('source-opendata-construction-permits', { status: construction.meta.status, origin: construction.meta.source, message: 'Реестр разрешений интегрирован через OpenData bundle.', lastUpdated: construction.payload.permitsMeta.fetchedAt, rowCount: construction.payload.permits.length }),
+      createStatus('source-opendata-construction-commissioned', { status: construction.meta.status, origin: construction.meta.source, message: 'Реестр ввода в эксплуатацию интегрирован через OpenData bundle.', lastUpdated: construction.payload.commissionedMeta.fetchedAt, rowCount: construction.payload.commissioned.length }),
+      createStatus('source-osm-boundaries', { status: 'ready', origin: 'snapshot', message: 'Полигоны районов доступны для spatial enrichment.', lastUpdated: districtBoundaries[0]?.updatedAt, objectCount: districtBoundaries.length }),
+      createStatus('source-traffic-index', { status: 'ready', origin: 'runtime', message: 'Индекс дорожной нагрузки рассчитан на лету.', lastUpdated: trafficIndex[0]?.updatedAt, objectCount: trafficIndex.length }),
     ]
 
-    return { mode, outages, construction, sourceStatuses }
+    return {
+      mode,
+      outages,
+      construction,
+      domain: {
+        indicators,
+        referenceObjects: allReferences,
+        districtBoundaries,
+        riskCards,
+        transitRoutes,
+        constructionObjects,
+        trafficIndex,
+      },
+      sourceStatuses,
+    }
   }
 
   private async resolveOutages(mode: LiveSourceMode, runtimeEnabled: boolean): Promise<LiveBundle['outages']> {

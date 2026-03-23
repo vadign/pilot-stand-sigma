@@ -1,0 +1,5 @@
+{
+  "elements": [
+    { "id": 201, "lat": 55.01, "lon": 82.97, "tags": { "name": "Больница", "amenity": "hospital" } }
+  ]
+}

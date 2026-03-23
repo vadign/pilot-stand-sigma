@@ -90,3 +90,18 @@ export const useOutageHistorySeries = () => {
     total: snapshot.totals.houses,
   })), [history])
 }
+
+export const selectIndicators = (state: SigmaState) => state.live.indicators
+export const selectReferenceObjects = (state: SigmaState) => state.live.referenceObjects
+export const selectRiskCards = (state: SigmaState) => state.live.riskCards
+export const selectTrafficIndex = (state: SigmaState) => state.live.trafficIndex
+export const selectDistrictBoundaries = (state: SigmaState) => state.live.districtBoundaries
+export const selectConstructionObjects = (state: SigmaState) => state.live.constructionObjects
+export const selectTransitRoutes = (state: SigmaState) => state.live.transitRoutes
+
+export const useIndicators = () => useSigmaStore(selectIndicators)
+export const useReferenceObjects = () => useSigmaStore(selectReferenceObjects)
+export const useRiskCards = () => useSigmaStore(selectRiskCards)
+export const useTrafficIndex = () => useSigmaStore(selectTrafficIndex)
+export const useConstructionObjects = () => useSigmaStore(selectConstructionObjects)
+export const useTransitRoutes = () => useSigmaStore(selectTransitRoutes)

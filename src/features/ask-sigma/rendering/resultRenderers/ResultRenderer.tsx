@@ -40,6 +40,63 @@ export const ResultRenderer = ({
         </div>
       )}
 
+      {result.indicators && (
+        <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+          {result.indicators.map((indicator) => (
+            <div key={indicator.id} className="rounded border p-2">
+              <div className="font-semibold">{indicator.label}</div>
+              <div>{indicator.value} {indicator.unit}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {result.riskCards && (
+        <div className="mt-3 space-y-2 text-sm">
+          {result.riskCards.map((card) => (
+            <div key={card.id} className="rounded border p-2">
+              <div className="font-semibold">{card.title}</div>
+              <div>{card.explanation.title}</div>
+              <div className="text-slate-500">{card.explanation.because.join(' · ')}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {result.trafficIndex && (
+        <div className="mt-3 space-y-2 text-sm">
+          {result.trafficIndex.map((item) => (
+            <div key={item.id} className="rounded border p-2">
+              <div className="font-semibold">{item.districtName}</div>
+              <div>{item.score} · {item.level} · calculated</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {result.referenceObjects && (
+        <div className="mt-3 space-y-2 text-sm">
+          {result.referenceObjects.map((item) => (
+            <div key={item.id} className="rounded border p-2">
+              <div className="font-semibold">{item.title}</div>
+              <div>{item.category} · {item.districtName ?? 'без района'}</div>
+              <div className="text-slate-500">{item.address ?? `${item.coordinates[0]}, ${item.coordinates[1]}`}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {result.transitRoutes && (
+        <div className="mt-3 space-y-2 text-sm">
+          {result.transitRoutes.map((route) => (
+            <div key={route.id} className="rounded border p-2">
+              <div className="font-semibold">{route.summary}</div>
+              <div>Маршруты: {route.commonRouteNames.join(', ')}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {result.incidents && (
         <div className="mt-3 space-y-2">
           {result.incidents.map((incident) => (
@@ -60,10 +117,10 @@ export const ResultRenderer = ({
       {result.sourceStatuses && (
         <div className="mt-3 space-y-2 text-sm">
           {result.sourceStatuses.map((status) => (
-            <div key={status.key} className="rounded border p-2">
-              <div className="font-semibold">{status.title}</div>
-              <div>{status.source}/{status.status} · {status.type}</div>
-              <div className="text-slate-500">Обновлено: {status.updatedAt ? new Date(status.updatedAt).toLocaleString('ru-RU') : '—'}</div>
+            <div key={status.id} className="rounded border p-2">
+              <div className="font-semibold">{status.name}</div>
+              <div>{status.origin}/{status.status} · {status.dataCategory}</div>
+              <div className="text-slate-500">Обновлено: {status.lastUpdated ? new Date(status.lastUpdated).toLocaleString('ru-RU') : '—'}</div>
             </div>
           ))}
         </div>
