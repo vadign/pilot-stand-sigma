@@ -9,7 +9,7 @@ import { calculateActiveConstruction, extractDistrictFromAddress, normalizeCommi
 const base = join(process.cwd(), 'src/live/tests/fixtures')
 
 describe('parse051OffPage', () => {
-  it('parses planned and emergency blocks', () => {
+  it('parses planned and emergency outage blocks', () => {
     const html = readFileSync(join(base, '051-off.html'), 'utf-8')
     const parsed = parse051OffPage(html)
     expect(parsed.planned).toHaveLength(3)

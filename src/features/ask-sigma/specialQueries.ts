@@ -1,6 +1,7 @@
 import { normalizeText } from './normalize'
 import type { AskSigmaIntent } from './types'
 import { parseRoleCommand, stripSafetyWakeWord } from './voice/voiceRegex'
+import { defaultMayorTransportPath } from '../public-transport/navigation'
 
 const navigationMap: Record<string, string> = {
   'открой сводку': '/briefing',
@@ -9,7 +10,7 @@ const navigationMap: Record<string, string> = {
   'открой регламенты': '/regulations',
   'открой цифровых заместителей': '/deputies',
   'открой инциденты': '/operations',
-  'открой общественный транспорт': '/mayor-dashboard?subsystem=transport',
+  'открой общественный транспорт': defaultMayorTransportPath,
 }
 
 const districtRegex = /(советский|ленинский|центральный|кольцово|академгородок)/i

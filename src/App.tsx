@@ -1,11 +1,12 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { BriefingPage, DeputiesPage, HistoryPage, IncidentPage, MayorDashboardPage, OperationsPage, PlaceholderPage, RegulationsPage, ScenariosPage } from './features/pages'
+import { applyMayorTransportParams } from './features/public-transport/navigation'
 
 function LegacyPublicTransportRedirect() {
   const { search } = useLocation()
   const params = new URLSearchParams(search)
-  params.set('subsystem', 'transport')
+  applyMayorTransportParams(params, 'when-missing')
   return <Navigate to={`/mayor-dashboard?${params.toString()}`} replace />
 }
 

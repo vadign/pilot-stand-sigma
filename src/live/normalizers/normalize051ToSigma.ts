@@ -1,16 +1,9 @@
 import { getDistrictId, getDistrictName } from '../../lib/districts'
 import { districts } from '../../mocks/data'
+import { getOutageKindLabel } from '../outageKindLabels'
+import { getOutageTitle, getUtilityLabel } from '../outagePresentation'
 import type { Power051Snapshot, Power051UtilityBucket, SigmaLiveOutageIncident, SigmaLiveOutageSummary } from '../types'
 import { liveSeverityByOutageKind, liveStatusByOutageKind } from '../types'
-
-const utilityLabels: Record<string, string> = {
-  heating: 'отопление',
-  hot_water: 'горячая вода',
-  cold_water: 'холодная вода',
-  sewer: 'водоотведение',
-  electricity: 'электроснабжение',
-  gas: 'газоснабжение',
-}
 
 const utilityToSubsystem: Record<string, string> = {
   heating: 'heat',
@@ -55,7 +48,7 @@ export const normalize051ToSigmaIncidents = (snapshot: Power051Snapshot): SigmaL
     const districtId = getDistrictId(item.district)
     const district = districts.find((entry) => entry.id === districtId) ?? districts[0]
     const detectedAt = snapshot.snapshotAt
-    const label = utilityLabels[item.utilityType] ?? item.utilityType
+    const label = getUtilityLabel(item.utilityType)
     return {
       id: `051-${district.id}-${item.outageKind}-${item.utilityType}-${index}`,
       liveSource: '051',
@@ -66,7 +59,7 @@ export const normalize051ToSigmaIncidents = (snapshot: Power051Snapshot): SigmaL
       sourceUrl: snapshot.sourceUrl,
       raw: item,
       sourceId: 'live-051',
-      title: `${item.outageKind === 'emergency' ? 'Аварийное' : 'Плановое'} отключение: ${label}`,
+      title: getOutageTitle(item.outageKind, item.utilityType),
       subsystem: utilityToSubsystem[item.utilityType] ?? 'utilities',
       severity: liveSeverityByOutageKind[item.outageKind],
       status: liveStatusByOutageKind[item.outageKind],
@@ -78,7 +71,7 @@ export const normalize051ToSigmaIncidents = (snapshot: Power051Snapshot): SigmaL
       description: item.description ?? `${getDistrictName(district.id)} район, ресурс: ${label}.`,
       metrics: [
         { label: 'Отключено домов', value: String(item.houses), type: 'real' },
-        { label: 'Тип отключения', value: item.outageKind === 'emergency' ? 'аварийное' : 'плановое', type: 'real' },
+        { label: 'Тип отключения', value: getOutageKindLabel(item.outageKind, 'singular'), type: 'real' },
         { label: 'Уровень детализации', value: 'район', type: 'real' },
       ],
       affectedPopulation: item.houses * 3,
@@ -95,7 +88,7 @@ export const normalize051ToSigmaIncidents = (snapshot: Power051Snapshot): SigmaL
           ],
         },
       ],
-      assignee: item.outageKind === 'emergency' ? 'ЕДДС / аварийная служба' : 'Плановые работы ЖКХ',
+      assignee: item.outageKind === 'emergency' ? 'ЕДДС / экстренная служба' : 'Запланированные работы ЖКХ',
       deadline: item.recoveryTime ? new Date().toISOString() : new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
       progress: item.outageKind === 'emergency' ? 20 : 10,
       timeline: [

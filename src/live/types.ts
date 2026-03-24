@@ -152,6 +152,11 @@ export interface ConstructionDatasetBundle {
   commissioned: ConstructionCommissionedRecord[]
   active: ConstructionActiveRecord[]
   aggregates: DistrictConstructionAggregate[]
+  sourceState?: {
+    type: SigmaDataType
+    status: SourceLoadStatus
+    message: string
+  }
 }
 
 export interface LiveManifestRecord {

@@ -1,4 +1,5 @@
 import { getDistrictAnswerName } from '../../lib/districts'
+import { getOutageKindLabel } from '../../live/outageKindLabels'
 import { defaultTransportFares, defaultTransportStops } from '../public-transport/data/defaultTransportData'
 import { getTransportDistrictLabel, selectCurrentFareCards, selectDistrictConnectivity, selectFilteredStops, selectGlobalTransportMetrics, selectRouteDetails, selectSelectedDistrictSummary, selectStopsForRoute } from '../public-transport/selectors'
 import type { AskSigmaPlan, AskSigmaResult, SigmaRole } from './types'
@@ -57,11 +58,11 @@ export const executePlan = (
       return {
         type: 'SUMMARY',
         title: 'Оперативная обстановка по ЖКХ',
-        summary: `${districtLabel ? `Сейчас ${districtLabel}` : 'Сейчас'} live-событий ЖКХ: ${context.liveSummary?.activeIncidents ?? liveIncidents.length}. Аварийных домов: ${context.liveSummary?.emergencyHouses ?? 0}.`,
+        summary: `${districtLabel ? `Сейчас ${districtLabel}` : 'Сейчас'} live-событий ЖКХ: ${context.liveSummary?.activeIncidents ?? liveIncidents.length}. ${getOutageKindLabel('emergency', 'titlePlural')} домов: ${context.liveSummary?.emergencyHouses ?? 0}.`,
         kpis: [
           { label: 'Live incidents 051', value: String(context.liveSummary?.activeIncidents ?? liveIncidents.length) },
-          { label: 'Плановые дома', value: String(context.liveSummary?.plannedHouses ?? 0) },
-          { label: 'Аварийные дома', value: String(context.liveSummary?.emergencyHouses ?? 0) },
+          { label: `${getOutageKindLabel('planned', 'titlePlural')} дома`, value: String(context.liveSummary?.plannedHouses ?? 0) },
+          { label: `${getOutageKindLabel('emergency', 'titlePlural')} дома`, value: String(context.liveSummary?.emergencyHouses ?? 0) },
         ],
         actions: [{ label: 'Открыть монитор', route: '/operations', district }, { label: 'Открыть бриф', route: '/briefing' }],
         explain: { ...explainBase, dataType: 'real' },

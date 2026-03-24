@@ -167,16 +167,17 @@ export class LiveSourceManager {
     if (mode !== 'mock') {
       try {
         const bundle = await this.snapshotProvider.getConstructionBundle()
+        const snapshotState = bundle.sourceState
         return {
           payload: { ...bundle, aggregates: bundle.aggregates.length > 0 ? bundle.aggregates : aggregateConstructionByDistrict(bundle.permits, bundle.commissioned, bundle.active) },
           meta: {
             source: 'snapshot',
-            type: 'real',
+            type: snapshotState?.type ?? 'real',
             fetchedAt: bundle.permitsMeta.fetchedAt,
             updatedAt: bundle.permitsMeta.updatedAt,
             sourceUrl: bundle.permitsMeta.passportUrl,
-            status: 'ready',
-            message: 'Показан последний локальный snapshot OpenData.',
+            status: snapshotState?.status ?? 'ready',
+            message: snapshotState?.message ?? 'Показан последний локальный snapshot OpenData.',
           },
         }
       } catch {

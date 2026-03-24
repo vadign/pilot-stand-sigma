@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { curlFetchJson, curlFetchText } from './lib/curlFetch.mts'
 import { parse051OffPage } from '../src/live/parsers/parse051OffPage.ts'
 import { build051Snapshot } from '../src/live/normalizers/normalize051ToSigma.ts'
 import type { LiveManifestRecord, OutageKind, Power051DistrictStat, Power051Snapshot, UtilityType } from '../src/live/types.ts'
@@ -64,7 +65,9 @@ const normalizeText = (value?: string | null): string => value?.replace(/\s+/g, 
 const isBlocked051Html = (html: string): boolean =>
   /The page cannot be displayed/i.test(html) ||
   /Network Access Message/i.test(html) ||
-  /401 Unauthorized/i.test(html)
+  /401 Unauthorized/i.test(html) ||
+  /CookieAuth\.dll/i.test(html) ||
+  /Microsoft Forefront TMG/i.test(html)
 
 const mapOutageKind = (value?: string): OutageKind => /авар/i.test(value ?? '') ? 'emergency' : 'planned'
 
@@ -129,9 +132,7 @@ const fetchArcGisCollection = async (): Promise<ArcGisFeatureCollection> => {
   let totalCount = Number.POSITIVE_INFINITY
 
   while (allFeatures.length < totalCount) {
-    const response = await fetch(buildArcGisQueryUrl(offset), { cache: 'no-store' })
-    if (!response.ok) throw new Error(`ArcGIS query failed: HTTP ${response.status}`)
-    const page = await response.json() as ArcGisFeatureCollection
+    const page = await curlFetchJson<ArcGisFeatureCollection>(buildArcGisQueryUrl(offset))
     const features = page.features ?? []
 
     totalCount = page.count ?? features.length
@@ -216,9 +217,7 @@ const buildSnapshotFromArcGis = async (): Promise<{ snapshot: Power051Snapshot; 
 }
 
 const fetchHtml = async (): Promise<Power051Snapshot> => {
-  const response = await fetch(targetUrl, { cache: 'no-store' })
-  if (!response.ok) throw new Error(`HTTP ${response.status}`)
-  const html = await response.text()
+  const html = await curlFetchText(targetUrl)
   if (isBlocked051Html(html)) throw new Error('051 HTML endpoint returned access denied page')
   await writeFile(join(liveRoot, '051/raw-latest.html'), html, 'utf-8')
   return buildSnapshotFromHtml(html)

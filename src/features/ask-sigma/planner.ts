@@ -23,14 +23,14 @@ export const createPlan = (query: AskSigmaQuery): AskSigmaPlan => {
   if (/(отключения сейчас|что сейчас в жкх|что происходит сейчас|что сейчас|обстановка сейчас)/i.test(text)) {
     return { operation: 'SUMMARY', entity: 'dashboard', filters: { district: district ?? '', subsystem: subsystem ?? '' }, text }
   }
-  if (/(аварийные отключения|плановые отключения|отключения по районам|отключения отопления|отключения энергетики|отключения электричества|отключения электроснабжения|где больше всего отключений)/i.test(text)) {
+  if (/(аварийные отключения|плановые отключения|экстренные отключения|запланированные отключения|отключения по районам|отключения отопления|отключения энергетики|отключения электричества|отключения электроснабжения|где больше всего отключений)/i.test(text)) {
     return {
       operation: 'FILTER',
       entity: 'incident',
       filters: {
         district: district ?? '',
         subsystem: subsystem ?? '',
-        outageKind: /авар/i.test(text) ? 'emergency' : /план/i.test(text) ? 'planned' : '',
+        outageKind: /авар|экстр/i.test(text) ? 'emergency' : /план|заплан/i.test(text) ? 'planned' : '',
         severity: criticalOnly ? 'критический' : '',
       },
       text,

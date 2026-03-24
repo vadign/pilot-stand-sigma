@@ -26,7 +26,7 @@ Sigma остается frontend-only приложением на React + Vite + 
 ### Где live-данные уже интегрированы
 - `/mayor-dashboard` — KPI по отключениям, карта проблем, топ районов, статус ЖКХ.
 - `/briefing` — ежедневный бриф по 051 + строительная активность по районам.
-- `/operations` — live-feed 051 с фильтрами `planned/emergency`, `utility`, `district`, `source`.
+- `/operations` — live-feed 051 с фильтрами `запланированные/экстренные`, `utility`, `district`, `source`.
 - `/incidents/:id` — карточка live-инцидента с районным уровнем детализации и локальным workflow поверх источника 051.
 - `/history` — тренд по накопленным snapshot 051 и строительная аналитика по open data.
 - `/deputies` — live-показатели для ЖКХ/теплоснабжения.
@@ -82,7 +82,7 @@ VITE_OPENDATA_PROXY_URL=
 ### `npm run sync:051`
 - загружает `off.aspx`;
 - сохраняет raw HTML snapshot;
-- парсит `planned/emergency`;
+- парсит блоки `запланированные/экстренные`;
 - нормализует в JSON;
 - обновляет `public/live-data/051/latest.json`;
 - добавляет запись в `public/live-data/051/history/index.json` и timestamp-файл.
@@ -197,8 +197,8 @@ Sigma **не подменяет реальность симуляцией**.
 ## Ask Sigma: поддерживаемые live-запросы
 
 - `отключения сейчас`
-- `аварийные отключения`
-- `плановые отключения`
+- `экстренные отключения`
+- `запланированные отключения`
 - `отключения по районам`
 - `отключения отопления`
 - `где больше всего отключений`
@@ -230,7 +230,7 @@ npm run build
 
 Фикстуры лежат в `src/live/tests/fixtures` и покрывают:
 
-- parsing 051 (`planned/emergency`, district breakdown, graceful degradation),
+- parsing 051 (`запланированные/экстренные`, district breakdown, graceful degradation),
 - parsing OpenData passport/CSV,
 - parsing dataset 49/51 для общественного транспорта,
 - active construction по `KadNom`,
@@ -285,7 +285,7 @@ npm run build
 3. Проверить:
    - `/mayor-dashboard` — KPI и карта 051;
    - `/briefing` — блок строительства;
-   - `/operations` — фильтры `source/planned/emergency/utility`;
+   - `/operations` — фильтры `source/запланированные/экстренные/utility`;
    - `/public-transport` — карта Яндекса, фильтры, список остановок, тарифы и блок связности районов;
    - `/incidents/051-...` — карточку live-инцидента;
    - Ask Sigma запросами из списка выше.

@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
 import { YMaps, Map, Placemark } from '@pbe/react-yandex-maps'
 import type { Incident } from '../types'
+import { getIncidentMapPresentation } from '../lib/incidentMapPresentation'
+import { selectCriticalAndOnePlannedPerCollisionBucket, stackNearbyPlacemarks } from '../lib/mapPlacemarkStack'
 
 const severityColor: Record<Incident['severity'], string> = {
   низкий: '#3b82f6',
@@ -9,7 +11,15 @@ const severityColor: Record<Incident['severity'], string> = {
   критический: '#dc2626',
 }
 
-export function MapView({ incidents, onPick }: { incidents: Incident[]; onPick?: (id: string) => void }) {
+export function MapView({
+  incidents,
+  onPick,
+  overlapMode = 'stack',
+}: {
+  incidents: Incident[]
+  onPick?: (id: string) => void
+  overlapMode?: 'stack' | 'critical-and-planned'
+}) {
   const mapState = useMemo(() => {
     if (incidents.length === 0) {
       return { center: [55.03, 82.98] as [number, number], zoom: 10 }
@@ -38,6 +48,23 @@ export function MapView({ incidents, onPick }: { incidents: Incident[]; onPick?:
     }
   }, [incidents])
 
+  const visibleIncidents = useMemo(() =>
+    overlapMode === 'critical-and-planned'
+      ? selectCriticalAndOnePlannedPerCollisionBucket(incidents, mapState.zoom)
+      : incidents
+  , [incidents, mapState.zoom, overlapMode])
+
+  const placemarks = useMemo(() => stackNearbyPlacemarks(visibleIncidents, mapState.zoom).map((incident) => ({
+    incident,
+    presentation: getIncidentMapPresentation(incident),
+  })), [visibleIncidents, mapState.zoom])
+
+  const escapeHtml = (value: string): string => value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+
   return (
     <div className="h-[380px] w-full rounded-xl overflow-hidden">
       <YMaps query={{ lang: 'ru_RU' }}>
@@ -47,20 +74,23 @@ export function MapView({ incidents, onPick }: { incidents: Incident[]; onPick?:
           height="100%"
           options={{ suppressMapOpenBlock: true }}
         >
-          {incidents.map((incident) => (
+          {placemarks.map(({ incident, presentation }) => (
             <Placemark
               key={incident.id}
-              geometry={incident.coordinates}
+              geometry={incident.displayCoordinates}
               properties={{
-                balloonContentHeader: incident.title,
-                balloonContentBody: `Критичность: ${incident.severity}`,
-                iconCaption: incident.id,
+                balloonContentHeader: escapeHtml(presentation.title),
+                balloonContentBody: presentation.bodyRows.map((row) => `<div><b>${escapeHtml(row.label)}:</b> ${escapeHtml(row.value)}</div>`).join(''),
+                balloonContentFooter: escapeHtml(presentation.footer),
+                hintContent: escapeHtml(presentation.hint),
+                iconCaption: escapeHtml(presentation.caption),
               }}
               options={{
                 preset: 'islands#circleDotIcon',
                 iconColor: severityColor[incident.severity],
+                iconOffset: incident.displayOffset,
               }}
-              modules={['geoObject.addon.balloon']}
+              modules={['geoObject.addon.balloon', 'geoObject.addon.hint']}
               onClick={() => onPick?.(incident.id)}
             />
           ))}

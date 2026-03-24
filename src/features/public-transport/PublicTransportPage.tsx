@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Card, SectionTitle } from '../../components/ui'
 import { useSigmaStore } from '../../store/useSigmaStore'
-import { FareCards } from './components/FareCards'
 import { RouteDetailsPanel } from './components/RouteDetailsPanel'
 import { StopDetailsDrawer } from './components/StopDetailsDrawer'
 import { TransportFilters } from './components/TransportFilters'
@@ -11,7 +10,7 @@ import { TransportMetrics } from './components/TransportMetrics'
 import { NovosibirskStopsProvider } from './providers/NovosibirskStopsProvider'
 import { NovosibirskTariffsProvider } from './providers/NovosibirskTariffsProvider'
 import { TransportRealtimeProvider } from './providers/TransportRealtimeProvider'
-import { selectCurrentFareCards, selectDistrictConnectivity, selectFilteredStops, selectGlobalTransportMetrics, selectRouteDetails, selectSelectedDistrictSummary, selectStopsForRoute, selectTransportFilterOptions } from './selectors'
+import { selectDistrictConnectivity, selectFilteredStops, selectGlobalTransportMetrics, selectRouteDetails, selectSelectedDistrictSummary, selectStopsForRoute, selectTransportFilterOptions } from './selectors'
 import type { LiveTransportRoute, PublicTransportBundle, PublicTransportFiltersValue, TransitMode, TransitStop } from './types'
 
 const defaultFilters: PublicTransportFiltersValue = { district: '', mode: 'all', search: '', route: '', onlyPavilion: false }
@@ -134,7 +133,6 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
   const districtConnectivity = useMemo(() => selectDistrictConnectivity(bundle?.stops ?? [], connectivity.from, connectivity.to), [bundle?.stops, connectivity])
   const stopsForSelectedRoute = useMemo(() => selectStopsForRoute(bundle?.stops ?? [], filters.route), [bundle?.stops, filters.route])
   const visibleStopsForMap = filters.route ? stopsForSelectedRoute : filteredStops
-  const fareCards = useMemo(() => selectCurrentFareCards(bundle?.fares ?? []), [bundle?.fares])
   const liveRouteMatches = useMemo(() =>
     !filters.route
       ? []
@@ -166,7 +164,7 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
 
   return (
     <div className="space-y-4">
-      {!embedded && <SectionTitle title="Общественный транспорт" subtitle="Остановки и тарифы из официальных открытых наборов Новосибирска без симуляции live GPS." />}
+      {!embedded && <SectionTitle title="Общественный транспорт" subtitle="Остановки и маршруты из официальных открытых наборов Новосибирска без симуляции live GPS." />}
       <TransportFilters
         filters={filters}
         districts={filterOptions.districts}
@@ -253,8 +251,6 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
               <RouteDetailsPanel route={selectedRoute} />
             </div>
           </div>
-
-          <FareCards fares={fareCards} />
         </div>
       )}
     </div>

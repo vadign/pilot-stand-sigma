@@ -6,7 +6,7 @@
 - `https://051.novo-sibirsk.ru/SitePages/off.aspx`
 
 ### Что извлекается
-- `planned | emergency`
+- `запланированные | экстренные`
 - `hot_water | cold_water | sewer | electricity | gas | heating`
 - число домов
 - район

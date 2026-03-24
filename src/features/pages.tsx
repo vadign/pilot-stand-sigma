@@ -8,8 +8,10 @@ import { MapView } from '../components/MapView'
 import { Badge, Card, MetaGrid, SectionTitle, SourceMetaFooter } from '../components/ui'
 import { PublicTransportPage } from './public-transport'
 import { defaultTransportStops } from './public-transport/data/defaultTransportData'
+import { applyMayorTransportParams } from './public-transport/navigation'
 import { selectTransportFilterOptions } from './public-transport/selectors'
 import { getDistrictName } from '../lib/districts'
+import { getOutageKindLabel } from '../live/outageKindLabels'
 import { useSigmaStore } from '../store/useSigmaStore'
 import { selectIncidentById, selectOutageSummary, selectSourceStatuses, useConstructionAggregates, useDistrictOutageCards, useIncidentViews, useOutageHistorySeries } from '../live/selectors'
 import type { LiveIncidentView } from '../live/types'
@@ -175,34 +177,6 @@ const useDashboardData = () => {
   return { districts, incidents, outageSummary, sourceStatuses, construction, districtCards, live }
 }
 
-const DataSourcePanel = () => {
-  const statuses = useSigmaStore(selectSourceStatuses)
-  if (statuses.length === 0) return null
-  return (
-    <Card>
-      <div className="mb-3 flex items-center justify-between">
-        <div>
-          <div className="text-sm font-semibold uppercase tracking-widest text-slate-500">Live-источники</div>
-          <div className="text-2xl font-bold">Состояние официальных данных</div>
-        </div>
-        <Badge text="runtime → snapshot → cache → mock" className="bg-slate-100 text-slate-700" />
-      </div>
-      <div className="grid gap-3 md:grid-cols-2">
-        {statuses.map((status) => (
-          <div key={status.key} className="rounded-xl border border-slate-200 p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="font-semibold">{status.title}</div>
-              <Badge text={`${status.source}/${status.status}`} className={status.status === 'ready' ? 'bg-emerald-50 text-emerald-700' : status.status === 'stale' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'} />
-            </div>
-            <div className="mt-2 text-sm text-slate-600">{status.message}</div>
-            <SourceMetaFooter source={status.sourceUrl} updatedAt={status.updatedAt} ttl={`${status.ttlMinutes} мин`} type={sourceTypeLabels[status.type] ?? status.type} status={status.status} />
-          </div>
-        ))}
-      </div>
-    </Card>
-  )
-}
-
 export function BriefingPage() {
   const navigate = useNavigate()
   const { incidents, outageSummary, construction, sourceStatuses } = useDashboardData()
@@ -226,8 +200,8 @@ export function BriefingPage() {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card><div className="text-sm text-slate-500">Аварийные отключения 051</div><div className="mt-2 text-5xl font-bold text-red-600">{emergencyLive.length}</div><div className="text-slate-500">домов: {outageSummary?.emergencyHouses ?? 0}</div></Card>
-        <Card><div className="text-sm text-slate-500">Плановые отключения 051</div><div className="mt-2 text-5xl font-bold text-amber-600">{plannedLive.length}</div><div className="text-slate-500">домов: {outageSummary?.plannedHouses ?? 0}</div></Card>
+        <Card><div className="text-sm text-slate-500">{getOutageKindLabel('emergency', 'titlePlural')} отключения 051</div><div className="mt-2 text-5xl font-bold text-red-600">{emergencyLive.length}</div><div className="text-slate-500">домов: {outageSummary?.emergencyHouses ?? 0}</div></Card>
+        <Card><div className="text-sm text-slate-500">{getOutageKindLabel('planned', 'titlePlural')} отключения 051</div><div className="mt-2 text-5xl font-bold text-amber-600">{plannedLive.length}</div><div className="text-slate-500">домов: {outageSummary?.plannedHouses ?? 0}</div></Card>
         <Card><div className="text-sm text-slate-500">Δ к предыдущему snapshot</div><div className="mt-2 text-5xl font-bold text-blue-700">{formatDelta(outageSummary?.delta?.incidents)}</div><div className="text-slate-500">по активным событиям</div></Card>
         <Card><div className="text-sm text-slate-500">Активные стройки</div><div className="mt-2 text-5xl font-bold text-emerald-600">{construction.reduce((sum, item) => sum + item.activeConstruction, 0)}</div><div className="text-slate-500">по open data 124/125</div></Card>
       </div>
@@ -235,7 +209,7 @@ export function BriefingPage() {
       <Card>
         <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">Сводка системы</div>
         <p className="mt-2 text-xl leading-relaxed text-slate-700 lg:text-3xl">
-          По данным 051 сейчас зарегистрировано <b className="text-blue-700">{outageSummary?.activeIncidents ?? 0} live-событий</b>, из них аварийных — <b>{emergencyLive.length}</b>.
+          По данным 051 сейчас зарегистрировано <b className="text-blue-700">{outageSummary?.activeIncidents ?? 0} live-событий</b>, из них {getOutageKindLabel('emergency', 'genitivePlural')} — <b>{emergencyLive.length}</b>.
           Наибольшая нагрузка по домам наблюдается в районах {outageSummary?.topDistricts.slice(0, 2).map((item) => item.district).join(' и ') || 'без выраженного лидера'}.
         </p>
         {liveStatus051 && <SourceMetaFooter source="051.novo-sibirsk.ru" updatedAt={liveStatus051.updatedAt} ttl={`${liveStatus051.ttlMinutes} мин`} type={sourceTypeLabels[liveStatus051.type] ?? liveStatus051.type} status={liveStatus051.status} />}
@@ -267,8 +241,6 @@ export function BriefingPage() {
           {liveStatusOpenData && <SourceMetaFooter source="opendata.novo-sibirsk.ru" updatedAt={liveStatusOpenData.updatedAt} ttl={`${liveStatusOpenData.ttlMinutes} мин`} type={sourceTypeLabels[liveStatusOpenData.type] ?? liveStatusOpenData.type} status={liveStatusOpenData.status} />}
         </Card>
       </div>
-
-      <DataSourcePanel />
     </div>
   )
 }
@@ -291,6 +263,7 @@ export function MayorDashboardPage() {
   const selectedSubsystemMeta = subsystemTabDescriptions[subsystem]
   const isHeatTab = isHeatSubsystemTab(subsystem)
   const isTransportTab = isTransportSubsystemTab(subsystem)
+  const mapIncidents = visibleIncidents
   const selectedTransportDistrict = searchParams.get('district') ?? ''
 
   const handleSubsystemChange = (nextSubsystem: SubsystemTabId) => {
@@ -299,6 +272,10 @@ export function MayorDashboardPage() {
       nextParams.delete('subsystem')
     } else {
       nextParams.set('subsystem', nextSubsystem)
+    }
+
+    if (isTransportSubsystemTab(nextSubsystem) && !isTransportTab) {
+      applyMayorTransportParams(nextParams, 'always')
     }
 
     if (!isTransportSubsystemTab(nextSubsystem)) {
@@ -354,10 +331,10 @@ export function MayorDashboardPage() {
         <>
           {isHeatTab ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <Card><div className="text-sm text-slate-500">Активные отключения</div><div className="mt-2 text-5xl font-bold">{outageSummary?.activeIncidents ?? 0}</div><div className="mt-2 text-sm text-slate-500">аварийных: {urgent.length}</div></Card>
-              <Card><div className="text-sm text-slate-500">Отключено домов</div><div className="mt-2 text-5xl font-bold">{outageSummary?.totalHouses ?? 0}</div><div className="mt-2 text-sm text-slate-500">planned/emergency отдельно</div></Card>
-              <Card><div className="text-sm text-slate-500">Аварийный контур</div><div className="mt-2 text-5xl font-bold text-red-600">{outageSummary?.emergencyHouses ?? 0}</div><div className="mt-2 text-sm text-slate-500">домов под аварийным воздействием</div></Card>
-              <Card><div className="text-sm text-slate-500">Плановый контур</div><div className="mt-2 text-5xl font-bold text-amber-600">{outageSummary?.plannedHouses ?? 0}</div><div className="mt-2 text-sm text-slate-500">домов в плановых окнах</div></Card>
+              <Card><div className="text-sm text-slate-500">Активные отключения</div><div className="mt-2 text-5xl font-bold">{outageSummary?.activeIncidents ?? 0}</div><div className="mt-2 text-sm text-slate-500">{getOutageKindLabel('emergency', 'genitivePlural')}: {urgent.length}</div></Card>
+              <Card><div className="text-sm text-slate-500">Отключено домов</div><div className="mt-2 text-5xl font-bold">{outageSummary?.totalHouses ?? 0}</div></Card>
+              <Card><div className="text-sm text-slate-500">Экстренный контур</div><div className="mt-2 text-5xl font-bold text-red-600">{outageSummary?.emergencyHouses ?? 0}</div><div className="mt-2 text-sm text-slate-500">домов в экстренном контуре</div></Card>
+              <Card><div className="text-sm text-slate-500">Контур запланированных отключений</div><div className="mt-2 text-5xl font-bold text-amber-600">{outageSummary?.plannedHouses ?? 0}</div><div className="mt-2 text-sm text-slate-500">домов в запланированных окнах</div></Card>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -369,14 +346,14 @@ export function MayorDashboardPage() {
           )}
 
           <div className="grid gap-4 lg:grid-cols-12">
-            <div className="lg:col-span-8"><Card><div className="mb-3 text-3xl font-bold">Карта территориальных проблем</div><MapView incidents={visibleIncidents.slice(0, 20)} /></Card></div>
+            <div className="lg:col-span-8"><Card><div className="mb-3 text-3xl font-bold">Карта территориальных проблем</div><MapView incidents={mapIncidents} overlapMode="stack" /></Card></div>
             <div className="space-y-3 lg:col-span-4">
               <Card>
                 <div className="mb-2 text-2xl font-bold">{isHeatTab ? 'Срочные действия' : 'Приоритетные события'}</div>
                 {(isHeatTab ? urgent : prioritizedIncidents).slice(0, 4).map((incident) => (
                   <div key={incident.id} className="mb-2 rounded-xl border bg-blue-50 p-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge text={isHeatTab ? (incident.liveMeta?.outageKind === 'emergency' ? 'аварийное' : 'плановое') : incident.severity} className="bg-red-50 text-red-700" />
+                      <Badge text={isHeatTab ? getOutageKindLabel(incident.liveMeta?.outageKind === 'emergency' ? 'emergency' : 'planned', 'singular') : incident.severity} className="bg-red-50 text-red-700" />
                       <span className="text-xs font-medium uppercase tracking-wide text-slate-500">{getDistrictName(incident.district)}</span>
                     </div>
                     <div className="mt-2 font-bold">{incident.title}</div>
@@ -409,7 +386,7 @@ export function MayorDashboardPage() {
                   {outageSummary?.utilities.map((item) => (
                     <div key={item.utilityType} className="rounded-xl border p-3">
                       <div className="font-semibold">{utilityLabels[item.utilityType] ?? item.utilityType}</div>
-                      <div className="mt-2 text-sm text-slate-500">planned: {item.plannedHouses} · emergency: {item.emergencyHouses}</div>
+                      <div className="mt-2 text-sm text-slate-500">{getOutageKindLabel('planned', 'plural')}: {item.plannedHouses} · {getOutageKindLabel('emergency', 'plural')}: {item.emergencyHouses}</div>
                       <div className="mt-2 text-sm text-slate-500">событий: {item.incidents}</div>
                     </div>
                   ))}
@@ -430,8 +407,6 @@ export function MayorDashboardPage() {
               </>
             )}
           </Card>
-
-          <DataSourcePanel />
         </>
       )}
     </div>
@@ -498,8 +473,8 @@ export function OperationsPage() {
               <>
                 <select className="rounded-xl border px-3 py-2" value={outageKind} onChange={(event) => setOutageKind(event.target.value)}>
                   <option value="">Тип отключения: все</option>
-                  <option value="emergency">Аварийные</option>
-                  <option value="planned">Плановые</option>
+                  <option value="emergency">{getOutageKindLabel('emergency', 'titlePlural')}</option>
+                  <option value="planned">{getOutageKindLabel('planned', 'titlePlural')}</option>
                 </select>
                 <select className="rounded-xl border px-3 py-2" value={utility} onChange={(event) => setUtility(event.target.value)}>
                   <option value="">Ресурс: все</option>
@@ -515,7 +490,7 @@ export function OperationsPage() {
             <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><Badge text={`${incident.sourceBadge.toUpperCase()} · ${incident.severity.toUpperCase()}`} className={severityStyles[incident.severity]} /><span className="text-xs text-slate-500">{new Date(incident.detectedAt).toLocaleTimeString('ru-RU')}</span></div>
             <div className="text-2xl font-bold">{incident.title}</div>
             <div className="mt-1 text-slate-500">{incident.summary}</div>
-            {incident.liveMeta && <div className="mt-2 text-sm text-slate-500">{utilityLabels[incident.liveMeta.utilityType]} · {incident.liveMeta.outageKind === 'emergency' ? 'аварийное' : 'плановое'} · уровень детализации: район</div>}
+            {incident.liveMeta && <div className="mt-2 text-sm text-slate-500">{utilityLabels[incident.liveMeta.utilityType]} · {getOutageKindLabel(incident.liveMeta.outageKind, 'singular')} · уровень детализации: район</div>}
             <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
               <button onClick={() => assignIncident(incident.id, 'Штаб района')} className="rounded-lg bg-blue-600 py-2 text-xs font-semibold text-white">Назначить</button>
               <button onClick={() => escalateIncident(incident.id)} className="rounded-lg bg-amber-500 py-2 text-xs font-semibold text-white">Эскалировать</button>
@@ -667,15 +642,15 @@ export function HistoryPage() {
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={series.slice(-24)}>
                   <XAxis dataKey="label" hide={series.length > 10} /><YAxis /><Tooltip />
-                  <Line dataKey="emergency" stroke="#dc2626" strokeWidth={3} dot={false} />
-                  <Line dataKey="planned" stroke="#f59e0b" strokeWidth={3} dot={false} />
+                  <Line dataKey="emergency" name={getOutageKindLabel('emergency', 'titlePlural')} stroke="#dc2626" strokeWidth={3} dot={false} />
+                  <Line dataKey="planned" name={getOutageKindLabel('planned', 'titlePlural')} stroke="#f59e0b" strokeWidth={3} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
               <div className="rounded-xl border border-dashed p-4 text-sm text-slate-600">История live-источника только накапливается. В hybrid-режиме текущий snapshot уже используется, но длинный тренд пока ограничен.</div>
             )}
           </Card>
-          <Card><div className="mb-2 text-3xl font-bold">Очаги проблем</div><MapView incidents={incidents.slice(0, 10)} /></Card>
+          <Card><div className="mb-2 text-3xl font-bold">Очаги проблем</div><MapView incidents={incidents} /></Card>
         </div>
 
         <div className="space-y-4 lg:col-span-4">
@@ -742,7 +717,7 @@ export function ScenariosPage() {
               </Card>
             ))}
           </div>
-          <div className="lg:col-span-8"><Card><MapView incidents={scenarioIncidents.slice(0, 8)} /></Card></div>
+          <div className="lg:col-span-8"><Card><MapView incidents={scenarioIncidents} /></Card></div>
         </div>
 
         <Card>

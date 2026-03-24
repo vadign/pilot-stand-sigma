@@ -70,6 +70,34 @@ describe('App smoke render', () => {
     })
   })
 
+  it('defaults transport mode and route when opening transport from mayor dashboard button', async () => {
+    const root = createRoot(container)
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={['/mayor-dashboard']}>
+          <App />
+        </MemoryRouter>,
+      )
+    })
+
+    const transportButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('Общественный транспорт'))
+    expect(transportButton).toBeTruthy()
+
+    await act(async () => {
+      transportButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(container.textContent).toContain('Общественный транспорт в управленческом контуре мэра')
+    expect(container.textContent).toContain('embedded transport')
+    expect(container.textContent).toContain('mode:minibus')
+    expect(container.textContent).toContain('route:35')
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
   it('does not force a transport mode or route when opening mayor dashboard transport tab', async () => {
     const root = createRoot(container)
 

@@ -32,6 +32,11 @@ export class NovosibirskOpenDataProvider {
         commissioned: commissionedRows,
         active,
         aggregates,
+        sourceState: {
+          type: 'real',
+          status: 'ready',
+          message: 'OpenData успешно обновлен напрямую из браузера.',
+        },
       },
       meta: {
         source: 'runtime',
