@@ -2,6 +2,7 @@ import { findDistrictId } from '../../lib/districts'
 import { detectSpecialIntent } from './specialQueries'
 import type { AskSigmaPlan, AskSigmaQuery } from './types'
 import { routeEntity } from './router'
+import { detectRouteFromText, detectTransportDistrictFilters, detectTransportMode } from './transportQuery'
 
 export const createPlan = (query: AskSigmaQuery): AskSigmaPlan => {
   const special = detectSpecialIntent(query.raw)
@@ -11,6 +12,11 @@ export const createPlan = (query: AskSigmaQuery): AskSigmaPlan => {
   const { entity, subsystem } = routeEntity(query)
   const text = query.normalized
   const district = findDistrictId(text)
+  const transportDistricts = detectTransportDistrictFilters(text)
+  const fromTransportDistrict = transportDistricts[0]
+  const toTransportDistrict = transportDistricts[1]
+  const route = detectRouteFromText(text)
+  const mode = detectTransportMode(text)
   const isExplicitHelpRequest = /помощ|подскажи|что (?:ты )?уме(?:е|)шь|что умеет сигма/i.test(text)
 
   if (/(отключения сейчас|что сейчас в жкх|что происходит сейчас|что сейчас|обстановка сейчас)/i.test(text)) {
@@ -23,20 +29,64 @@ export const createPlan = (query: AskSigmaQuery): AskSigmaPlan => {
     return { operation: 'CONSTRUCTION', entity: 'construction', filters: { district: district ?? '' }, text }
   }
 
-  if (/(общественный транспорт|покажи общественный транспорт на карте|покажи транспорт на карте)/i.test(text)) {
-    return { operation: 'PUBLIC_TRANSPORT_SUMMARY', entity: 'transport', text }
+  if (/(покажи транспорт на карте|покажи общественный транспорт на карте|на карте)/i.test(text) && /(транспорт|остановк|маршрут|проезд|как добраться|как проехать)/i.test(text)) {
+    return {
+      operation: 'TRANSIT_NAVIGATE_TO_PAGE',
+      entity: 'transport',
+      text,
+      filters: {
+        district: fromTransportDistrict?.districtId ?? fromTransportDistrict?.district ?? '',
+        fromDistrict: fromTransportDistrict?.district ?? '',
+        toDistrict: toTransportDistrict?.district ?? '',
+        route: route ?? '',
+        mode: mode ?? '',
+        pavilionOnly: /павильон/i.test(text),
+        focus: 'map',
+      },
+    }
   }
-  if (/(какой тариф на автобус|тарифы на проезд|тариф на транспорт|социальный тариф)/i.test(text)) {
-    return { operation: 'TRANSIT_FARES', entity: 'transport', text }
+
+  if (/(как проехать|как добраться|общих маршрутов между|между .* и .* маршру)/i.test(text)) {
+    return {
+      operation: 'TRANSIT_ROUTE_BETWEEN_DISTRICTS',
+      entity: 'transport',
+      text,
+      filters: {
+        fromDistrict: fromTransportDistrict?.district ?? '',
+        toDistrict: toTransportDistrict?.district ?? '',
+      },
+    }
   }
-  if (/(какие остановки у маршрута|маршрут\s*\d+|какие маршруты есть в|топ транспортных узлов)/i.test(text)) {
-    return { operation: 'TRANSIT_ROUTE_LOOKUP', entity: 'transport', text }
-  }
-  if (/(сколько общих маршрутов между|связность районов)/i.test(text)) {
+
+  if (/(какие районы лучше всего покрыты транспортом|сравни .*район|лучше покрыты|по районам)/i.test(text) && /транспорт|район/i.test(text)) {
     return { operation: 'TRANSIT_DISTRICT_COMPARE', entity: 'transport', text }
   }
-  if (/(остановки в|остановки с павильоном|сколько остановок в)/i.test(text)) {
-    return { operation: 'TRANSIT_STOPS', entity: 'transport', text }
+
+  if (/(общественный транспорт|покажи общественный транспорт|покажи транспорт)/i.test(text)) {
+    return { operation: 'PUBLIC_TRANSPORT_SUMMARY', entity: 'transport', text }
+  }
+  if (/(какой тариф на автобус|тариф на автобус|тарифы на проезд|тариф на транспорт|социальный тариф|покажи тарифы)/i.test(text)) {
+    return { operation: 'TRANSIT_FARES', entity: 'transport', text, filters: { mode: mode ?? '' } }
+  }
+  if (/(топ транспортных узлов|пересадк|узел)/i.test(text)) {
+    return { operation: 'TRANSIT_HUBS', entity: 'transport', text }
+  }
+  if (/(какие остановки у маршрута|маршрут\s*\d+|какие маршруты есть в|маршруты в)/i.test(text)) {
+    return { operation: 'TRANSIT_ROUTE_LOOKUP', entity: 'transport', text, filters: { route: route ?? '', district: fromTransportDistrict?.district ?? '' } }
+  }
+  if (/(остановки в|остановки с павильоном|сколько остановок в|остановки)/i.test(text)) {
+    return {
+      operation: 'TRANSIT_STOPS',
+      entity: 'transport',
+      text,
+      filters: {
+        district: fromTransportDistrict?.districtId ?? fromTransportDistrict?.district ?? '',
+        districtLabel: fromTransportDistrict?.district ?? '',
+        rawDistrict: fromTransportDistrict?.rawLabel ?? '',
+        pavilionOnly: /павильон/i.test(text),
+        metric: /сколько/i.test(text) ? 'count' : '',
+      },
+    }
   }
 
   if (/(покажи live-источники|когда обновлялись данные|источники данных|live-источники)/i.test(text)) {

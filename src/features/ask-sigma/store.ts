@@ -73,7 +73,7 @@ export const useAskSigmaStore = create<AskSigmaState>((set, get) => ({
       return result
     }
 
-    const result = executePlan(plan, provider, get().role)
+    const result = executePlan(plan, provider, get().role, { implicitDistrict: get().district })
     const history = [value, ...get().history.filter((item) => item !== value)].slice(0, 10)
     localStorage.setItem(LS_HISTORY, JSON.stringify(history))
     localStorage.setItem(LS_RESULT, JSON.stringify(result))

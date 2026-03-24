@@ -15,7 +15,7 @@ import { getTransportDistrictLabel, selectCurrentFareCards, selectDistrictConnec
 import type { LiveTransportRoute, PublicTransportBundle, PublicTransportFiltersValue, TransitMode, TransitStop } from './types'
 
 const defaultFilters: PublicTransportFiltersValue = { district: '', mode: 'minibus', search: '', route: '35', onlyPavilion: false }
-const transportFilterParamKeys = ['district', 'mode', 'search', 'route', 'pavilion'] as const
+const transportFilterParamKeys = ['district', 'mode', 'search', 'route', 'pavilion', 'pavilionOnly', 'fromDistrict', 'toDistrict', 'focus'] as const
 const stopsProvider = new NovosibirskStopsProvider()
 const tariffsProvider = new NovosibirskTariffsProvider()
 const realtimeProvider = new TransportRealtimeProvider()
@@ -40,12 +40,12 @@ const readFiltersFromParams = (params: URLSearchParams, withDefaults = false): P
   mode: (params.get('mode') as PublicTransportFiltersValue['mode']) || (withDefaults ? defaultFilters.mode : 'all'),
   search: params.get('search') ?? (withDefaults ? defaultFilters.search : ''),
   route: params.get('route') ?? (withDefaults ? defaultFilters.route : ''),
-  onlyPavilion: params.get('pavilion') === '1',
+  onlyPavilion: params.get('pavilion') === '1' || params.get('pavilionOnly') === 'true',
 })
 
 const readConnectivityFromParams = (params: URLSearchParams) => ({
-  from: params.get('district') ?? '',
-  to: params.get('compareTo') ?? '',
+  from: params.get('fromDistrict') ?? params.get('district') ?? '',
+  to: params.get('toDistrict') ?? params.get('compareTo') ?? '',
 })
 
 const writeFiltersToParams = (filters: PublicTransportFiltersValue, currentParams: URLSearchParams): URLSearchParams => {
@@ -55,7 +55,7 @@ const writeFiltersToParams = (filters: PublicTransportFiltersValue, currentParam
   if (filters.mode !== 'all') params.set('mode', filters.mode)
   if (filters.search) params.set('search', filters.search)
   if (filters.route) params.set('route', filters.route)
-  if (filters.onlyPavilion) params.set('pavilion', '1')
+  if (filters.onlyPavilion) { params.set('pavilion', '1'); params.set('pavilionOnly', 'true') }
   return params
 }
 
@@ -271,11 +271,25 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
               <Card>
                 <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">Связность районов</div>
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
-                  <select value={connectivity.from} onChange={(event) => setConnectivity((current) => ({ ...current, from: event.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2">
+                  <select value={connectivity.from} onChange={(event) => {
+                    const from = event.target.value
+                    setConnectivity((current) => ({ ...current, from }))
+                    const params = new URLSearchParams(searchParams)
+                    if (from) params.set('fromDistrict', from)
+                    else params.delete('fromDistrict')
+                    setSearchParams(params, { replace: true })
+                  }} className="rounded-xl border border-slate-200 px-3 py-2">
                     <option value="">Район отправления</option>
                     {filterOptions.districts.map((district) => <option key={district} value={district}>{district}</option>)}
                   </select>
-                  <select value={connectivity.to} onChange={(event) => setConnectivity((current) => ({ ...current, to: event.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2">
+                  <select value={connectivity.to} onChange={(event) => {
+                    const to = event.target.value
+                    setConnectivity((current) => ({ ...current, to }))
+                    const params = new URLSearchParams(searchParams)
+                    if (to) params.set('toDistrict', to)
+                    else params.delete('toDistrict')
+                    setSearchParams(params, { replace: true })
+                  }} className="rounded-xl border border-slate-200 px-3 py-2">
                     <option value="">Район назначения</option>
                     {filterOptions.districts.map((district) => <option key={district} value={district}>{district}</option>)}
                   </select>

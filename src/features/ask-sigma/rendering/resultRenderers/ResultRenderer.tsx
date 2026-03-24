@@ -33,6 +33,13 @@ export const ResultRenderer = ({
         </div>
       )}
 
+
+      {result.appliedDistrictFilter && (
+        <div className="mt-3 rounded border border-blue-200 bg-blue-50 p-2 text-sm text-blue-950">
+          Применен {result.appliedDistrictFilter.source === 'implicit' ? 'неявный' : 'явный'} фильтр района: <b>{result.appliedDistrictFilter.district}</b>
+        </div>
+      )}
+
       {result.kpis && (
         <div className="mt-3 grid grid-cols-2 gap-2">
           {result.kpis.map((kpi) => (
@@ -78,6 +85,18 @@ export const ResultRenderer = ({
           <div className="font-semibold">{result.districtCompare.from} → {result.districtCompare.to}</div>
           <div>Общих маршрутов: {result.districtCompare.count}</div>
           <div>Номера: {result.districtCompare.commonRoutes.join(', ') || 'нет'}</div>
+        </div>
+      )}
+
+
+      {result.transportRouteBetweenDistricts && (
+        <div className="mt-3 rounded border p-2 text-sm">
+          <div className="font-semibold">{result.transportRouteBetweenDistricts.from} → {result.transportRouteBetweenDistricts.to}</div>
+          <div>Общих маршрутов: {result.transportRouteBetweenDistricts.count}</div>
+          <div>Маршруты: {result.transportRouteBetweenDistricts.commonRoutes.join(', ') || 'нет'}</div>
+          <div className="mt-1 text-slate-600">A: {result.transportRouteBetweenDistricts.examplesFrom.join(', ') || '—'}</div>
+          <div className="text-slate-600">B: {result.transportRouteBetweenDistricts.examplesTo.join(', ') || '—'}</div>
+          <div className="mt-1 text-xs text-slate-500">{result.transportRouteBetweenDistricts.note}</div>
         </div>
       )}
 

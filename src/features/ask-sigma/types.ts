@@ -58,8 +58,12 @@ export type AskSigmaOperation =
   | 'PUBLIC_TRANSPORT_SUMMARY'
   | 'TRANSIT_STOPS'
   | 'TRANSIT_ROUTE_LOOKUP'
+  | 'TRANSIT_DISTRICT_FILTER'
   | 'TRANSIT_DISTRICT_COMPARE'
+  | 'TRANSIT_ROUTE_BETWEEN_DISTRICTS'
+  | 'TRANSIT_HUBS'
   | 'TRANSIT_FARES'
+  | 'TRANSIT_NAVIGATE_TO_PAGE'
   | 'HELP'
   | 'UNKNOWN'
 
@@ -94,8 +98,12 @@ export type AskSigmaResultType =
   | 'PUBLIC_TRANSPORT_SUMMARY'
   | 'TRANSIT_STOPS'
   | 'TRANSIT_ROUTE_LOOKUP'
+  | 'TRANSIT_DISTRICT_FILTER'
   | 'TRANSIT_DISTRICT_COMPARE'
+  | 'TRANSIT_ROUTE_BETWEEN_DISTRICTS'
+  | 'TRANSIT_HUBS'
   | 'TRANSIT_FARES'
+  | 'TRANSIT_NAVIGATE_TO_PAGE'
   | 'HELP'
   | 'UNKNOWN'
 
@@ -149,6 +157,22 @@ export interface AskSigmaResult {
   transportFares?: TransportFare[]
   transportRoute?: { route: string; stopCount: number; districts: string[] }
   districtCompare?: { from: string; to: string; commonRoutes: string[]; count: number }
+
+  transportRouteBetweenDistricts?: {
+    from: string
+    to: string
+    commonRoutes: string[]
+    count: number
+    examplesFrom: string[]
+    examplesTo: string[]
+    note: string
+  }
+  transportHubs?: { name: string; district: string; routes: number }[]
+  appliedDistrictFilter?: {
+    district: string
+    rawLabel?: string
+    source: 'explicit' | 'implicit'
+  }
   actions?: { label: string; route?: string; incidentId?: string; district?: string }[]
   hints?: AskSigmaHint[]
   explain: AskSigmaExplain

@@ -87,7 +87,7 @@ const matchesSubsystemTab = (incident: LiveIncidentView, tab: SubsystemTabId): b
   return incident.subsystem === tab
 }
 
-const transportQueryParamKeys = ['mode', 'search', 'route', 'pavilion', 'compareTo', 'map'] as const
+const transportQueryParamKeys = ['mode', 'search', 'route', 'pavilion', 'pavilionOnly', 'compareTo', 'fromDistrict', 'toDistrict', 'focus', 'map'] as const
 
 const isSubsystemTabId = (value: string | null): value is SubsystemTabId => subsystemTabs.some((tab) => tab.id === value)
 
