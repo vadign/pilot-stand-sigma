@@ -100,10 +100,10 @@ export const createPlan = (query: AskSigmaQuery): AskSigmaPlan => {
     }
   }
 
-  if (/(покажи live-источники|когда обновлялись данные|источники данных|live-источники)/i.test(text)) {
+  if (/(покажи источники|статус источников|когда обновлялись данные|источники данных)/i.test(text)) {
     return { operation: 'LIVE_SOURCES', entity: 'sources', text }
   }
-  if (/сводка.*24|24 часа|бриф/i.test(text)) return { operation: 'BRIEFING', entity: 'briefing', text }
+  if (/сводка.*24|24 часа|отчет/i.test(text)) return { operation: 'BRIEFING', entity: 'briefing', text }
   if (/открой инцидент/i.test(text) || /051-|inc-|sig-/i.test(text)) {
     const rawId = query.raw.match(/(051-|inc-|sig-)\S+/i)?.[0]
     const incidentId = rawId?.toUpperCase().replace('SIG-', 'INC-')

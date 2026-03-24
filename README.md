@@ -1,6 +1,6 @@
-# Sigma — frontend-only live demo
+# Sigma — frontend-only demo
 
-Sigma остается frontend-only приложением на React + Vite + TypeScript. В этой версии добавлен двухконтурный live ingestion для официальных источников Новосибирска без runtime-backend:
+Sigma остается frontend-only приложением на React + Vite + TypeScript. В этой версии добавлен двухконтурный ingestion для официальных источников Новосибирска без runtime-backend:
 
 - **051** — отключения ЖКХ: `https://051.novo-sibirsk.ru/SitePages/off.aspx`
 - **OpenData Novosibirsk** — строительные наборы 124/125: `https://opendata.novo-sibirsk.ru`
@@ -12,27 +12,27 @@ Sigma остается frontend-only приложением на React + Vite + 
 Через env доступны три режима:
 
 - `mock` — только текущие моки.
-- `hybrid` — live там, где данные доступны, и mock fallback в остальном. **Режим по умолчанию.**
-- `live` — приоритет на реальные данные; если live недоступен, UI честно падает в snapshot/cache/mock fallback.
+- `hybrid` — реальные данные там, где они доступны, и mock fallback в остальном. **Режим по умолчанию.**
+- `live` — приоритет на прямое получение данных; если оно недоступно, UI честно падает в snapshot/cache/mock fallback.
 
 ### Порядок источников
-Для live-контуров используется одинаковый приоритет:
+Для контуров с актуальными данными используется одинаковый приоритет:
 
-1. runtime live fetch из браузера,
+1. runtime fetch из браузера,
 2. локальный snapshot (`public/live-data/*`),
 3. IndexedDB cache,
 4. mock fallback.
 
-### Где live-данные уже интегрированы
+### Где данные уже интегрированы
 - `/mayor-dashboard` — KPI по отключениям, карта проблем, топ районов, статус ЖКХ.
-- `/briefing` — ежедневный бриф по 051 + строительная активность по районам.
-- `/operations` — live-feed 051 с фильтрами `запланированные/экстренные`, `utility`, `district`, `source`.
-- `/incidents/:id` — карточка live-инцидента с районным уровнем детализации и локальным workflow поверх источника 051.
+- `/briefing` — ежедневный отчет по 051 + строительная активность по районам.
+- `/operations` — лента 051 с фильтрами `запланированные/экстренные`, `utility`, `district`, `source`.
+- `/incidents/:id` — карточка инцидента 051 с районным уровнем детализации и локальным workflow поверх источника 051.
 - `/history` — тренд по накопленным snapshot 051 и строительная аналитика по open data.
-- `/deputies` — live-показатели для ЖКХ/теплоснабжения.
-- `/regulations` — live linkage `utilityType/outageType -> регламент`, `active construction -> контроль`.
+- `/deputies` — показатели для ЖКХ/теплоснабжения.
+- `/regulations` — связи `utilityType/outageType -> регламент`, `active construction -> контроль`.
 - `/public-transport` — карта Яндекса со слоем остановок, фильтрами, метриками, тарифами, карточками остановок и блоком «Связность районов».
-- Ask Sigma — live-вопросы по отключениям, стройке, freshness, статусам источников и общественному транспорту.
+- Ask Sigma — вопросы по отключениям, стройке, freshness, статусам источников и общественному транспорту.
 
 ## Запуск
 
@@ -77,7 +77,7 @@ VITE_OPENDATA_PROXY_URL=
 - если `true`, клиент сначала пробует runtime-refresh;
 - если прямой fetch не проходит из-за CORS/timeout/parser error, приложение откатывается на snapshot/cache/mock и показывает это в UI.
 
-## Синхронизация live snapshots
+## Синхронизация snapshots
 
 ### `npm run sync:051`
 - загружает `off.aspx`;
@@ -105,7 +105,7 @@ VITE_OPENDATA_PROXY_URL=
 
 > В sandbox этого задания внешние сайты были недоступны, поэтому sync-скрипты автоматически откатились на fixture snapshots. В обычной среде с доступом к доменам они используют реальные официальные источники.
 
-## Структура live-модуля
+## Структура модуля источников
 
 ```text
 scripts/
@@ -164,7 +164,7 @@ public/live-data/
 - `transportInfrastructureIndex` — помечен как `calculated`, а не внешний официальный KPI.
 
 ### Честные ограничения данных
-- Вкладка **не рисует live moving vehicles** и **не показывает ETA**, потому что в проекте нет официального GTFS-RT/partner feed.
+- Вкладка **не рисует транспорт в движении в реальном времени** и **не показывает ETA**, потому что в проекте нет официального GTFS-RT/partner feed.
 - Если для остановки нет координат, она остаётся в списке и метриках, но не попадает в слой маркеров на карте.
 - Если runtime fetch dataset 49/51 не удался, UI откатывается на snapshot/cache/mock-fallback и явно показывает это в source badges.
 - Выбор маршрута без официальной геометрии лишь подсвечивает остановки, где этот номер найден в `Marshryt`; полилинии не рисуются.
@@ -184,7 +184,7 @@ public/live-data/
 4. Добавьте selector/UI consumption.
 5. Зафиксируйте fallback/meta block: источник, обновление, TTL, тип данных.
 
-## Поведение при недоступности live
+## Поведение при недоступности прямых данных
 
 Sigma **не подменяет реальность симуляцией**.
 
@@ -194,7 +194,7 @@ Sigma **не подменяет реальность симуляцией**.
 - если данные старые — возраст виден в мета-блоке;
 - если runtime fetch не удался — Ask Sigma и UI пишут, что показан snapshot/cache/mock fallback.
 
-## Ask Sigma: поддерживаемые live-запросы
+## Ask Sigma: поддерживаемые запросы
 
 - `отключения сейчас`
 - `экстренные отключения`
@@ -206,7 +206,7 @@ Sigma **не подменяет реальность симуляцией**.
 - `активные стройки`
 - `ввод в эксплуатацию`
 - `что по строительству в советском районе`
-- `покажи live-источники`
+- `покажи источники данных`
 - `когда обновлялись данные`
 - `что сейчас в жкх`
 - `общественный транспорт`
@@ -241,17 +241,17 @@ npm run build
 ## Ограничения
 
 - Нет backend/auth.
-- Все workflow-действия над live-инцидентом хранятся локально поверх источника 051.
+- Все workflow-действия над инцидентом 051 хранятся локально поверх источника 051.
 - История 051 начинает накапливаться с момента запуска sync-скриптов.
 - В демо-репозитории используются только текстовые ассеты (SVG/CSS/TS/JSON/HTML/CSV fixtures).
 
 ## Спросите Сигму (ask-sigma)
 
-Модуль расположен в `src/features/ask-sigma/*` и теперь работает как с mock store, так и с live selectors.
+Модуль расположен в `src/features/ask-sigma/*` и теперь работает как с mock store, так и с селекторами актуальных данных.
 
 ### Pipeline
 - `normalize -> special query handler -> router -> planner -> executor -> renderer`
-- provider читает live-сводки, construction aggregates и source statuses из Zustand.
+- provider читает актуальные сводки, construction aggregates и source statuses из Zustand.
 - Транспортный домен работает как детерминированный rule-based слой: без LLM runtime и без обращения к AI API.
 
 ### Ask Sigma + общественный транспорт
@@ -276,10 +276,10 @@ npm run build
 - intents/special команды: `src/features/ask-sigma/specialQueries.ts`
 - маршрутизация: `src/features/ask-sigma/router.ts`
 - планы: `src/features/ask-sigma/planner.ts`
-- детерминированные live-ответы: `src/features/ask-sigma/executor.ts`
+- детерминированные ответы: `src/features/ask-sigma/executor.ts`
 - рендер ответов: `src/features/ask-sigma/rendering/resultRenderers/*`
 
-## Проверка live-интеграции локально
+## Проверка интеграции локально
 
 1. Запустить UI: `npm run dev`
 3. Проверить:
@@ -287,11 +287,11 @@ npm run build
    - `/briefing` — блок строительства;
    - `/operations` — фильтры `source/запланированные/экстренные/utility`;
    - `/public-transport` — карта Яндекса, фильтры, список остановок, тарифы и блок связности районов;
-   - `/incidents/051-...` — карточку live-инцидента;
+   - `/incidents/051-...` — карточку инцидента 051;
    - Ask Sigma запросами из списка выше.
 4. Для транспортной вкладки проверьте сценарии:
    - фильтр по району, типу транспорта, номеру маршрута и павильону;
    - клик по остановке и открытие карточки маршрута;
    - тарифные карточки и source badges;
-   - отсутствие live moving vehicles и ETA без официального realtime feed.
+   - отсутствие транспорта в движении в реальном времени и ETA без официального realtime feed.
 5. Для проверки fallback выставить `VITE_ENABLE_RUNTIME_LIVE_FETCH=false` или заблокировать доступ к источникам и убедиться, что UI остается рабочим.

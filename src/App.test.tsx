@@ -42,7 +42,7 @@ describe('App smoke render', () => {
       )
     })
 
-    expect(container.textContent).toContain('ЖКХ и энергетика под управлением live-источников')
+    expect(container.textContent).toContain('ЖКХ и энергетика под управлением оперативных источников')
 
     await act(async () => {
       root.unmount()

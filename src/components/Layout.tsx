@@ -9,7 +9,7 @@ import { useLiveDataBootstrap } from '../live/hooks/useLiveDataBootstrap'
 
 const nav = [
   ['/mayor-dashboard', 'Панель мэра'],
-  ['/briefing', 'Управленческий бриф'],
+  ['/briefing', 'Управленческий отчет'],
   ['/history', 'История и аналитика'],
 ]
 
@@ -32,7 +32,7 @@ export function Layout() {
             <Building2 size={20} />
           </div>
           <div>
-            <div className="text-3xl font-bold">Сигма City</div>
+            <div className="text-3xl font-bold">Сигма</div>
             <div className="text-sm text-slate-500">Кабинет руководителя</div>
           </div>
         </div>

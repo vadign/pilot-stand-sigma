@@ -18,7 +18,7 @@ export const useLiveDataBootstrap = () => {
         const bundle = await manager.loadBundle({ mode: getLiveSourceMode(), runtimeEnabled: isRuntimeLiveFetchEnabled() })
         if (!cancelled) applyLiveBundle(bundle)
       } catch (error) {
-        if (!cancelled) setLiveError(error instanceof Error ? error.message : 'Не удалось загрузить live-данные')
+        if (!cancelled) setLiveError(error instanceof Error ? error.message : 'Не удалось загрузить данные источников')
       } finally {
         if (!cancelled) setLiveLoading(false)
       }

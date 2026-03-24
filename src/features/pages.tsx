@@ -31,6 +31,12 @@ const sourceTypeLabels: Record<string, string> = {
   'mock-fallback': 'mock-fallback',
 }
 
+const sourceModeLabels: Record<string, string> = {
+  live: 'прямой',
+  hybrid: 'гибридный',
+  mock: 'mock',
+}
+
 const utilityLabels: Record<string, string> = {
   heating: 'отопление',
   hot_water: 'горячая вода',
@@ -54,7 +60,7 @@ type SubsystemTabId = (typeof subsystemTabs)[number]['id']
 
 const subsystemTabDescriptions: Record<SubsystemTabId, { title: string; description: string }> = {
   heat: {
-    title: 'ЖКХ и энергетика под управлением live-источников',
+    title: 'ЖКХ и энергетика под управлением оперативных источников',
     description: 'Оперативная картина по отключениям, авариям и состоянию городской энергетической инфраструктуры.',
   },
   roads: {
@@ -191,8 +197,8 @@ export function BriefingPage() {
       <Card>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="mb-2 text-sm font-semibold uppercase tracking-wider text-blue-700">Sigma Управленческий бриф</div>
-            <h1 className="text-4xl font-extrabold">Ежедневный управленческий бриф: {new Date().toLocaleDateString('ru-RU')}</h1>
+            <div className="mb-2 text-sm font-semibold uppercase tracking-wider text-blue-700">Sigma Управленческий отчет</div>
+            <h1 className="text-4xl font-extrabold">Ежедневный управленческий отчет: {new Date().toLocaleDateString('ru-RU')}</h1>
             <p className="mt-2 text-lg text-slate-500">Реальные отключения ЖКХ из 051 и строительная аналитика из открытых данных Новосибирска.</p>
           </div>
           <button onClick={() => window.print()} className="rounded-xl border px-3 py-2 font-semibold"><Download size={14} className="mr-1 inline" />Экспорт PDF</button>
@@ -209,7 +215,7 @@ export function BriefingPage() {
       <Card>
         <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">Сводка системы</div>
         <p className="mt-2 text-xl leading-relaxed text-slate-700 lg:text-3xl">
-          По данным 051 сейчас зарегистрировано <b className="text-blue-700">{outageSummary?.activeIncidents ?? 0} live-событий</b>, из них {getOutageKindLabel('emergency', 'genitivePlural')} — <b>{emergencyLive.length}</b>.
+          По данным 051 сейчас зарегистрировано <b className="text-blue-700">{outageSummary?.activeIncidents ?? 0} активных событий</b>, из них {getOutageKindLabel('emergency', 'genitivePlural')} — <b>{emergencyLive.length}</b>.
           Наибольшая нагрузка по домам наблюдается в районах {outageSummary?.topDistricts.slice(0, 2).map((item) => item.district).join(' и ') || 'без выраженного лидера'}.
         </p>
         {liveStatus051 && <SourceMetaFooter source="051.novo-sibirsk.ru" updatedAt={liveStatus051.updatedAt} ttl={`${liveStatus051.ttlMinutes} мин`} type={sourceTypeLabels[liveStatus051.type] ?? liveStatus051.type} status={liveStatus051.status} />}
@@ -217,7 +223,7 @@ export function BriefingPage() {
 
       <div className="grid gap-4 lg:grid-cols-12">
         <Card className="lg:col-span-7">
-          <div className="mb-3 text-2xl font-bold">Активные live-события ЖКХ</div>
+          <div className="mb-3 text-2xl font-bold">Активные события ЖКХ</div>
           {incidents.filter((incident) => incident.sourceKind === 'live').slice(0, 5).map((incident) => (
             <button key={incident.id} onClick={() => navigate(`/incidents/${incident.id}`)} className="mb-2 flex w-full items-center justify-between rounded-xl border px-3 py-3 text-left hover:bg-slate-50">
               <div>
@@ -508,8 +514,8 @@ export function OperationsPage() {
         <Card className="relative">
           <MapView incidents={filtered} onPick={setSelectedIncident} />
           <div className="absolute bottom-3 left-3 right-3 rounded-2xl border border-red-200 bg-white p-3 shadow lg:bottom-5 lg:left-auto lg:right-5">
-            <div className="font-bold text-red-600"><AlertTriangle size={16} className="mr-1 inline" />{isHeatTab ? 'Live-feed 051 интегрирован в ленту' : `Контур «${subsystemTabs.find((item) => item.id === subsystem)?.title}» снова доступен`}</div>
-            <div className="text-sm text-slate-600">{isHeatTab ? 'Факты из 051 не скрываются локальными действиями. Workflow ведется поверх live snapshot.' : 'Вкладка показывает доменный поток событий на карте и в ленте без переключения между разделами.'}</div>
+            <div className="font-bold text-red-600"><AlertTriangle size={16} className="mr-1 inline" />{isHeatTab ? 'Поток 051 интегрирован в ленту' : `Контур «${subsystemTabs.find((item) => item.id === subsystem)?.title}» снова доступен`}</div>
+            <div className="text-sm text-slate-600">{isHeatTab ? 'Факты из 051 не скрываются локальными действиями. Workflow ведется поверх сохраненного снимка.' : 'Вкладка показывает доменный поток событий на карте и в ленте без переключения между разделами.'}</div>
           </div>
         </Card>
       </div>
@@ -551,7 +557,7 @@ export function IncidentPage() {
       <div className="grid gap-4 lg:grid-cols-12">
         <div className="space-y-4 lg:col-span-8">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Card><div className="text-sm uppercase tracking-wide text-slate-500">Источник</div><div className="text-2xl font-bold">{incident.sourceKind === 'live' ? '051 / live snapshot' : 'Mock store'}</div></Card>
+            <Card><div className="text-sm uppercase tracking-wide text-slate-500">Источник</div><div className="text-2xl font-bold">{incident.sourceKind === 'live' ? '051 / снимок данных' : 'Mock store'}</div></Card>
             <Card><div className="text-sm uppercase tracking-wide text-slate-500">Уровень детализации</div><div className="text-2xl font-bold">{incident.liveMeta ? 'район' : 'точка'}</div></Card>
             <Card><div className="text-sm uppercase tracking-wide text-slate-500">Ресурс</div><div className="text-2xl font-bold">{incident.liveMeta ? utilityLabels[incident.liveMeta.utilityType] : 'операционный инцидент'}</div></Card>
           </div>
@@ -561,7 +567,7 @@ export function IncidentPage() {
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-2">
                 <div className="rounded-xl border p-3"><b>Влияние на жителей:</b> около {incident.affectedPopulation}+ человек.</div>
-                <div className="rounded-xl border p-3"><b>Источник данных:</b> {incident.sourceKind === 'live' ? 'официальный live-источник 051' : 'демо-модель Sigma'}.</div>
+                <div className="rounded-xl border p-3"><b>Источник данных:</b> {incident.sourceKind === 'live' ? 'официальный источник 051' : 'демо-модель Sigma'}.</div>
                 <div className="rounded-xl border p-3"><b>Комментарий:</b> {incident.statusHint ?? 'локальный workflow Sigma'}</div>
               </div>
               <MapView incidents={[incident]} />
@@ -628,10 +634,10 @@ export function HistoryPage() {
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card><div className="text-slate-500">Live snapshots 051</div><div className="text-4xl font-bold lg:text-5xl">{live.liveHistory.length}</div><div className="text-slate-500">история накапливается автоматически</div></Card>
+        <Card><div className="text-slate-500">Снимки 051</div><div className="text-4xl font-bold lg:text-5xl">{live.liveHistory.length}</div><div className="text-slate-500">история накапливается автоматически</div></Card>
         <Card><div className="text-slate-500">Период</div><div className="text-4xl font-bold lg:text-5xl">{period}</div><div className="text-slate-500">если история короткая, UI честно показывает ограничение</div></Card>
         <Card><div className="text-slate-500">Активные стройки</div><div className="text-4xl font-bold lg:text-5xl">{construction.reduce((sum, item) => sum + item.activeConstruction, 0)}</div><div className="text-slate-500">open data active construction</div></Card>
-        <Card><div className="text-slate-500">Режим данных</div><div className="text-4xl font-bold lg:text-5xl">{live.mode}</div><div className="text-slate-500">live / hybrid / mock</div></Card>
+        <Card><div className="text-slate-500">Режим данных</div><div className="text-4xl font-bold lg:text-5xl">{sourceModeLabels[live.mode] ?? live.mode}</div><div className="text-slate-500">прямой / гибридный / mock</div></Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-12">
@@ -647,7 +653,7 @@ export function HistoryPage() {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="rounded-xl border border-dashed p-4 text-sm text-slate-600">История live-источника только накапливается. В hybrid-режиме текущий snapshot уже используется, но длинный тренд пока ограничен.</div>
+              <div className="rounded-xl border border-dashed p-4 text-sm text-slate-600">История источника 051 только накапливается. В гибридном режиме текущий снимок уже используется, но длинный тренд пока ограничен.</div>
             )}
           </Card>
           <Card><div className="mb-2 text-3xl font-bold">Очаги проблем</div><MapView incidents={incidents} /></Card>
@@ -692,11 +698,11 @@ export function ScenariosPage() {
         <Card>
           <div className="mb-2 text-xl font-bold uppercase tracking-widest text-slate-500">Библиотека сценариев</div>
           {scenarios.map((item) => <button key={item.id} onClick={() => setSelectedId(item.id)} className={`mb-2 w-full rounded-xl border p-3 text-left ${item.id === selectedId ? 'border-blue-300 bg-blue-50' : ''}`}><div className="font-semibold">{item.title}</div><div className="text-sm text-slate-500">{item.description}</div></button>)}
-          <SourceMetaFooter source="live baseline only" updatedAt={new Date().toISOString()} ttl="n/a" type="simulation + live baseline" status="simulation" />
+          <SourceMetaFooter source="baseline only" updatedAt={new Date().toISOString()} ttl="n/a" type="simulation + baseline" status="simulation" />
         </Card>
         <Card>
           <div className="mb-2 text-xl font-bold uppercase tracking-widest text-slate-500">Baseline</div>
-          <div className="text-sm text-slate-500">Текущая нагрузка ЖКХ: {outageSummary?.activeIncidents ?? 0} live-событий</div>
+          <div className="text-sm text-slate-500">Текущая нагрузка ЖКХ: {outageSummary?.activeIncidents ?? 0} активных событий</div>
           <div className="mt-1 text-sm text-slate-500">Строительная активность: {construction.reduce((sum, item) => sum + item.activeConstruction, 0)} объектов</div>
           <button onClick={() => runScenario(scenario.id)} className="mt-3 w-full rounded-xl bg-blue-600 py-3 text-lg font-bold text-white"><Play size={16} className="mr-1 inline" />Запустить симуляцию</button>
         </Card>
@@ -704,7 +710,7 @@ export function ScenariosPage() {
 
       <div className="space-y-4 lg:col-span-9">
         <Card className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <SectionTitle title={scenario.title} subtitle="Live-источники используются только как baseline, не как post hoc факт сценария." />
+          <SectionTitle title={scenario.title} subtitle="Оперативные источники используются только как baseline, не как post hoc факт сценария." />
           <button disabled={!run} onClick={() => run && saveScenario(run.id)} className="rounded-xl border px-4 py-2 font-semibold disabled:opacity-50">Сохранить сценарий</button>
         </Card>
 
@@ -740,13 +746,13 @@ export function DeputiesPage() {
     <div className="grid gap-4 lg:grid-cols-12">
       <div className="space-y-4 lg:col-span-9">
         <Card>
-          <SectionTitle title="Цифровые заместители" subtitle="Заместитель по энергетике и ЖКХ получает live-показатели 051 и статус обновления источника." />
+          <SectionTitle title="Цифровые заместители" subtitle="Заместитель по энергетике и ЖКХ получает показатели 051 и статус обновления источника." />
         </Card>
 
         <Card>
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="text-4xl font-bold">{deputy.name}</div><Badge text="активен" className="bg-emerald-50 text-emerald-700" /></div>
           <MetaGrid items={[
-            { label: 'Активные live-события', value: String(liveSummary?.activeIncidents ?? 0) },
+            { label: 'Активные события', value: String(liveSummary?.activeIncidents ?? 0) },
             { label: 'Районы в фокусе', value: liveSummary?.topDistricts.slice(0, 3).map((item) => item.district).join(', ') || '—' },
             { label: 'Источник', value: statuses.find((item) => item.key === '051')?.title ?? '051' },
             { label: 'Последнее обновление', value: statuses.find((item) => item.key === '051')?.updatedAt ? new Date(statuses.find((item) => item.key === '051')!.updatedAt!).toLocaleString('ru-RU') : '—' },
@@ -800,9 +806,9 @@ export function RegulationsPage() {
   return (
     <div className="space-y-4">
       <Card>
-        <SectionTitle title="Реестр регламентов" subtitle="Mock-регламенты сохранены, но добавлены live linkage по utility type/outage type и active construction." />
+        <SectionTitle title="Реестр регламентов" subtitle="Mock-регламенты сохранены, но добавлены связи по utility type/outage type и active construction." />
         <MetaGrid items={[
-          { label: 'Live-события ЖКХ', value: String(liveSummary?.activeIncidents ?? 0) },
+          { label: 'События ЖКХ', value: String(liveSummary?.activeIncidents ?? 0) },
           { label: 'Активные стройки', value: String(construction.reduce((sum, item) => sum + item.activeConstruction, 0)) },
           { label: 'Покрытие логики', value: `${coverage.pct}%` },
           { label: 'Рекомендованный домен', value: 'ЖКХ / строительство' },

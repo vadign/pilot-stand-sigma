@@ -58,13 +58,13 @@ export const executePlan = (
       return {
         type: 'SUMMARY',
         title: 'Оперативная обстановка по ЖКХ',
-        summary: `${districtLabel ? `Сейчас ${districtLabel}` : 'Сейчас'} live-событий ЖКХ: ${context.liveSummary?.activeIncidents ?? liveIncidents.length}. ${getOutageKindLabel('emergency', 'titlePlural')} домов: ${context.liveSummary?.emergencyHouses ?? 0}.`,
+        summary: `${districtLabel ? `Сейчас ${districtLabel}` : 'Сейчас'} активных событий ЖКХ: ${context.liveSummary?.activeIncidents ?? liveIncidents.length}. ${getOutageKindLabel('emergency', 'titlePlural')} домов: ${context.liveSummary?.emergencyHouses ?? 0}.`,
         kpis: [
-          { label: 'Live incidents 051', value: String(context.liveSummary?.activeIncidents ?? liveIncidents.length) },
+          { label: 'События 051', value: String(context.liveSummary?.activeIncidents ?? liveIncidents.length) },
           { label: `${getOutageKindLabel('planned', 'titlePlural')} дома`, value: String(context.liveSummary?.plannedHouses ?? 0) },
           { label: `${getOutageKindLabel('emergency', 'titlePlural')} дома`, value: String(context.liveSummary?.emergencyHouses ?? 0) },
         ],
-        actions: [{ label: 'Открыть монитор', route: '/operations', district }, { label: 'Открыть бриф', route: '/briefing' }],
+        actions: [{ label: 'Открыть монитор', route: '/operations', district }, { label: 'Открыть отчет', route: '/briefing' }],
         explain: { ...explainBase, dataType: 'real' },
       }
     }
@@ -126,10 +126,10 @@ export const executePlan = (
       return { type: 'SCENARIO_LOOKUP', title: scenario.title, scenario, summary: scenario.description, actions: [{ label: 'Открыть сценарий', route: '/scenarios' }], explain: { ...explainBase, dataType: 'simulation' } }
     }
     case 'SCENARIO_COMPARE':
-      return { type: 'SCENARIO_COMPARE', title: 'Сравнение сценариев', compare: { baseline: 'Текущая ситуация', intervention: 'Сценарное вмешательство', effects: ['live baseline сохранен', '-18% критичных инцидентов', '+8% нагрузка на службы'] }, actions: [{ label: 'Открыть сценарии', route: '/scenarios' }], explain: { ...explainBase, dataType: 'simulation' } }
+      return { type: 'SCENARIO_COMPARE', title: 'Сравнение сценариев', compare: { baseline: 'Текущая ситуация', intervention: 'Сценарное вмешательство', effects: ['базовая картина сохранена', '-18% критичных инцидентов', '+8% нагрузка на службы'] }, actions: [{ label: 'Открыть сценарии', route: '/scenarios' }], explain: { ...explainBase, dataType: 'simulation' } }
     case 'DEPUTY_STATUS': {
       const deputy = context.deputies[0]
-      return { type: 'DEPUTY_STATUS', title: deputy.name, deputy, summary: `Режим: ${deputy.mode}. Live-событий ЖКХ: ${context.liveSummary?.activeIncidents ?? 0}.`, actions: [{ label: 'Открыть заместителей', route: '/deputies' }], explain: { ...explainBase, dataType: 'pilot' } }
+      return { type: 'DEPUTY_STATUS', title: deputy.name, deputy, summary: `Режим: ${deputy.mode}. Активных событий ЖКХ: ${context.liveSummary?.activeIncidents ?? 0}.`, actions: [{ label: 'Открыть заместителей', route: '/deputies' }], explain: { ...explainBase, dataType: 'pilot' } }
     }
     case 'DEPUTY_MODE_CHANGE': {
       const deputy = context.deputies[0]
@@ -143,10 +143,10 @@ export const executePlan = (
     case 'LIVE_SOURCES':
       return {
         type: 'LIVE_SOURCE_STATUS',
-        title: 'Статус live-источников',
+        title: 'Статус источников',
         summary: sourceStatuses.map((status) => `${status.key}: ${status.source}/${status.status}`).join(' · '),
         sourceStatuses,
-        actions: [{ label: 'Открыть бриф', route: '/briefing' }],
+        actions: [{ label: 'Открыть отчет', route: '/briefing' }],
         explain: { ...explainBase, dataType: sourceStatuses.some((status) => status.type === 'mock-fallback') ? 'mock-fallback' : 'real' },
       }
     case 'CONSTRUCTION': {
@@ -161,7 +161,7 @@ export const executePlan = (
         title,
         summary,
         constructionAggregates: aggregates.slice(0, 8),
-        actions: [{ label: 'Открыть историю', route: '/history' }, { label: 'Открыть бриф', route: '/briefing' }],
+        actions: [{ label: 'Открыть историю', route: '/history' }, { label: 'Открыть отчет', route: '/briefing' }],
         explain: { ...explainBase, source: 'OpenData Novosibirsk', dataType: 'real' },
       }
     }
@@ -174,7 +174,7 @@ export const executePlan = (
         type: 'PUBLIC_TRANSPORT_SUMMARY',
         title: 'Общественный транспорт',
         summary: fallbackMode
-          ? 'Показываю последний сохраненный снимок. Данные по общественному транспорту сейчас недоступны в live режиме.'
+          ? 'Показываю последний сохраненный снимок. Данные по общественному транспорту сейчас недоступны в режиме прямого обновления.'
           : `Остановок: ${metrics.totalStops}, районов покрытия: ${metrics.districtCount}, уникальных маршрутов: ${metrics.totalUniqueRoutes}, доля павильонов: ${(metrics.pavilionShare * 100).toFixed(1)}%.`,
         kpis: [
           { label: 'Остановки', value: String(metrics.totalStops) },
@@ -345,7 +345,7 @@ export const executePlan = (
       return {
         type: 'HELP',
         title: 'Что умеет Сигма',
-        summary: `Сигма понимает live-запросы по 051, open data, истории, транспорту и навигации для роли «${role}». По транспорту можно спрашивать про остановки по районам и маршрутам, тарифы, связность районов, покрытие и карту.`,
+        summary: `Сигма понимает запросы по 051, open data, истории, транспорту и навигации для роли «${role}». По транспорту можно спрашивать про остановки по районам и маршрутам, тарифы, связность районов, покрытие и карту.`,
         hints: supportedQuestions,
         explain: explainBase,
       }
@@ -355,7 +355,7 @@ export const executePlan = (
         title: 'Сигма пока не знает эту тему',
         summary: /транспорт|остановк|маршрут|тариф|проезд/i.test(plan.text)
           ? 'Уточните транспортный запрос. Например: «остановки в советском районе», «какие остановки у маршрута 36», «как проехать из академгородка в центральный район».'
-          : 'Попробуйте один из поддерживаемых live-запросов ниже.',
+          : 'Попробуйте один из поддерживаемых запросов ниже.',
         hints: supportedQuestions,
         explain: explainBase,
       }

@@ -121,7 +121,7 @@ export class LiveSourceManager {
           updatedAt: cache.entry.payload.snapshot.snapshotAt,
           sourceUrl: cache.entry.sourceUrl,
           status: cache.fresh ? 'ready' : 'stale',
-          message: cache.fresh ? 'Показан кэшированный live-ответ 051.' : 'Показан устаревший кэш 051.',
+          message: cache.fresh ? 'Показан кэшированный ответ 051.' : 'Показан устаревший кэш 051.',
         },
       }
     }
@@ -148,7 +148,7 @@ export class LiveSourceManager {
         updatedAt: mock.snapshotAt,
         sourceUrl: mock.sourceUrl,
         status: 'stale',
-        message: 'Live-данные 051 недоступны, показан mock fallback.',
+        message: 'Данные 051 недоступны, показан mock fallback.',
       },
     }
   }
@@ -218,7 +218,7 @@ export class LiveSourceManager {
         updatedAt: emptyBundle.permitsMeta.fetchedAt,
         sourceUrl: emptyBundle.permitsMeta.passportUrl,
         status: 'stale',
-        message: 'Live-данные OpenData недоступны, показан mock fallback.',
+        message: 'Данные OpenData недоступны, показан mock fallback.',
       },
     }
   }

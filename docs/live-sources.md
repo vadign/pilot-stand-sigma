@@ -1,4 +1,4 @@
-# Live sources in Sigma
+# Источники данных в Sigma
 
 ## 1. 051: отключения ЖКХ
 
@@ -54,7 +54,7 @@
 
 Если район отсутствует в явном поле, Sigma пытается извлечь его из адреса по шаблонам.
 
-## 3. Freshness и fallback
+## 3. Актуальность и fallback
 
 ### TTL
 - 051 — 30 минут
@@ -70,7 +70,7 @@
 - `errorState`
 
 ### Priority
-1. runtime live fetch
+1. runtime fetch
 2. snapshot asset
 3. IndexedDB cache
 4. mock fallback

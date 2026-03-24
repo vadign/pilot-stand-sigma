@@ -11,6 +11,8 @@ const severityColor: Record<Incident['severity'], string> = {
   критический: '#dc2626',
 }
 
+const zoomOutForOverview = (zoom: number): number => Math.max(0, zoom - 2)
+
 export function MapView({
   incidents,
   onPick,
@@ -22,11 +24,11 @@ export function MapView({
 }) {
   const mapState = useMemo(() => {
     if (incidents.length === 0) {
-      return { center: [55.03, 82.98] as [number, number], zoom: 10 }
+      return { center: [55.03, 82.98] as [number, number], zoom: zoomOutForOverview(10) }
     }
 
     if (incidents.length === 1) {
-      return { center: incidents[0].coordinates, zoom: 13 }
+      return { center: incidents[0].coordinates, zoom: zoomOutForOverview(13) }
     }
 
     const latitudes = incidents.map((incident) => incident.coordinates[0])
@@ -44,7 +46,7 @@ export function MapView({
 
     return {
       center: [Number(((minLat + maxLat) / 2).toFixed(6)), Number(((minLng + maxLng) / 2).toFixed(6))] as [number, number],
-      zoom,
+      zoom: zoomOutForOverview(zoom),
     }
   }, [incidents])
 

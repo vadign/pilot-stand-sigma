@@ -85,7 +85,7 @@ export const useSigmaStore = create<SigmaState>((set, get) => ({
   setSelectedIncident: (id) => set({ selectedIncidentId: id }),
   escalateIncident: (id) => set((state) => {
     if (isLiveIncident(id)) {
-      return { live: { ...state.live, workflow: addWorkflowEntry(state, id, 'escalate', 'Live-инцидент эскалирован в локальный workflow.', 'Sigma') } }
+      return { live: { ...state.live, workflow: addWorkflowEntry(state, id, 'escalate', 'Инцидент 051 эскалирован в локальный workflow.', 'Sigma') } }
     }
     return ({
       incidents: state.incidents.map((incident) => incident.id === id ? { ...incident, severity: incident.severity === 'критический' ? 'критический' : 'высокий', status: 'эскалирован', timeline: [...incident.timeline, { id: crypto.randomUUID(), at: new Date().toISOString(), author: 'Sigma', text: 'Инцидент эскалирован' }] } : incident),

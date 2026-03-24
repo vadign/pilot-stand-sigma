@@ -35,6 +35,8 @@ const mapOptions: Record<string, unknown> & { yandexMapType: 'transit' } = {
   yandexMapType: 'transit',
 }
 
+const zoomOutForOverview = (zoom: number): number => Math.max(0, zoom - 2)
+
 let yandexMapsApiPromise: Promise<YMapsApi> | null = null
 
 const hasCoordinates = (stop: TransitStop): stop is TransitStop & { coordinates: [number, number] } => Array.isArray(stop.coordinates)
@@ -42,8 +44,8 @@ const hasCoordinates = (stop: TransitStop): stop is TransitStop & { coordinates:
 const getBoundsState = (stops: TransitStop[], selectedStop?: TransitStop) => {
   const visibleStops = stops.filter(hasCoordinates)
   if (selectedStop?.coordinates) return { center: selectedStop.coordinates, zoom: 14 }
-  if (visibleStops.length === 0) return { center: [55.03, 82.92] as [number, number], zoom: 10 }
-  if (visibleStops.length === 1) return { center: visibleStops[0].coordinates, zoom: 13 }
+  if (visibleStops.length === 0) return { center: [55.03, 82.92] as [number, number], zoom: zoomOutForOverview(10) }
+  if (visibleStops.length === 1) return { center: visibleStops[0].coordinates, zoom: zoomOutForOverview(13) }
 
   const latitudes = visibleStops.map((stop) => stop.coordinates[0])
   const longitudes = visibleStops.map((stop) => stop.coordinates[1])
@@ -56,14 +58,14 @@ const getBoundsState = (stops: TransitStop[], selectedStop?: TransitStop) => {
 
   return {
     center: [Number(((minLat + maxLat) / 2).toFixed(6)), Number(((minLon + maxLon) / 2).toFixed(6))] as [number, number],
-    zoom,
+    zoom: zoomOutForOverview(zoom),
   }
 }
 
 const getMapState = (stops: TransitStop[], selectedDistrict?: string, selectedStop?: TransitStop) => {
   if (selectedDistrict && !selectedStop) {
     const districtCenter = districts.find((district) => district.name === selectedDistrict || district.id === selectedDistrict)?.center
-    if (districtCenter) return { center: districtCenter, zoom: 12 }
+    if (districtCenter) return { center: districtCenter, zoom: zoomOutForOverview(12) }
   }
 
   return getBoundsState(stops, selectedStop)
