@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { parseStopsCsv } from '../parsers/parseStopsCsv'
 import { parseTariffsCsv } from '../parsers/parseTariffsCsv'
 import { NovosibirskStopsProvider } from '../providers/NovosibirskStopsProvider'
-import { selectDistrictConnectivity, selectFilteredStops, selectGlobalTransportMetrics, selectRouteDetails } from '../selectors'
+import { selectCurrentFareCards, selectDistrictConnectivity, selectFilteredStops, selectGlobalTransportMetrics, selectRouteDetails } from '../selectors'
 import { flattenRoutes } from '../server/nskgortransProxy'
 import { buildDistrictMetrics } from '../utils/buildDistrictMetrics'
 import { buildRouteMetrics } from '../utils/buildRouteMetrics'
@@ -41,6 +41,11 @@ describe('public transport', () => {
     expect(fares).toHaveLength(4)
     expect(fares[0]?.amount).toBe(40)
     expect(fares[2]?.fareType).toContain('Льготный')
+  })
+
+  it('hides unknown fare categories from fare cards', () => {
+    const fares = selectCurrentFareCards(parseTariffsCsv(tariffsCsv))
+    expect(fares.every((fare) => fare.mode !== 'unknown')).toBe(true)
   })
 
   it('computes route intersection between districts', () => {

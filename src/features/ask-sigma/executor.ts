@@ -1,24 +1,24 @@
 import { getDistrictAnswerName } from '../../lib/districts'
 import { defaultTransportFares, defaultTransportStops } from '../public-transport/data/defaultTransportData'
 import { getTransportDistrictLabel, selectCurrentFareCards, selectDistrictConnectivity, selectFilteredStops, selectGlobalTransportMetrics, selectRouteDetails, selectSelectedDistrictSummary, selectStopsForRoute } from '../public-transport/selectors'
-import type { AskSigmaHint, AskSigmaPlan, AskSigmaResult, SigmaRole } from './types'
+import type { AskSigmaPlan, AskSigmaResult, SigmaRole } from './types'
 import type { AskSigmaProvider } from './provider'
+import { supportedQuestions } from './suggestedQuestions'
 import { buildPublicTransportLink, detectRouteFromText, detectTransportDistrictFilters, detectTransportMode, formatTransportDistrictLabel } from './transportQuery'
-
-const supportedQuestions: AskSigmaHint[] = [
-  { question: 'что происходит сейчас', description: 'общая оперативная обстановка, число активных и критичных событий.' },
-  { question: 'отключения сейчас', description: 'текущая live-сводка по 051 и fallback-режим.' },
-  { question: 'стройки по районам', description: 'агрегаты по open data 124/125.' },
-  { question: 'остановки в советском районе', description: 'поиск остановок по району.' },
-  { question: 'какие маршруты есть в академгородке', description: 'маршруты и остановки в подрайоне.' },
-  { question: 'тариф на автобус', description: 'карточки тарифов из dataset 51.' },
-  { question: 'как проехать из академгородка в центральный район', description: 'пересечение маршрутов по двум районам.' },
-  { question: 'топ транспортных узлов', description: 'остановки с максимальным числом маршрутов.' },
-]
 
 const getRequestedDistrict = (plan: AskSigmaPlan): string | undefined => String(plan.filters?.district ?? '').trim() || undefined
 const matchesDistrict = (district: string | undefined, incidentDistrict: string): boolean => !district || incidentDistrict === district
 const formatDistrictLabel = (district?: string): string => district ? `по району «${getDistrictAnswerName(district)}»` : ''
+const matchesSubsystem = (incidentSubsystem: string, subsystem: string | undefined): boolean => {
+  if (!subsystem) return true
+  if (subsystem === 'energy') return incidentSubsystem === 'heat' || incidentSubsystem === 'utilities'
+  return incidentSubsystem.includes(subsystem.slice(0, 4))
+}
+const matchesRegulationSubsystem = (linkedIncidentTypes: string[], subsystem: string | undefined): boolean => {
+  if (!subsystem) return true
+  if (subsystem === 'energy') return linkedIncidentTypes.some((type) => type === 'heat' || type === 'utilities')
+  return linkedIncidentTypes.some((type) => type.includes(subsystem.slice(0, 4)))
+}
 
 const getTransportData = (provider: AskSigmaProvider) => {
   const context = provider.getContext()
@@ -80,10 +80,12 @@ export const executePlan = (
       const district = getRequestedDistrict(plan)
       const outageKind = String(plan.filters?.outageKind ?? '')
       const subsystem = String(plan.filters?.subsystem ?? '')
+      const severity = String(plan.filters?.severity ?? '')
       const filtered = context.incidents
         .filter((incident) => matchesDistrict(district, incident.district))
         .filter((incident) => !outageKind || (incident.id.startsWith('051-') && String((incident as { liveMeta?: { outageKind?: string } }).liveMeta?.outageKind) === outageKind))
-        .filter((incident) => !subsystem || incident.subsystem.includes(subsystem.slice(0, 4)))
+        .filter((incident) => matchesSubsystem(incident.subsystem, subsystem || undefined))
+        .filter((incident) => !severity || incident.severity === severity)
         .slice(0, 6)
       return {
         type: 'INCIDENT_LIST',
@@ -108,7 +110,8 @@ export const executePlan = (
       }
     }
     case 'REGULATION_GUIDANCE': {
-      const regulation = context.regulations.find((item) => !plan.filters?.subsystem || item.linkedIncidentTypes.some((type) => type.includes(String(plan.filters?.subsystem ?? '').slice(0, 4)))) ?? context.regulations[0]
+      const subsystem = String(plan.filters?.subsystem ?? '') || undefined
+      const regulation = context.regulations.find((item) => matchesRegulationSubsystem(item.linkedIncidentTypes, subsystem)) ?? context.regulations[0]
       return { type: 'REGULATION_GUIDANCE', title: 'Рекомендации по регламенту', summary: `Для текущего кейса релевантен ${regulation.code} «${regulation.title}».`, regulations: [regulation], actions: [{ label: 'Открыть регламенты', route: '/regulations' }], explain: { ...explainBase, dataType: 'pilot' } }
     }
     case 'REGULATION_LOOKUP': {
@@ -244,11 +247,11 @@ export const executePlan = (
     case 'TRANSIT_HUBS': {
       const { stops, fares } = getTransportData(provider)
       const metrics = selectGlobalTransportMetrics(stops, fares)
-      const hubs = metrics.topStopsByRouteCount.slice(0, 8)
+      const hubs = metrics.topStopsByRouteCount.slice(0, 5)
       return {
         type: 'TRANSIT_HUBS',
-        title: 'Топ транспортных узлов',
-        summary: `Показываю узлы с наибольшим числом маршрутов: ${hubs.slice(0, 3).map((stop) => `${stop.name} (${stop.routesParsed.length})`).join(' · ')}.`,
+        title: 'Остановки с наибольшим числом маршрутов',
+        summary: `Показываю остановки с наибольшим числом маршрутов: ${hubs.slice(0, 3).map((stop) => `${stop.name} (${stop.routesParsed.length})`).join(' · ')}.`,
         transportStops: hubs,
         transportHubs: hubs.map((stop) => ({ name: stop.name, district: stop.district, routes: stop.routesParsed.length })),
         actions: [{ label: 'Открыть транспорт', route: buildPublicTransportLink({ focus: 'hubs' }) }],
@@ -338,13 +341,19 @@ export const executePlan = (
         explain: { ...explainBase, dataType: 'calculated' },
       }
     case 'HELP':
-      return { type: 'HELP', title: 'Что умеет Сигма', summary: `Сигма понимает live-запросы по 051, open data, истории, транспорту и навигации для роли «${role}».`, hints: supportedQuestions, explain: explainBase }
+      return {
+        type: 'HELP',
+        title: 'Что умеет Сигма',
+        summary: `Сигма понимает live-запросы по 051, open data, истории, транспорту и навигации для роли «${role}». По транспорту можно спрашивать про остановки по районам и маршрутам, тарифы, связность районов, покрытие и карту.`,
+        hints: supportedQuestions,
+        explain: explainBase,
+      }
     default:
       return {
         type: 'UNKNOWN',
         title: 'Сигма пока не знает эту тему',
         summary: /транспорт|остановк|маршрут|тариф|проезд/i.test(plan.text)
-          ? 'Уточните транспортный запрос. Например: «остановки в советском районе», «тариф на автобус», «топ транспортных узлов». '
+          ? 'Уточните транспортный запрос. Например: «остановки в советском районе», «какие остановки у маршрута 36», «как проехать из академгородка в центральный район».'
           : 'Попробуйте один из поддерживаемых live-запросов ниже.',
         hints: supportedQuestions,
         explain: explainBase,

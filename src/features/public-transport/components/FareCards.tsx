@@ -1,4 +1,4 @@
-import { Badge, Card } from '../../../components/ui'
+import { Card } from '../../../components/ui'
 import type { TransportFare } from '../types'
 
 const modeLabels: Record<string, string> = {
@@ -12,12 +12,11 @@ const modeLabels: Record<string, string> = {
 
 export const FareCards = ({ fares }: { fares: TransportFare[] }) => (
   <Card>
-    <div className="mb-4 flex items-center justify-between gap-3">
+    <div className="mb-4">
       <div>
         <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">Тарифы</div>
-        <div className="text-2xl font-bold">Тарифные карточки из dataset 51</div>
+        <div className="text-2xl font-bold">Тарифные карточки</div>
       </div>
-      <Badge text="best-effort normalisation" className="bg-slate-100 text-slate-700" />
     </div>
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       {fares.map((fare) => (
@@ -30,7 +29,6 @@ export const FareCards = ({ fares }: { fares: TransportFare[] }) => (
           <div className="mt-3 space-y-1 text-xs text-slate-500">
             <div>Актуально с: {fare.validFrom ? new Date(fare.validFrom).toLocaleDateString('ru-RU') : '—'}</div>
             <div>Перевозчик: {fare.carrier ?? 'не выделен из набора'}</div>
-            <div>Источник: {fare.source}</div>
           </div>
         </div>
       ))}

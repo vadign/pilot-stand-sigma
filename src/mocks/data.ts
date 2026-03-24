@@ -510,7 +510,7 @@ const incidentTemplates: Record<IncidentSubsystemId, IncidentTemplate[]> = {
 }
 
 export const subsystems: Subsystem[] = [
-{id:'heat',title:'Теплоснабжение',color:'#ef4444'},{id:'roads',title:'Дороги',color:'#f59e0b'},{id:'noise',title:'Шум и безопасность',color:'#8b5cf6'},{id:'air',title:'Качество воздуха',color:'#10b981'}]
+{id:'heat',title:'Энергетика',color:'#ef4444'},{id:'roads',title:'Дороги',color:'#f59e0b'},{id:'noise',title:'Шум и безопасность',color:'#8b5cf6'},{id:'air',title:'Качество воздуха',color:'#10b981'}]
 export const dataSources: DataSource[] = [
 {id:'s1',title:'ЕДДС 051',type:'real',freshness:'30 сек',provider:'051'},
 {id:'s2',title:'Датчики воздуха Кольцово',type:'pilot',freshness:'5 мин',provider:'Внутренний контур'},
@@ -538,10 +538,10 @@ export const incidents: Incident[] = Array.from({length:24}).map((_,i)=>{
     timeline:[{id:'t1',at:subDays(now,1).toISOString(),author:'Sigma',text:template.initialTimelineText},{id:'t2',at:now.toISOString(),author:'Диспетчер',text:template.followupTimelineText}]
   }
 })
-export const briefs: ExecutiveBrief[] = Array.from({length:10}).map((_,i)=>({id:`b${i+1}`,title:`Бриф №${i+1}: состояние городских контуров`,body:'Критические изменения за сутки: теплоснабжение в зоне контроля, рост нагрузки на улично-дорожную сеть в часы пик.',incidentIds:[incidents[i].id,incidents[i+1].id],sourceId:'s3',type:'calculated',updatedAt:now.toISOString()}))
+export const briefs: ExecutiveBrief[] = Array.from({length:10}).map((_,i)=>({id:`b${i+1}`,title:`Бриф №${i+1}: состояние городских контуров`,body:'Критические изменения за сутки: энергетика в зоне контроля, рост нагрузки на улично-дорожную сеть в часы пик.',incidentIds:[incidents[i].id,incidents[i+1].id],sourceId:'s3',type:'calculated',updatedAt:now.toISOString()}))
 export const scenarios: Scenario[] = Array.from({length:5}).map((_,i)=>({id:`sc${i+1}`,title:['Морозный пик','Снегопад и заторы','Ремонт теплосети','Сильный ветер','Ночной шум'][i],description:'Сценарий для проверки устойчивости служб',parameters:{temperature:-20+i,traffic:40+i*8},impacts:[{label:'Рост инцидентов',value:12+i*4},{label:'Задержка',value:15+i*2}],comparisonBaseline:'Текущая неделя',serviceLoad:62+i*5,timelinePoints:[{name:'0ч',value:20},{name:'6ч',value:30+i*2},{name:'12ч',value:45+i*3},{name:'24ч',value:38+i*2}]}))
 export const deputies: Deputy[] = [
-{id:'d1',name:'Заместитель по теплоснабжению',domain:'ЖКХ',mode:'approval',connectedSourceIds:['s1','s3'],activeIncidentIds:incidents.filter(i=>i.subsystem==='heat').slice(0,3).map(i=>i.id),permissions:['эскалация','назначение бригад'],latestActions:['Согласована аварийная бригада'],constraints:['Не закрывать без фотофиксации'],escalationRate:0.31},
+{id:'d1',name:'Заместитель по энергетике',domain:'ЖКХ',mode:'approval',connectedSourceIds:['s1','s3'],activeIncidentIds:incidents.filter(i=>i.subsystem==='heat').slice(0,3).map(i=>i.id),permissions:['эскалация','назначение бригад'],latestActions:['Согласована аварийная бригада'],constraints:['Не закрывать без фотофиксации'],escalationRate:0.31},
 {id:'d2',name:'Заместитель по дорожной обстановке',domain:'Транспорт',mode:'recommendation',connectedSourceIds:['s1','s3'],activeIncidentIds:incidents.filter(i=>i.subsystem==='roads').slice(0,3).map(i=>i.id),permissions:['перераспределение техники'],latestActions:['Предложена очистка маршрута №13'],constraints:['Без перекрытия магистралей'],escalationRate:0.21},
 {id:'d3',name:'Заместитель по воздуху',domain:'Экология',mode:'autonomous',connectedSourceIds:['s2','s3'],activeIncidentIds:incidents.filter(i=>i.subsystem==='air').slice(0,3).map(i=>i.id),permissions:['автозапуск оповещения'],latestActions:['Запущено предупреждение по PM2.5'],constraints:['Порог PM2.5 > 35'],escalationRate:0.15},
 {id:'d4',name:'Заместитель по шуму и безопасности',domain:'Безопасность',mode:'recommendation',connectedSourceIds:['s1'],activeIncidentIds:incidents.filter(i=>i.subsystem==='noise').slice(0,3).map(i=>i.id),permissions:['маршрут патруля'],latestActions:['Согласован патруль'],constraints:['Только ночной режим'],escalationRate:0.26},

@@ -8,9 +8,15 @@ vi.mock('./components/MapView', () => ({
   MapView: () => <div data-testid="mock-map">map</div>,
 }))
 
-vi.mock('./features/public-transport', () => ({
-  PublicTransportPage: ({ embedded }: { embedded?: boolean }) => <div>{embedded ? 'embedded transport' : 'transport page'}</div>,
-}))
+vi.mock('./features/public-transport', async () => {
+  const { useSearchParams } = await import('react-router-dom')
+  return {
+    PublicTransportPage: ({ embedded }: { embedded?: boolean }) => {
+      const [searchParams] = useSearchParams()
+      return <div>{embedded ? 'embedded transport' : 'transport page'} mode:{searchParams.get('mode') ?? 'none'} route:{searchParams.get('route') ?? 'none'}</div>
+    },
+  }
+})
 
 vi.mock('./live/hooks/useLiveDataBootstrap', () => ({
   useLiveDataBootstrap: () => undefined,
@@ -36,7 +42,7 @@ describe('App smoke render', () => {
       )
     })
 
-    expect(container.textContent).toContain('ЖКХ и теплоснабжение под управлением live-источников')
+    expect(container.textContent).toContain('ЖКХ и энергетика под управлением live-источников')
 
     await act(async () => {
       root.unmount()
@@ -56,6 +62,29 @@ describe('App smoke render', () => {
 
     expect(container.textContent).toContain('Общественный транспорт в управленческом контуре мэра')
     expect(container.textContent).toContain('embedded transport')
+    expect(container.textContent).toContain('mode:none')
+    expect(container.textContent).toContain('route:36')
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
+  it('does not force a transport mode or route when opening mayor dashboard transport tab', async () => {
+    const root = createRoot(container)
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={['/mayor-dashboard?subsystem=transport']}>
+          <App />
+        </MemoryRouter>,
+      )
+    })
+
+    expect(container.textContent).toContain('Общественный транспорт в управленческом контуре мэра')
+    expect(container.textContent).toContain('embedded transport')
+    expect(container.textContent).toContain('mode:none')
+    expect(container.textContent).toContain('route:none')
 
     await act(async () => {
       root.unmount()

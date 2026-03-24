@@ -17,7 +17,7 @@ const entityKeywords: Record<AskSigmaEntity, string[]> = {
 }
 
 const subsystemKeywords: Record<string, string[]> = {
-  heating: ['отоплен', 'тепл', 'теплоснабж'],
+  energy: ['энергетик', 'электр', 'электроснабж', 'отоплен', 'тепл', 'теплоснабж'],
   roads: ['дорог', 'трафик', 'пробк', 'затор'],
   air: ['воздух', 'aqi', 'pm', 'эколог', 'смог'],
   noise: ['шум', 'дециб', 'акуст'],

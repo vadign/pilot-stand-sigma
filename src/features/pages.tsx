@@ -7,6 +7,8 @@ import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '
 import { MapView } from '../components/MapView'
 import { Badge, Card, MetaGrid, SectionTitle, SourceMetaFooter } from '../components/ui'
 import { PublicTransportPage } from './public-transport'
+import { defaultTransportStops } from './public-transport/data/defaultTransportData'
+import { selectTransportFilterOptions } from './public-transport/selectors'
 import { getDistrictName } from '../lib/districts'
 import { useSigmaStore } from '../store/useSigmaStore'
 import { selectIncidentById, selectOutageSummary, selectSourceStatuses, useConstructionAggregates, useDistrictOutageCards, useIncidentViews, useOutageHistorySeries } from '../live/selectors'
@@ -37,7 +39,7 @@ const utilityLabels: Record<string, string> = {
 }
 
 const subsystemTabs = [
-  { id: 'heat', title: 'Теплоснабжение' },
+  { id: 'heat', title: 'Энергетика' },
   { id: 'transport', title: 'Общественный транспорт' },
   { id: 'roads', title: 'Дороги' },
   { id: 'noise', title: 'Шум' },
@@ -50,8 +52,8 @@ type SubsystemTabId = (typeof subsystemTabs)[number]['id']
 
 const subsystemTabDescriptions: Record<SubsystemTabId, { title: string; description: string }> = {
   heat: {
-    title: 'ЖКХ и теплоснабжение под управлением live-источников',
-    description: 'KPI по отключениям строятся на основе официальной страницы 051, а строительная аналитика — на официальных CSV из open data.',
+    title: 'ЖКХ и энергетика под управлением live-источников',
+    description: 'Оперативная картина по отключениям, авариям и состоянию городской энергетической инфраструктуры.',
   },
   roads: {
     title: 'Дорожный контур и транспортная обстановка',
@@ -67,7 +69,7 @@ const subsystemTabDescriptions: Record<SubsystemTabId, { title: string; descript
   },
   transport: {
     title: 'Общественный транспорт в управленческом контуре мэра',
-    description: 'Остановки, маршруты и тарифы теперь открываются внутри панели мэра вместе с отраслевыми кнопками, без отдельного левого раздела.',
+    description: 'Карта, маршруты, тарифы и связность районов в одном представлении для управленческого обзора.',
   },
 }
 
@@ -87,7 +89,8 @@ const matchesSubsystemTab = (incident: LiveIncidentView, tab: SubsystemTabId): b
   return incident.subsystem === tab
 }
 
-const transportQueryParamKeys = ['mode', 'search', 'route', 'pavilion', 'pavilionOnly', 'compareTo', 'fromDistrict', 'toDistrict', 'focus', 'map'] as const
+const transportQueryParamKeys = ['district', 'mode', 'search', 'route', 'pavilion', 'pavilionOnly', 'compareTo', 'fromDistrict', 'toDistrict', 'focus', 'map'] as const
+const transportDistrictOptions = selectTransportFilterOptions(defaultTransportStops).districts
 
 const isSubsystemTabId = (value: string | null): value is SubsystemTabId => subsystemTabs.some((tab) => tab.id === value)
 
@@ -271,7 +274,7 @@ export function BriefingPage() {
 }
 
 export function MayorDashboardPage() {
-  const { districts, incidents, outageSummary, districtCards, sourceStatuses } = useDashboardData()
+  const { districts, incidents, outageSummary, districtCards } = useDashboardData()
   const [searchParams, setSearchParams] = useSearchParams()
   const [district, setDistrict] = useState('')
   const subsystem = readSubsystemFromParams(searchParams)
@@ -285,10 +288,10 @@ export function MayorDashboardPage() {
   const criticalIncidents = visibleIncidents.filter((incident) => incident.severity === 'критический').length
   const activeInWork = visibleIncidents.filter((incident) => incident.status === 'в работе' || incident.status === 'эскалирован').length
   const affectedPopulation = visibleIncidents.reduce((sum, incident) => sum + incident.affectedPopulation, 0)
-  const status051 = sourceStatuses.find((item) => item.key === '051')
   const selectedSubsystemMeta = subsystemTabDescriptions[subsystem]
   const isHeatTab = isHeatSubsystemTab(subsystem)
   const isTransportTab = isTransportSubsystemTab(subsystem)
+  const selectedTransportDistrict = searchParams.get('district') ?? ''
 
   const handleSubsystemChange = (nextSubsystem: SubsystemTabId) => {
     const nextParams = new URLSearchParams(searchParams)
@@ -310,29 +313,31 @@ export function MayorDashboardPage() {
       <Card>
         <div className="flex flex-col gap-3">
           <SubsystemTabs value={subsystem} onChange={handleSubsystemChange} />
-          <div className="flex flex-wrap gap-2">
-            {!isTransportTab && (
+          {!isTransportTab ? (
+            <div className="flex flex-wrap gap-2">
               <select className="rounded-xl border px-3 py-2" value={district} onChange={(event) => setDistrict(event.target.value)}>
                 <option value="">Все районы</option>
                 {districts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
               </select>
-            )}
-            <Badge text={subsystemTabs.find((item) => item.id === subsystem)?.title ?? 'Контур'} className="bg-slate-900 text-white" />
-            {isTransportTab ? (
-              <>
-                <Badge text="dataset 49 остановки" className="bg-blue-50 text-blue-700" />
-                <Badge text="dataset 51 тарифы" className="bg-emerald-50 text-emerald-700" />
-                <Badge text="без live GPS/ETA" className="bg-amber-50 text-amber-700" />
-              </>
-            ) : (
-              <>
-                <Badge text="051 live outages" className="bg-blue-50 text-blue-700" />
-                <Badge text="OpenData construction" className="bg-emerald-50 text-emerald-700" />
-              </>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <select
+                className="rounded-xl border px-3 py-2"
+                value={selectedTransportDistrict}
+                onChange={(event) => {
+                  const nextParams = new URLSearchParams(searchParams)
+                  if (event.target.value) nextParams.set('district', event.target.value)
+                  else nextParams.delete('district')
+                  setSearchParams(nextParams, { replace: true })
+                }}
+              >
+                <option value="">Все районы</option>
+                {transportDistrictOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </div>
+          )}
         </div>
-        {!isTransportTab && status051 && <SourceMetaFooter source="051.novo-sibirsk.ru/SitePages/off.aspx" updatedAt={status051.updatedAt} ttl={`${status051.ttlMinutes} мин`} type={sourceTypeLabels[status051.type] ?? status051.type} status={status051.status} />}
       </Card>
 
       <Card className="bg-gradient-to-r from-blue-700 to-blue-600 text-white">
@@ -760,7 +765,7 @@ export function DeputiesPage() {
     <div className="grid gap-4 lg:grid-cols-12">
       <div className="space-y-4 lg:col-span-9">
         <Card>
-          <SectionTitle title="Цифровые заместители" subtitle="Заместитель по теплоснабжению и ЖКХ получает live-показатели 051 и статус обновления источника." />
+          <SectionTitle title="Цифровые заместители" subtitle="Заместитель по энергетике и ЖКХ получает live-показатели 051 и статус обновления источника." />
         </Card>
 
         <Card>

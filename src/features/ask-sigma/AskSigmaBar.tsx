@@ -2,18 +2,13 @@ import { Mic, MicOff, SendHorizontal } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAskSigmaStore } from './store'
+import { quickExamplesByRole } from './suggestedQuestions'
 import { useVoiceInput } from './voice/useVoiceInput'
 
 const placeholders = {
   мэр: 'Что сейчас происходит?',
   диспетчер: 'Что сейчас происходит?',
   аналитик: 'Что сейчас происходит?',
-} as const
-
-const quickExamples = {
-  мэр: ['Что ты умеешь?', 'Что происходит на дорогах?', 'События в Советском районе'],
-  диспетчер: ['Что ты умеешь?', 'Критичные инциденты по отоплению', 'Что происходит на дорогах?', 'События в Советстком районе'],
-  аналитик: ['Что ты умеешь?', 'Динамика отключений за неделю', 'Что происходит на дорогах?', 'События в Советском районе'],
 } as const
 
 export const AskSigmaBar = ({ className = 'mb-4' }: { className?: string }) => {
@@ -65,7 +60,7 @@ export const AskSigmaBar = ({ className = 'mb-4' }: { className?: string }) => {
       <div className="mt-2">
         <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Быстрые вопросы</div>
         <div className="flex flex-wrap gap-2">
-          {(quickExamples[role] ?? quickExamples.мэр).map((example) => (
+          {(quickExamplesByRole[role] ?? quickExamplesByRole.мэр).map((example) => (
             <button
               key={example}
               onClick={() => submit(example)}

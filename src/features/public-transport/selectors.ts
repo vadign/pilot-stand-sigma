@@ -99,10 +99,8 @@ export const selectRouteDetails = (stops: TransitStop[], routeNumber: string): T
 }
 
 export const selectCurrentFareCards = (fares: TransportFare[]) => {
-  const preferredTypes = ['базовый', 'социальный', 'льготный', 'накопительный', 'единый']
-
   return fares
-    .filter((fare) => fare.mode !== 'unknown' || preferredTypes.some((label) => fare.fareType.toLowerCase().includes(label)))
+    .filter((fare) => fare.mode !== 'unknown')
     .sort((left, right) => left.amount - right.amount)
 }
 

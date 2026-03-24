@@ -11,10 +11,10 @@ import { TransportMetrics } from './components/TransportMetrics'
 import { NovosibirskStopsProvider } from './providers/NovosibirskStopsProvider'
 import { NovosibirskTariffsProvider } from './providers/NovosibirskTariffsProvider'
 import { TransportRealtimeProvider } from './providers/TransportRealtimeProvider'
-import { getTransportDistrictLabel, selectCurrentFareCards, selectDistrictConnectivity, selectFilteredStops, selectGlobalTransportMetrics, selectRouteDetails, selectSelectedDistrictSummary, selectStopsForRoute, selectTransportFilterOptions } from './selectors'
+import { selectCurrentFareCards, selectDistrictConnectivity, selectFilteredStops, selectGlobalTransportMetrics, selectRouteDetails, selectSelectedDistrictSummary, selectStopsForRoute, selectTransportFilterOptions } from './selectors'
 import type { LiveTransportRoute, PublicTransportBundle, PublicTransportFiltersValue, TransitMode, TransitStop } from './types'
 
-const defaultFilters: PublicTransportFiltersValue = { district: '', mode: 'minibus', search: '', route: '35', onlyPavilion: false }
+const defaultFilters: PublicTransportFiltersValue = { district: '', mode: 'all', search: '', route: '', onlyPavilion: false }
 const transportFilterParamKeys = ['district', 'mode', 'search', 'route', 'pavilion', 'pavilionOnly', 'fromDistrict', 'toDistrict', 'focus'] as const
 const stopsProvider = new NovosibirskStopsProvider()
 const tariffsProvider = new NovosibirskTariffsProvider()
@@ -69,7 +69,6 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
   const [selectedStop, setSelectedStop] = useState<TransitStop>()
   const [connectivity, setConnectivity] = useState(() => readConnectivityFromParams(searchParams))
   const [liveRoutes, setLiveRoutes] = useState<LiveTransportRoute[]>([])
-  const [liveRoutesError, setLiveRoutesError] = useState<string | null>(null)
 
   useEffect(() => {
     if (isFirstParamsSync.current) {
@@ -110,11 +109,9 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
         const routes = await response.json() as LiveTransportRoute[]
         if (cancelled) return
         setLiveRoutes(routes)
-        setLiveRoutesError(null)
       } catch (error) {
         if (cancelled) return
         setLiveRoutes([])
-        setLiveRoutesError(error instanceof Error ? error.message : 'Не удалось загрузить /api/routes')
       }
     }
 
@@ -155,13 +152,6 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
       searchValue: `${transportLabelByRouteType(route.type)} ${route.number}: ${route.stopA} → ${route.stopB}`,
     }))
   , [liveRoutes])
-  const realtimeNotice = liveRoutesError
-    ? `Realtime proxy недоступен: ${liveRoutesError}`
-    : !filters.route
-      ? 'Чтобы показать реальные машины на карте, выберите номер маршрута. Карта будет запрашивать `/api/vehicles?routeId=...` только для совпавших routeId.'
-      : liveRouteMatches.length > 0
-        ? `Показываю реальные машины для ${liveRouteMatches.length} routeId из maps.nskgortrans.ru через backend-proxy.`
-        : 'Для выбранного номера маршрута нет совпадений в live-списке `/api/routes`. Уточните номер или тип транспорта.'
 
   useEffect(() => {
     if (selectedStop && !filteredStops.some((stop) => stop.id === selectedStop.id)) {
@@ -177,7 +167,13 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
   return (
     <div className="space-y-4">
       {!embedded && <SectionTitle title="Общественный транспорт" subtitle="Остановки и тарифы из официальных открытых наборов Новосибирска без симуляции live GPS." />}
-      <TransportFilters filters={filters} districts={filterOptions.districts} routeSuggestions={routeSuggestions} onChange={handleFiltersChange} onReset={() => handleFiltersChange(defaultFilters)} />
+      <TransportFilters
+        filters={filters}
+        districts={filterOptions.districts}
+        routeSuggestions={routeSuggestions}
+        onChange={handleFiltersChange}
+        showDistrictFilter={!embedded}
+      />
 
       {loading && <Card>Загружаю транспортные данные…</Card>}
 
@@ -192,7 +188,7 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
                     <div className="text-2xl font-bold">Карта общественного транспорта</div>
                   </div>
                   <div className="text-sm text-slate-500">
-                    {filters.route ? `Фокус на маршруте № ${filters.route}` : filters.district ? `Фокус на районе ${filters.district}` : 'Весь город'}
+                    {filters.route ? `Сейчас на карте: маршрут № ${filters.route}` : filters.district ? `Сейчас на карте: район ${filters.district}` : 'Сейчас на карте: весь город'}
                   </div>
                 </div>
                 <TransportMap
@@ -203,71 +199,8 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
                   liveRoutes={liveRouteMatches}
                   onSelectStop={setSelectedStop}
                 />
-                <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
-                  <span className="rounded-full bg-slate-100 px-2 py-1">Подложка: Yandex transit</span>
-                  <span className="rounded-full bg-slate-100 px-2 py-1">Красная точка: вручную выбранная остановка</span>
-                  <span className="rounded-full bg-slate-100 px-2 py-1">Реальные машины грузятся только после выбора маршрута</span>
-                </div>
-                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-                  {realtimeNotice}
-                </div>
               </Card>
 
-              <Card>
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">Список остановок</div>
-                    <div className="text-2xl font-bold">Отфильтрованные остановки</div>
-                  </div>
-                  <div className="text-sm text-slate-500">Всего строк: {filteredStops.length}</div>
-                </div>
-                <div className="overflow-auto">
-                  <table className="min-w-full text-sm">
-                    <thead className="text-left text-slate-500">
-                      <tr className="border-b border-slate-200">
-                        <th className="px-2 py-2">Остановка</th>
-                        <th className="px-2 py-2">Район</th>
-                        <th className="px-2 py-2">Улица</th>
-                        <th className="px-2 py-2">Павильон</th>
-                        <th className="px-2 py-2">Маршруты</th>
-                        <th className="px-2 py-2">Действие</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredStops.map((stop) => (
-                        <tr key={stop.id} className="border-b border-slate-100 align-top">
-                          <td className="px-2 py-3 font-semibold text-slate-900">{stop.name}</td>
-                          <td className="px-2 py-3">{getTransportDistrictLabel(stop.district)}</td>
-                          <td className="px-2 py-3 text-slate-600">{stop.street || '—'}</td>
-                          <td className="px-2 py-3">{stop.hasPavilion ? 'Да' : 'Нет'}</td>
-                          <td className="px-2 py-3">
-                            <div className="max-h-20 overflow-auto text-slate-600">{stop.routesParsed.map((route) => route.number).join(', ') || '—'}</div>
-                          </td>
-                          <td className="px-2 py-3"><button onClick={() => setSelectedStop(stop)} className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium hover:bg-slate-50">Показать на карте</button></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            </div>
-
-            <div className="space-y-4">
-              <TransportMetrics
-                totalStops={globalMetrics.totalStops}
-                totalUniqueRoutes={globalMetrics.totalUniqueRoutes}
-                pavilionShare={globalMetrics.pavilionShare}
-                districtCount={globalMetrics.districtCount}
-                infrastructureIndex={globalMetrics.transportInfrastructureIndex}
-                topStopsByRouteCount={globalMetrics.topStopsByRouteCount}
-                topDistrictsByStopCount={globalMetrics.topDistrictsByStopCount}
-                topDistrictsByUniqueRoutes={globalMetrics.topDistrictsByUniqueRoutes}
-                selectedDistrict={selectedDistrict}
-                statuses={bundle.statuses}
-                realtime={bundle.realtime}
-              />
-              <StopDetailsDrawer stop={selectedStop} relatedHubs={relatedHubs} />
-              <RouteDetailsPanel route={selectedRoute} />
               <Card>
                 <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">Связность районов</div>
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -303,6 +236,21 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
                   </div>
                 </div>
               </Card>
+            </div>
+
+            <div className="space-y-4">
+              <TransportMetrics
+                totalStops={globalMetrics.totalStops}
+                totalUniqueRoutes={globalMetrics.totalUniqueRoutes}
+                pavilionShare={globalMetrics.pavilionShare}
+                districtCount={globalMetrics.districtCount}
+                topStopsByRouteCount={globalMetrics.topStopsByRouteCount}
+                topDistrictsByStopCount={globalMetrics.topDistrictsByStopCount}
+                topDistrictsByUniqueRoutes={globalMetrics.topDistrictsByUniqueRoutes}
+                selectedDistrict={selectedDistrict}
+              />
+              <StopDetailsDrawer stop={selectedStop} relatedHubs={relatedHubs} />
+              <RouteDetailsPanel route={selectedRoute} />
             </div>
           </div>
 

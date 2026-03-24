@@ -17,13 +17,24 @@ export const createPlan = (query: AskSigmaQuery): AskSigmaPlan => {
   const toTransportDistrict = transportDistricts[1]
   const route = detectRouteFromText(text)
   const mode = detectTransportMode(text)
+  const criticalOnly = /критичн|критическ/i.test(text)
   const isExplicitHelpRequest = /помощ|подскажи|что (?:ты )?уме(?:е|)шь|что умеет сигма/i.test(text)
 
   if (/(отключения сейчас|что сейчас в жкх|что происходит сейчас|что сейчас|обстановка сейчас)/i.test(text)) {
     return { operation: 'SUMMARY', entity: 'dashboard', filters: { district: district ?? '', subsystem: subsystem ?? '' }, text }
   }
-  if (/(аварийные отключения|плановые отключения|отключения по районам|отключения отопления|где больше всего отключений)/i.test(text)) {
-    return { operation: 'FILTER', entity: 'incident', filters: { district: district ?? '', subsystem: subsystem ?? '', outageKind: /авар/i.test(text) ? 'emergency' : /план/i.test(text) ? 'planned' : '' }, text }
+  if (/(аварийные отключения|плановые отключения|отключения по районам|отключения отопления|отключения энергетики|отключения электричества|отключения электроснабжения|где больше всего отключений)/i.test(text)) {
+    return {
+      operation: 'FILTER',
+      entity: 'incident',
+      filters: {
+        district: district ?? '',
+        subsystem: subsystem ?? '',
+        outageKind: /авар/i.test(text) ? 'emergency' : /план/i.test(text) ? 'planned' : '',
+        severity: criticalOnly ? 'критический' : '',
+      },
+      text,
+    }
   }
   if (/(стройки по районам|активные стройки|ввод в эксплуатацию|что по строительству)/i.test(text)) {
     return { operation: 'CONSTRUCTION', entity: 'construction', filters: { district: district ?? '' }, text }
@@ -68,7 +79,7 @@ export const createPlan = (query: AskSigmaQuery): AskSigmaPlan => {
   if (/(какой тариф на автобус|тариф на автобус|тарифы на проезд|тариф на транспорт|социальный тариф|покажи тарифы)/i.test(text)) {
     return { operation: 'TRANSIT_FARES', entity: 'transport', text, filters: { mode: mode ?? '' } }
   }
-  if (/(топ транспортных узлов|пересадк|узел)/i.test(text)) {
+  if (/(топ транспортных узлов|остановки с наибольшим числом маршрутов|пересадк|узел)/i.test(text)) {
     return { operation: 'TRANSIT_HUBS', entity: 'transport', text }
   }
   if (/(какие остановки у маршрута|маршрут\s*\d+|какие маршруты есть в|маршруты в)/i.test(text)) {
@@ -107,7 +118,18 @@ export const createPlan = (query: AskSigmaQuery): AskSigmaPlan => {
   if (/заместител/i.test(text)) return { operation: 'DEPUTY_STATUS', entity: 'deputy', filters: { subsystem: subsystem ?? '' }, text }
   if (/согласован|требует согласования|требует решения/i.test(text)) return { operation: 'APPROVALS', entity: 'approval', filters: { district: district ?? '' }, text }
 
-  if (entity === 'incident') return { operation: 'FILTER', entity, filters: { subsystem: subsystem ?? '', district: district ?? '' }, text }
+  if (entity === 'incident') {
+    return {
+      operation: 'FILTER',
+      entity,
+      filters: {
+        subsystem: subsystem ?? '',
+        district: district ?? '',
+        severity: criticalOnly ? 'критический' : '',
+      },
+      text,
+    }
+  }
   if (entity === 'construction') return { operation: 'CONSTRUCTION', entity, filters: { district: district ?? '' }, text }
   if (entity === 'transport') return { operation: 'PUBLIC_TRANSPORT_SUMMARY', entity, text }
   if (entity === 'sources') return { operation: 'LIVE_SOURCES', entity, text }
