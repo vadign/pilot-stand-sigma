@@ -1,7 +1,7 @@
 # Server Deploy
 
 Базовый изолированный вариант для сервера теперь такой: `Docker` + `docker compose`.
-На хосте не нужны `node`, `npm`, `systemd` и host-`nginx`.
+На хосте не нужны `node`, `npm` и `systemd`.
 
 Причина та же: приложение не только отдает UI, но и:
 
@@ -16,7 +16,7 @@
 - Docker image: [`Dockerfile`](/Users/vadign/pilot-stand-sigma/Dockerfile)
 - Compose stack: [`compose.yml`](/Users/vadign/pilot-stand-sigma/compose.yml)
 - app env example: [`deploy/docker/sigma.env.example`](/Users/vadign/pilot-stand-sigma/deploy/docker/sigma.env.example)
-- internal nginx config: [`deploy/docker/nginx.conf`](/Users/vadign/pilot-stand-sigma/deploy/docker/nginx.conf)
+- optional host nginx config: [`deploy/nginx/sigma.conf`](/Users/vadign/pilot-stand-sigma/deploy/nginx/sigma.conf)
 
 ## Требования на сервере
 
@@ -60,21 +60,19 @@ VITE_051_PORTAL_URL=https://map.novo-sibirsk.ru/portal/disconnections?t=
 
 Если нужен ключ Яндекс.Карт, добавь его в `VITE_YANDEX_MAPS_API_KEY`.
 
-### 3. Поднять контейнеры
+### 3. Поднять контейнер
 
 ```bash
 docker compose up -d --build
 ```
 
-По умолчанию compose поднимет:
+По умолчанию compose поднимет один контейнер `app` с Node runtime внутри.
+Он публикуется наружу на `5173` порт.
 
-- `app` с Node runtime внутри контейнера;
-- `proxy` с `nginx`, который публикует приложение наружу на `80` порт.
-
-Если внешний `80` уже занят, можно выбрать другой порт:
+Если нужен другой внешний порт:
 
 ```bash
-SIGMA_HTTP_PORT=8080 docker compose up -d --build
+SIGMA_APP_PORT=8080 docker compose up -d --build
 ```
 
 ## Как это работает
@@ -91,8 +89,6 @@ node --import tsx scripts/dev.mts --host 0.0.0.0 --port 5173
 - повторный sync по расписанию;
 - HTTP-сервер приложения с транспортными `/api/*` endpoint'ами.
 
-`nginx` контейнер только проксирует запросы на внутренний `app:5173`.
-
 ## Полезные команды
 
 Статус:
@@ -105,12 +101,6 @@ docker compose ps
 
 ```bash
 docker compose logs -f app
-```
-
-Логи прокси:
-
-```bash
-docker compose logs -f proxy
 ```
 
 Перезапуск:
@@ -143,22 +133,40 @@ docker compose up -d --build
 - `/public-transport`
 - `/mayor-dashboard?subsystem=education`
 
+То есть по умолчанию:
+
+- `http://server:5173/`
+
 Проверить ответы:
 
 - `/live-data/manifest.json`
 - `/live-data/051/latest.json`
 - `/api/routes`
 
-## Если у тебя уже есть внешний reverse proxy
+## Если у тебя уже есть свой nginx
 
-Тогда внутренний `proxy` контейнер можно не использовать, а поднять только приложение:
+Тогда ничего дополнительного в compose не нужно.
+Просто проксируй на опубликованный порт приложения:
 
-```bash
-docker compose up -d --build app
+- `http://127.0.0.1:5173`
+
+Готовый пример конфига уже есть в [`deploy/nginx/sigma.conf`](/Users/vadign/pilot-stand-sigma/deploy/nginx/sigma.conf).
+
+Если не хочешь светить порт наружу вообще, в [`compose.yml`](/Users/vadign/pilot-stand-sigma/compose.yml) можно заменить:
+
+```yaml
+ports:
+  - "${SIGMA_APP_PORT:-5173}:5173"
 ```
 
-После этого проксируй внешний трафик на порт контейнера, который слушает `5173`.
-Точнее: на `127.0.0.1:5173`, потому что compose публикует этот порт только на loopback интерфейс хоста.
+на:
+
+```yaml
+ports:
+  - "127.0.0.1:5173:5173"
+```
+
+Тогда приложение будет доступно только локально на хосте, а наружу его будет отдавать уже ваш `nginx`.
 
 ## Альтернатива
 
