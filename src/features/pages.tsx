@@ -25,17 +25,25 @@ const severityStyles: Record<string, string> = {
 }
 
 const sourceTypeLabels: Record<string, string> = {
-  real: 'real',
-  calculated: 'calculated',
-  simulation: 'simulation',
-  pilot: 'mock',
-  'mock-fallback': 'mock-fallback',
+  real: 'подтвержденные сведения',
+  calculated: 'расчетные сведения',
+  simulation: 'сценарная оценка',
+  pilot: 'демонстрационные сведения',
+  'mock-fallback': 'резервные сведения',
 }
 
 const sourceModeLabels: Record<string, string> = {
-  live: 'прямой',
-  hybrid: 'гибридный',
-  mock: 'mock',
+  live: 'напрямую из городского источника',
+  hybrid: 'через основной и резервный источник',
+  mock: 'в демонстрационном режиме',
+}
+
+const sourceStatusLabels: Record<string, string> = {
+  idle: 'ожидает обновления',
+  loading: 'обновляется',
+  ready: 'актуально',
+  stale: 'нужно обновление',
+  error: 'временно недоступно',
 }
 
 const utilityLabels: Record<string, string> = {
@@ -45,6 +53,29 @@ const utilityLabels: Record<string, string> = {
   sewer: 'водоотведение',
   electricity: 'электроснабжение',
   gas: 'газоснабжение',
+}
+
+const subsystemHistoryLabels: Record<string, string> = {
+  heat: 'ЖКХ',
+  utilities: 'ЖКХ',
+  roads: 'Дороги',
+  noise: 'Шум',
+  air: 'Воздух',
+  transport: 'Транспорт',
+  education: 'Школы и детские сады',
+}
+
+const formatSourceLabel = (sourceUrl?: string, fallback?: string) => {
+  if (!sourceUrl) return fallback ?? '—'
+
+  try {
+    const host = new URL(sourceUrl).host
+    if (host === '051.novo-sibirsk.ru') return 'портал 051'
+    if (host === 'map.novo-sibirsk.ru') return 'городская карта отключений'
+    return host
+  } catch {
+    return fallback ?? sourceUrl
+  }
 }
 
 const subsystemTabs = [
@@ -196,43 +227,34 @@ export function BriefingPage() {
   const liveStatus051 = sourceStatuses.find((item) => item.key === '051')
   const emergencyLive = incidents.filter((incident) => incident.sourceKind === 'live' && incident.liveMeta?.outageKind === 'emergency')
   const plannedLive = incidents.filter((incident) => incident.sourceKind === 'live' && incident.liveMeta?.outageKind === 'planned')
-  const formatSourceLabel = (sourceUrl?: string, fallback?: string) => {
-    if (!sourceUrl) return fallback ?? '—'
-
-    try {
-      return new URL(sourceUrl).host
-    } catch {
-      return fallback ?? sourceUrl
-    }
-  }
 
   return (
     <div className="space-y-4">
       <Card>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="mb-2 text-sm font-semibold uppercase tracking-wider text-blue-700">Sigma Управленческий отчет</div>
+            <div className="mb-2 text-sm font-semibold uppercase tracking-wider text-blue-700">Управленческий отчет</div>
             <h1 className="text-4xl font-extrabold">Ежедневный управленческий отчет: {new Date().toLocaleDateString('ru-RU')}</h1>
-            <p className="mt-2 text-lg text-slate-500">Реальные отключения ЖКХ из 051 и оперативная сводка по городским событиям.</p>
+            <p className="mt-2 text-lg text-slate-500">Сводка по отключениям ЖКХ и наиболее заметным событиям в городе.</p>
           </div>
           <button onClick={() => window.print()} className="rounded-xl border px-3 py-2 font-semibold"><Download size={14} className="mr-1 inline" />Экспорт PDF</button>
         </div>
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card><div className="text-sm text-slate-500">{getOutageKindLabel('emergency', 'titlePlural')} отключения 051</div><div className="mt-2 text-5xl font-bold text-red-600">{emergencyLive.length}</div><div className="text-slate-500">домов: {outageSummary?.emergencyHouses ?? 0}</div></Card>
-        <Card><div className="text-sm text-slate-500">{getOutageKindLabel('planned', 'titlePlural')} отключения 051</div><div className="mt-2 text-5xl font-bold text-amber-600">{plannedLive.length}</div><div className="text-slate-500">домов: {outageSummary?.plannedHouses ?? 0}</div></Card>
-        <Card><div className="text-sm text-slate-500">Δ к предыдущему snapshot</div><div className="mt-2 text-5xl font-bold text-blue-700">{formatDelta(outageSummary?.delta?.incidents)}</div><div className="text-slate-500">по активным событиям</div></Card>
-        <Card><div className="text-sm text-slate-500">Районов с нагрузкой</div><div className="mt-2 text-5xl font-bold text-emerald-600">{districtCards.length}</div><div className="text-slate-500">по данным текущего snapshot 051</div></Card>
+        <Card><div className="text-sm text-slate-500">{getOutageKindLabel('emergency', 'titlePlural')}</div><div className="mt-2 text-5xl font-bold text-red-600">{emergencyLive.length}</div><div className="text-slate-500">домов: {outageSummary?.emergencyHouses ?? 0}</div></Card>
+        <Card><div className="text-sm text-slate-500">{getOutageKindLabel('planned', 'titlePlural')}</div><div className="mt-2 text-5xl font-bold text-amber-600">{plannedLive.length}</div><div className="text-slate-500">домов: {outageSummary?.plannedHouses ?? 0}</div></Card>
+        <Card><div className="text-sm text-slate-500">Изменение с прошлого обновления</div><div className="mt-2 text-5xl font-bold text-blue-700">{formatDelta(outageSummary?.delta?.incidents)}</div><div className="text-slate-500">по числу активных событий</div></Card>
+        <Card><div className="text-sm text-slate-500">Районов с наибольшей нагрузкой</div><div className="mt-2 text-5xl font-bold text-emerald-600">{districtCards.length}</div><div className="text-slate-500">по текущим сведениям</div></Card>
       </div>
 
       <Card>
-        <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">Сводка системы</div>
+        <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">Сводка по городу</div>
         <p className="mt-2 text-xl leading-relaxed text-slate-700 lg:text-3xl">
-          По данным 051 сейчас зарегистрировано <b className="text-blue-700">{outageSummary?.activeIncidents ?? 0} активных событий</b>, из них {getOutageKindLabel('emergency', 'genitivePlural')} — <b>{emergencyLive.length}</b>.
+          Сейчас зарегистрировано <b className="text-blue-700">{outageSummary?.activeIncidents ?? 0} активных событий</b>, из них {getOutageKindLabel('emergency', 'genitivePlural')} — <b>{emergencyLive.length}</b>.
           Наибольшая нагрузка по домам наблюдается в районах {outageSummary?.topDistricts.slice(0, 2).map((item) => item.district).join(' и ') || 'без выраженного лидера'}.
         </p>
-        {liveStatus051 && <SourceMetaFooter source={formatSourceLabel(liveStatus051.sourceUrl, '051.novo-sibirsk.ru')} updatedAt={liveStatus051.updatedAt} ttl={`${liveStatus051.ttlMinutes} мин`} type={sourceTypeLabels[liveStatus051.type] ?? liveStatus051.type} status={liveStatus051.status} />}
+        {liveStatus051 && <SourceMetaFooter source={formatSourceLabel(liveStatus051.sourceUrl, 'портал 051')} updatedAt={liveStatus051.updatedAt} ttl={`каждые ${liveStatus051.ttlMinutes} мин`} type={sourceTypeLabels[liveStatus051.type] ?? liveStatus051.type} status={sourceStatusLabels[liveStatus051.status] ?? liveStatus051.status} />}
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-12">
@@ -258,7 +280,7 @@ export function BriefingPage() {
               </div>
             ))}
           </div>
-          {liveStatus051 && <SourceMetaFooter source={formatSourceLabel(liveStatus051.sourceUrl, '051.novo-sibirsk.ru')} updatedAt={liveStatus051.updatedAt} ttl={`${liveStatus051.ttlMinutes} мин`} type={sourceTypeLabels[liveStatus051.type] ?? liveStatus051.type} status={liveStatus051.status} />}
+          {liveStatus051 && <SourceMetaFooter source={formatSourceLabel(liveStatus051.sourceUrl, 'портал 051')} updatedAt={liveStatus051.updatedAt} ttl={`каждые ${liveStatus051.ttlMinutes} мин`} type={sourceTypeLabels[liveStatus051.type] ?? liveStatus051.type} status={sourceStatusLabels[liveStatus051.status] ?? liveStatus051.status} />}
         </Card>
       </div>
     </div>
@@ -638,29 +660,29 @@ export function HistoryPage() {
   const series = useOutageHistorySeries()
   const live = useSigmaStore((state) => state.live)
   const [period, setPeriod] = useState('7 дней')
-  const category = Object.entries(incidents.reduce<Record<string, number>>((acc, incident) => ({ ...acc, [incident.subsystem]: (acc[incident.subsystem] || 0) + 1 }), {})).map(([name, value]) => ({ name, value }))
+  const category = Object.entries(incidents.reduce<Record<string, number>>((acc, incident) => ({ ...acc, [incident.subsystem]: (acc[incident.subsystem] || 0) + 1 }), {})).map(([name, value]) => ({ name: subsystemHistoryLabels[name] ?? name, value }))
   const liveIncidentCount = incidents.filter((incident) => incident.sourceKind === 'live').length
 
   return (
     <div className="space-y-4">
       <Card className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SectionTitle title="История и аналитика" subtitle="Тренды по накопленным snapshot 051 и оперативным событиям." />
+        <SectionTitle title="История и аналитика" subtitle="Динамика отключений и распределение нагрузки по районам города." />
         <div className="flex gap-2">
           {['7 дней', 'месяц', 'квартал', 'год'].map((item) => <button key={item} onClick={() => setPeriod(item)} className={`rounded-xl px-3 py-2 ${period === item ? 'bg-slate-900 text-white' : 'bg-slate-100'}`}>{item}</button>)}
         </div>
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card><div className="text-slate-500">Снимки 051</div><div className="text-4xl font-bold lg:text-5xl">{live.liveHistory.length}</div><div className="text-slate-500">история накапливается автоматически</div></Card>
-        <Card><div className="text-slate-500">Период</div><div className="text-4xl font-bold lg:text-5xl">{period}</div><div className="text-slate-500">если история короткая, UI честно показывает ограничение</div></Card>
-        <Card><div className="text-slate-500">Активные события 051</div><div className="text-4xl font-bold lg:text-5xl">{liveIncidentCount}</div><div className="text-slate-500">текущий live-контур ЖКХ</div></Card>
-        <Card><div className="text-slate-500">Режим данных</div><div className="text-4xl font-bold lg:text-5xl">{sourceModeLabels[live.mode] ?? live.mode}</div><div className="text-slate-500">прямой / гибридный / mock</div></Card>
+        <Card><div className="text-slate-500">Сохранено обновлений</div><div className="text-4xl font-bold lg:text-5xl">{live.liveHistory.length}</div><div className="text-slate-500">для сравнения динамики</div></Card>
+        <Card><div className="text-slate-500">Период обзора</div><div className="text-4xl font-bold lg:text-5xl">{period}</div><div className="text-slate-500">доступный интервал для анализа</div></Card>
+        <Card><div className="text-slate-500">Текущие отключения</div><div className="text-4xl font-bold lg:text-5xl">{liveIncidentCount}</div><div className="text-slate-500">по городской сводке на сейчас</div></Card>
+        <Card><div className="text-slate-500">Как поступают сведения</div><div className="text-2xl font-bold lg:text-3xl">{sourceModeLabels[live.mode] ?? live.mode}</div><div className="text-slate-500">способ получения текущей информации</div></Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-12">
         <div className="space-y-4 lg:col-span-8">
           <Card>
-            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="text-3xl font-bold">Тренд отключений 051</div><div className="text-slate-500">накопленная история snapshots</div></div>
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="text-3xl font-bold">Динамика отключений</div><div className="text-slate-500">история последовательных обновлений</div></div>
             {series.length > 1 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={series.slice(-24)}>
@@ -670,7 +692,7 @@ export function HistoryPage() {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="rounded-xl border border-dashed p-4 text-sm text-slate-600">История источника 051 только накапливается. В гибридном режиме текущий снимок уже используется, но длинный тренд пока ограничен.</div>
+              <div className="rounded-xl border border-dashed p-4 text-sm text-slate-600">История только начинает накапливаться, поэтому длинный ряд для сравнения пока ограничен.</div>
             )}
           </Card>
           <Card><div className="mb-2 text-3xl font-bold">Очаги проблем</div><MapView incidents={incidents} plannedTopByHousesLimit={5} /></Card>

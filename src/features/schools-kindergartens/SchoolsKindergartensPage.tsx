@@ -17,30 +17,14 @@ const coverageRadiusMetersByKind = {
   school: 900,
   kindergarten: 500,
 } as const
+const novosibirskOverviewMapState = {
+  center: [55.03, 82.98] as [number, number],
+  zoom: 8,
+} as const
 
 const hasCoordinates = (
   institution: EducationInstitution,
 ): institution is EducationInstitution & { coordinates: [number, number] } => Array.isArray(institution.coordinates)
-
-const getMapState = (institutions: EducationInstitution[]) => {
-  const geocoded = institutions.filter(hasCoordinates)
-  if (geocoded.length === 0) return { center: [55.03, 82.92] as [number, number], zoom: 10 }
-  if (geocoded.length === 1) return { center: geocoded[0].coordinates, zoom: 14 }
-
-  const latitudes = geocoded.map((item) => item.coordinates[0])
-  const longitudes = geocoded.map((item) => item.coordinates[1])
-  const minLat = Math.min(...latitudes)
-  const maxLat = Math.max(...latitudes)
-  const minLon = Math.min(...longitudes)
-  const maxLon = Math.max(...longitudes)
-  const spread = Math.max(maxLat - minLat, maxLon - minLon)
-  const zoom = spread > 0.42 ? 10 : spread > 0.2 ? 11 : spread > 0.1 ? 12 : 13
-
-  return {
-    center: [Number(((minLat + maxLat) / 2).toFixed(6)), Number(((minLon + maxLon) / 2).toFixed(6))] as [number, number],
-    zoom,
-  }
-}
 
 export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: boolean }) => {
   const [snapshot, setSnapshot] = useState<EducationSnapshot>()
@@ -84,19 +68,20 @@ export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: bool
     searchEducationInstitutions(visibleInstitutions, tableQuery)
   , [tableQuery, visibleInstitutions])
   const districtStats = useMemo(() => buildEducationDistrictStats(snapshot?.institutions ?? []), [snapshot?.institutions])
+  const visibleDistrictStats = useMemo(() => buildEducationDistrictStats(visibleInstitutions), [visibleInstitutions])
   const visibleGeocoded = useMemo(() => visibleInstitutions.filter(hasCoordinates), [visibleInstitutions])
-  const mapState = useMemo(() => getMapState(visibleInstitutions), [visibleInstitutions])
   const totalSchools = visibleInstitutions.filter((item) => item.kind === 'school').length
   const totalKindergartens = visibleInstitutions.filter((item) => item.kind === 'kindergarten').length
-  const totalKindergartenCapacity = visibleInstitutions.reduce((sum, item) => sum + (item.kind === 'kindergarten' ? item.capacity ?? 0 : 0), 0)
   const districtOptions = snapshot?.districts ?? []
+  const districtCoverageCount = visibleDistrictStats.length
+  const leadingDistrict = visibleDistrictStats[0]
 
   return (
     <div className="space-y-4">
       {!embedded && (
         <SectionTitle
           title="Школы и детские сады"
-          subtitle="Статический snapshot по официальным CSV Новосибирска с геокодированием адресов и примерными зонами покрытия."
+          subtitle="Карта и районная аналитика по обеспеченности Новосибирска школами и детскими садами."
         />
       )}
 
@@ -106,7 +91,7 @@ export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: bool
             <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">Социальная инфраструктура</div>
             <div className="text-3xl font-bold">Школы и детские сады Новосибирска</div>
             <div className="max-w-4xl text-sm text-slate-600">
-              Точки берутся из официальных CSV по адресам учреждений. Зоны покрытия показаны как приближенные радиусы вокруг объектов, а не как официальные границы закрепления домов.
+              Панель помогает быстро оценить обеспеченность районов школами и детскими садами, увидеть потенциальные зоны дефицита и понять, какие жилые территории попадают в зону доступности социальной инфраструктуры.
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -133,10 +118,17 @@ export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: bool
       {!loading && !error && snapshot && (
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Card><div className="text-sm text-slate-500">Учреждения в фильтре</div><div className="mt-2 text-5xl font-bold">{visibleInstitutions.length}</div><div className="mt-2 text-sm text-slate-500">из snapshot {snapshot.counts.total}</div></Card>
-            <Card><div className="text-sm text-slate-500">Школы</div><div className="mt-2 text-5xl font-bold text-blue-600">{totalSchools}</div><div className="mt-2 text-sm text-slate-500">отображаются отдельными точками</div></Card>
-            <Card><div className="text-sm text-slate-500">Детские сады</div><div className="mt-2 text-5xl font-bold text-orange-500">{totalKindergartens}</div><div className="mt-2 text-sm text-slate-500">примерная вместимость: {totalKindergartenCapacity}</div></Card>
-            <Card><div className="text-sm text-slate-500">Учреждений на карте</div><div className="mt-2 text-5xl font-bold text-emerald-600">{visibleGeocoded.length}</div><div className="mt-2 text-sm text-slate-500">геокодированные реальные адреса</div></Card>
+            <Card>
+              <div className="text-sm text-slate-500">Районов в контуре</div>
+              <div className="mt-2 text-5xl font-bold">{districtCoverageCount}</div>
+            </Card>
+            <Card><div className="text-sm text-slate-500">Школы</div><div className="mt-2 text-5xl font-bold text-blue-600">{totalSchools}</div></Card>
+            <Card><div className="text-sm text-slate-500">Детские сады</div><div className="mt-2 text-5xl font-bold text-orange-500">{totalKindergartens}</div></Card>
+            <Card>
+              <div className="text-sm text-slate-500">Лидер по числу учреждений</div>
+              <div className="mt-2 text-5xl font-bold text-emerald-600">{leadingDistrict?.total ?? 0}</div>
+              {leadingDistrict && <div className="mt-2 text-sm text-slate-500">{leadingDistrict.district}</div>}
+            </Card>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-12">
@@ -151,7 +143,7 @@ export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: bool
 
                 <div className="h-[460px] overflow-hidden rounded-2xl border border-slate-200">
                   <YMaps query={{ lang: 'ru_RU' }}>
-                    <Map state={mapState} width="100%" height="100%" options={{ suppressMapOpenBlock: true }}>
+                    <Map state={novosibirskOverviewMapState} width="100%" height="100%" options={{ suppressMapOpenBlock: true }}>
                       {showCoverage && visibleGeocoded.map((institution) => (
                         <Circle
                           key={`coverage-${institution.id}`}
@@ -203,21 +195,6 @@ export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: bool
                       <div className="mt-1 text-sm text-slate-500">
                         Мест в детсадах: {item.kindergartenCapacity} · На карте: {item.geocodedCount}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              <Card>
-                <div className="mb-2 text-2xl font-bold">Источник snapshot</div>
-                <div className="space-y-2 text-sm text-slate-600">
-                  <div>Город: {snapshot.city}</div>
-                  <div>Собран: {new Date(snapshot.generatedAt).toLocaleString('ru-RU')}</div>
-                  {snapshot.sourceUrls.map((source) => (
-                    <div key={`${source.kind}-${source.url}`} className="rounded-xl border p-3">
-                      <div className="font-semibold">{source.kind === 'school' ? 'Школы' : 'Детские сады'}</div>
-                      <a href={source.url} target="_blank" rel="noreferrer" className="mt-1 block break-all text-blue-700 underline">{source.url}</a>
-                      <div className="mt-1 text-slate-500">записей в snapshot: {source.records}</div>
                     </div>
                   ))}
                 </div>

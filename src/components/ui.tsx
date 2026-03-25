@@ -45,8 +45,8 @@ export const SourceMetaFooter = ({
     <div className="grid gap-2 sm:grid-cols-4">
       <div><span className="font-semibold text-slate-900">Источник:</span> {source}</div>
       <div><span className="font-semibold text-slate-900">Обновлено:</span> {updatedAt ? new Date(updatedAt).toLocaleString('ru-RU') : '—'}</div>
-      <div><span className="font-semibold text-slate-900">TTL:</span> {ttl}</div>
-      <div><span className="font-semibold text-slate-900">Тип данных:</span> {type} · {status}</div>
+      <div><span className="font-semibold text-slate-900">Период обновления:</span> {ttl}</div>
+      <div><span className="font-semibold text-slate-900">Характер сведений:</span> {type} · {status}</div>
     </div>
   </div>
 )
