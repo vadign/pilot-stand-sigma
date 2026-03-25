@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "snapshot:education": "python3 scripts/build_education_snapshot.py",
     "sync:051": "tsx scripts/sync-051.mts",
     "sync:live": "tsx scripts/sync-live.mts",
     "sync:live:hourly": "tsx scripts/sync-live.mts --watch"

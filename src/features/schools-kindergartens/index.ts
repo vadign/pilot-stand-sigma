@@ -1,0 +1,1 @@
+export { SchoolsKindergartensPage } from './SchoolsKindergartensPage'

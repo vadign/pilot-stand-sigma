@@ -7,6 +7,7 @@ import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '
 import { MapView } from '../components/MapView'
 import { Badge, Card, MetaGrid, SectionTitle, SourceMetaFooter } from '../components/ui'
 import { PublicTransportPage } from './public-transport'
+import { SchoolsKindergartensPage } from './schools-kindergartens'
 import { defaultTransportStops } from './public-transport/data/defaultTransportData'
 import { applyMayorTransportParams } from './public-transport/navigation'
 import { selectTransportFilterOptions } from './public-transport/selectors'
@@ -49,12 +50,13 @@ const utilityLabels: Record<string, string> = {
 const subsystemTabs = [
   { id: 'heat', title: 'Энергетика' },
   { id: 'transport', title: 'Общественный транспорт' },
+  { id: 'education', title: 'Школы и детские сады' },
   { id: 'roads', title: 'Дороги' },
   { id: 'noise', title: 'Шум' },
   { id: 'air', title: 'Воздух' },
 ] as const
 
-const operationalSubsystemTabs = subsystemTabs.filter((tab) => tab.id !== 'transport')
+const operationalSubsystemTabs = subsystemTabs.filter((tab) => tab.id !== 'transport' && tab.id !== 'education')
 
 type SubsystemTabId = (typeof subsystemTabs)[number]['id']
 
@@ -79,6 +81,10 @@ const subsystemTabDescriptions: Record<SubsystemTabId, { title: string; descript
     title: 'Общественный транспорт в управленческом контуре мэра',
     description: 'Карта, маршруты, тарифы и связность районов в одном представлении для управленческого обзора.',
   },
+  education: {
+    title: 'Школы и детские сады в городском контуре социальной инфраструктуры',
+    description: 'Реальные учреждения Новосибирска по официальным CSV: адреса, районная статистика и примерные зоны покрытия.',
+  },
 }
 
 const severityPriority: Record<string, number> = {
@@ -90,10 +96,12 @@ const severityPriority: Record<string, number> = {
 
 const isHeatSubsystemTab = (tab: SubsystemTabId): boolean => tab === 'heat'
 const isTransportSubsystemTab = (tab: SubsystemTabId): boolean => tab === 'transport'
+const isEducationSubsystemTab = (tab: SubsystemTabId): boolean => tab === 'education'
 
 const matchesSubsystemTab = (incident: LiveIncidentView, tab: SubsystemTabId): boolean => {
   if (tab === 'heat') return incident.sourceKind === 'live' || incident.subsystem === 'heat' || incident.subsystem === 'utilities'
   if (tab === 'transport') return false
+  if (tab === 'education') return false
   return incident.subsystem === tab
 }
 
@@ -275,6 +283,7 @@ export function MayorDashboardPage() {
   const selectedSubsystemMeta = subsystemTabDescriptions[subsystem]
   const isHeatTab = isHeatSubsystemTab(subsystem)
   const isTransportTab = isTransportSubsystemTab(subsystem)
+  const isEducationTab = isEducationSubsystemTab(subsystem)
   const mapIncidents = visibleIncidents
   const selectedTransportDistrict = searchParams.get('district') ?? ''
 
@@ -302,7 +311,7 @@ export function MayorDashboardPage() {
       <Card>
         <div className="flex flex-col gap-3">
           <SubsystemTabs value={subsystem} onChange={handleSubsystemChange} />
-          {!isTransportTab ? (
+          {!isTransportTab && !isEducationTab ? (
             <div className="flex flex-wrap gap-2">
               <select className="rounded-xl border px-3 py-2" value={district} onChange={(event) => setDistrict(event.target.value)}>
                 <option value="">Все районы</option>
@@ -339,6 +348,8 @@ export function MayorDashboardPage() {
 
       {isTransportTab ? (
         <PublicTransportPage embedded />
+      ) : isEducationTab ? (
+        <SchoolsKindergartensPage embedded />
       ) : (
         <>
           {isHeatTab ? (

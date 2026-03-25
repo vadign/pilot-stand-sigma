@@ -18,6 +18,10 @@ vi.mock('./features/public-transport', async () => {
   }
 })
 
+vi.mock('./features/schools-kindergartens', () => ({
+  SchoolsKindergartensPage: ({ embedded }: { embedded?: boolean }) => <div>{embedded ? 'embedded education' : 'education page'}</div>,
+}))
+
 vi.mock('./live/hooks/useLiveDataBootstrap', () => ({
   useLiveDataBootstrap: () => undefined,
 }))
@@ -113,6 +117,25 @@ describe('App smoke render', () => {
     expect(container.textContent).toContain('embedded transport')
     expect(container.textContent).toContain('mode:none')
     expect(container.textContent).toContain('route:none')
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
+  it('renders education tab inside mayor dashboard', async () => {
+    const root = createRoot(container)
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={['/mayor-dashboard?subsystem=education']}>
+          <App />
+        </MemoryRouter>,
+      )
+    })
+
+    expect(container.textContent).toContain('Школы и детские сады в городском контуре социальной инфраструктуры')
+    expect(container.textContent).toContain('embedded education')
 
     await act(async () => {
       root.unmount()
