@@ -1,4 +1,4 @@
-import { selectConstructionAggregates, selectIncidentViewList, selectOutageSummary, selectSourceStatuses } from '../../live/selectors'
+import { selectIncidentViewList, selectOutageSummary, selectSourceStatuses } from '../../live/selectors'
 import { defaultTransportFares, defaultTransportStops } from '../public-transport/data/defaultTransportData'
 import { useSigmaStore } from '../../store/useSigmaStore'
 import type { AskSigmaContext } from './types'
@@ -20,7 +20,6 @@ export class LocalAskSigmaProvider implements AskSigmaProvider {
       servicePerformance: state.servicePerformance,
       notifications: state.notifications,
       liveSummary: selectOutageSummary(state),
-      constructionAggregates: selectConstructionAggregates(state),
       sourceStatuses: selectSourceStatuses(state),
       publicTransport: {
         stops: defaultTransportStops,

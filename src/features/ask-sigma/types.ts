@@ -1,5 +1,5 @@
 import type { Deputy, Incident, Regulation, ServicePerformance } from '../../types'
-import type { DistrictConstructionAggregate, SigmaLiveOutageSummary, SourceStatusCard } from '../../live/types'
+import type { SigmaLiveOutageSummary, SourceStatusCard } from '../../live/types'
 import type { TransportFare, TransportSourceStatus, TransitStop } from '../public-transport/types'
 
 export type SigmaRole = 'мэр' | 'диспетчер' | 'аналитик'
@@ -23,7 +23,6 @@ export type AskSigmaEntity =
   | 'dashboard'
   | 'briefing'
   | 'map'
-  | 'construction'
   | 'transport'
   | 'sources'
   | 'help'
@@ -54,7 +53,6 @@ export type AskSigmaOperation =
   | 'APPROVALS'
   | 'NAVIGATE'
   | 'LIVE_SOURCES'
-  | 'CONSTRUCTION'
   | 'PUBLIC_TRANSPORT_SUMMARY'
   | 'TRANSIT_STOPS'
   | 'TRANSIT_ROUTE_LOOKUP'
@@ -94,7 +92,6 @@ export type AskSigmaResultType =
   | 'DEPUTY_STATUS'
   | 'DEPUTY_MODE_CHANGE'
   | 'LIVE_SOURCE_STATUS'
-  | 'CONSTRUCTION_AGGREGATES'
   | 'PUBLIC_TRANSPORT_SUMMARY'
   | 'TRANSIT_STOPS'
   | 'TRANSIT_ROUTE_LOOKUP'
@@ -117,7 +114,6 @@ export interface AskSigmaContext {
   servicePerformance: ServicePerformance[]
   notifications: { id: string; text: string; level: string; createdAt: string }[]
   liveSummary?: SigmaLiveOutageSummary
-  constructionAggregates?: DistrictConstructionAggregate[]
   sourceStatuses?: SourceStatusCard[]
   publicTransport?: {
     stops: TransitStop[]
@@ -151,7 +147,6 @@ export interface AskSigmaResult {
   compare?: { baseline: string; intervention: string; effects: string[] }
   deputy?: Deputy
   approvals?: { id: string; reason: string; initiator: string }[]
-  constructionAggregates?: DistrictConstructionAggregate[]
   sourceStatuses?: SourceStatusCard[]
   transportStops?: TransitStop[]
   transportFares?: TransportFare[]

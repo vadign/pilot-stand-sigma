@@ -6,8 +6,6 @@ import type { LiveIncidentView } from '../types'
 
 export const selectSourceStatuses = (state: SigmaState) => state.live.sourceStatuses
 export const selectOutageSummary = (state: SigmaState) => state.live.outages?.payload.summary
-export const selectConstructionAggregates = (state: SigmaState) => state.live.construction?.payload.aggregates ?? []
-export const selectConstructionBundle = (state: SigmaState) => state.live.construction?.payload
 
 export const selectIncidentViewList = (state: SigmaState): LiveIncidentView[] => {
   const workflow = state.live.workflow
@@ -66,11 +64,6 @@ export const useIncidentViews = (): LiveIncidentView[] => {
   const incidents = useSigmaStore((state) => state.incidents)
   const live = useSigmaStore((state) => state.live)
   return useMemo(() => selectIncidentViewList({ ...useSigmaStore.getState(), incidents, live }), [incidents, live])
-}
-
-export const useConstructionAggregates = () => {
-  const construction = useSigmaStore((state) => state.live.construction)
-  return useMemo(() => construction?.payload.aggregates ?? [], [construction])
 }
 
 export const useDistrictOutageCards = () => {

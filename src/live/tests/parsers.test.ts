@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parse051OffPage } from '../parsers/parse051OffPage'
-import { parseCsvDataset } from '../parsers/parseCsvDataset'
-import { parseOpendataPassport } from '../parsers/parseOpendataPassport'
-import { calculateActiveConstruction, extractDistrictFromAddress, normalizeCommissionedRecord, normalizePermitRecord } from '../normalizers/normalizeConstructionToSigma'
+import { buildPower051SnapshotFromArcGis } from '../providers/power051ArcGis'
 
 const base = join(process.cwd(), 'src/live/tests/fixtures')
 
@@ -33,26 +31,17 @@ describe('parse051OffPage', () => {
   })
 })
 
-describe('opendata parsers', () => {
-  it('parses passport html', () => {
-    const html = readFileSync(join(base, 'opendata-passport-124.html'), 'utf-8')
-    const parsed = parseOpendataPassport(html, 'https://opendata.novo-sibirsk.ru')
-    expect(parsed.title).toContain('Разрешения')
-    expect(parsed.csvUrl).toContain('/datasets/124.csv')
-  })
+describe('ArcGIS official fallbacks', () => {
+  it('builds 051 snapshot from ArcGIS outages', () => {
+    const snapshot = buildPower051SnapshotFromArcGis({
+      count: 2,
+      features: [
+        { attributes: { district_name: 'Ленинский район', type_id: 'Плановое', system_id: 1, geocoded_address: 'улица Крашенинникова, 1', description: 'Ремонт', end_date: 1774432800000 } },
+        { attributes: { district_name: 'Ленинский район', type_id: 'Плановое', system_id: 1, geocoded_address: 'улица Крашенинникова, 3', description: 'Ремонт', end_date: 1774432800000 } },
+      ],
+    }, { fetchedAt: '2026-03-25T00:00:00.000Z' })
 
-  it('computes active construction by cadastral number', () => {
-    const permitsCsv = readFileSync(join(base, 'opendata-124.csv'), 'utf-8')
-    const commissionedCsv = readFileSync(join(base, 'opendata-125.csv'), 'utf-8')
-    const permits = parseCsvDataset<Record<string, string>>(permitsCsv).map(normalizePermitRecord)
-    const commissioned = parseCsvDataset<Record<string, string>>(commissionedCsv).map(normalizeCommissionedRecord)
-    const active = calculateActiveConstruction(permits, commissioned)
-    expect(active.some((item) => item.KadNom === '54:35:091230:100')).toBe(true)
-    expect(active.some((item) => item.KadNom === '54:35:062500:201' && item.status === 'active')).toBe(false)
-  })
-
-  it('extracts district from address fallback', () => {
-    const district = extractDistrictFromAddress('Академгородок, пр. Лаврентьева, 12')
-    expect(district.districtId).toBe('sov')
+    expect(snapshot.planned).toHaveLength(1)
+    expect(snapshot.planned[0]?.houses).toBe(2)
   })
 })

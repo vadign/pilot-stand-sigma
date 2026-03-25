@@ -135,7 +135,6 @@ export const useSigmaStore = create<SigmaState>((set, get) => ({
       mode: bundle.mode,
       isBootstrapping: false,
       outages: bundle.outages,
-      construction: bundle.construction,
       sourceStatuses: bundle.sourceStatuses,
       liveIncidents: bundle.outages.payload.incidents,
       liveHistory: bundle.outages.payload.history,

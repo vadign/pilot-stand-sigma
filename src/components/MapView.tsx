@@ -3,6 +3,7 @@ import { YMaps, Map, Placemark } from '@pbe/react-yandex-maps'
 import type { Incident } from '../types'
 import { getIncidentMapPresentation } from '../lib/incidentMapPresentation'
 import { selectCriticalAndOnePlannedPerCollisionBucket, stackNearbyPlacemarks } from '../lib/mapPlacemarkStack'
+import { selectTopIncidentsByHouses } from '../lib/selectTopIncidentsByHouses'
 
 const severityColor: Record<Incident['severity'], string> = {
   низкий: '#3b82f6',
@@ -17,22 +18,28 @@ export function MapView({
   incidents,
   onPick,
   overlapMode = 'stack',
+  topByHousesLimit,
 }: {
   incidents: Incident[]
   onPick?: (id: string) => void
   overlapMode?: 'stack' | 'critical-and-planned'
+  topByHousesLimit?: number
 }) {
+  const mapIncidents = useMemo(() =>
+    topByHousesLimit ? selectTopIncidentsByHouses(incidents, topByHousesLimit) : incidents
+  , [incidents, topByHousesLimit])
+
   const mapState = useMemo(() => {
-    if (incidents.length === 0) {
+    if (mapIncidents.length === 0) {
       return { center: [55.03, 82.98] as [number, number], zoom: zoomOutForOverview(10) }
     }
 
-    if (incidents.length === 1) {
-      return { center: incidents[0].coordinates, zoom: zoomOutForOverview(13) }
+    if (mapIncidents.length === 1) {
+      return { center: mapIncidents[0].coordinates, zoom: zoomOutForOverview(13) }
     }
 
-    const latitudes = incidents.map((incident) => incident.coordinates[0])
-    const longitudes = incidents.map((incident) => incident.coordinates[1])
+    const latitudes = mapIncidents.map((incident) => incident.coordinates[0])
+    const longitudes = mapIncidents.map((incident) => incident.coordinates[1])
     const minLat = Math.min(...latitudes)
     const maxLat = Math.max(...latitudes)
     const minLng = Math.min(...longitudes)
@@ -48,13 +55,13 @@ export function MapView({
       center: [Number(((minLat + maxLat) / 2).toFixed(6)), Number(((minLng + maxLng) / 2).toFixed(6))] as [number, number],
       zoom: zoomOutForOverview(zoom),
     }
-  }, [incidents])
+  }, [mapIncidents])
 
   const visibleIncidents = useMemo(() =>
     overlapMode === 'critical-and-planned'
-      ? selectCriticalAndOnePlannedPerCollisionBucket(incidents, mapState.zoom)
-      : incidents
-  , [incidents, mapState.zoom, overlapMode])
+      ? selectCriticalAndOnePlannedPerCollisionBucket(mapIncidents, mapState.zoom)
+      : mapIncidents
+  , [mapIncidents, mapState.zoom, overlapMode])
 
   const placemarks = useMemo(() => stackNearbyPlacemarks(visibleIncidents, mapState.zoom).map((incident) => ({
     incident,

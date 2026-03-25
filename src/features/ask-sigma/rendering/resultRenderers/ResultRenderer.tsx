@@ -128,17 +128,6 @@ export const ResultRenderer = ({
         </div>
       )}
 
-      {result.constructionAggregates && (
-        <div className="mt-3 space-y-2 text-sm">
-          {result.constructionAggregates.map((item) => (
-            <div key={item.districtName} className="rounded border p-2">
-              <div className="font-semibold">{item.districtName}</div>
-              <div>Разрешения: {item.permits} · Ввод: {item.commissioned} · Active: {item.activeConstruction}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
       {result.regulations && (
         <ul className="mt-3 space-y-2 text-sm">
           {result.regulations.map((regulation) => <li key={regulation.id} className="rounded border p-2">{regulation.code} · {regulation.title}</li>)}

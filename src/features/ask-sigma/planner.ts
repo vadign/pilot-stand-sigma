@@ -36,9 +36,6 @@ export const createPlan = (query: AskSigmaQuery): AskSigmaPlan => {
       text,
     }
   }
-  if (/(стройки по районам|активные стройки|ввод в эксплуатацию|что по строительству)/i.test(text)) {
-    return { operation: 'CONSTRUCTION', entity: 'construction', filters: { district: district ?? '' }, text }
-  }
 
   if (/(покажи транспорт на карте|покажи общественный транспорт на карте|на карте)/i.test(text) && /(транспорт|остановк|маршрут|проезд|как добраться|как проехать)/i.test(text)) {
     return {
@@ -130,7 +127,6 @@ export const createPlan = (query: AskSigmaQuery): AskSigmaPlan => {
       text,
     }
   }
-  if (entity === 'construction') return { operation: 'CONSTRUCTION', entity, filters: { district: district ?? '' }, text }
   if (entity === 'transport') return { operation: 'PUBLIC_TRANSPORT_SUMMARY', entity, text }
   if (entity === 'sources') return { operation: 'LIVE_SOURCES', entity, text }
   if (entity === 'help') return { operation: isExplicitHelpRequest ? 'HELP' : 'UNKNOWN', entity, text }

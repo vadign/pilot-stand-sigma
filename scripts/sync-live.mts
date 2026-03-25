@@ -3,7 +3,6 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createManifest } from '../src/live/storage/liveManifest.ts'
 import { sync051 } from './sync-051.mts'
-import { syncOpenData } from './sync-opendata.mts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const liveRoot = join(root, 'public/live-data')
@@ -19,7 +18,7 @@ const getSyncIntervalMs = (): number => {
 }
 
 export const syncLive = async () => {
-  const records = [...await sync051(), ...await syncOpenData()]
+  const records = await sync051()
   const manifest = createManifest(records, parseVersion)
   await writeFile(join(liveRoot, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf-8')
   return manifest

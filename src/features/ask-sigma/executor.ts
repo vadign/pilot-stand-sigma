@@ -43,7 +43,6 @@ export const executePlan = (
 ): AskSigmaResult => {
   const context = provider.getContext()
   const sourceStatuses = context.sourceStatuses ?? []
-  const constructionAggregates = context.constructionAggregates ?? []
   const primaryStatus = sourceStatuses[0]
   const explainBase = { source: primaryStatus?.title ?? 'Sigma Zustand Store', updatedAt: primaryStatus?.updatedAt ?? context.now, dataType: primaryStatus?.type ?? 'calculated' as const }
 
@@ -72,7 +71,7 @@ export const executePlan = (
       return {
         type: 'BRIEFING',
         title: 'Сводка за 24 часа',
-        summary: `По 051 активных событий: ${context.liveSummary?.activeIncidents ?? 0}. По open data активных строек: ${constructionAggregates.reduce((sum, item) => sum + item.activeConstruction, 0)}.`,
+        summary: `По 051 активных событий: ${context.liveSummary?.activeIncidents ?? 0}. ${getOutageKindLabel('emergency', 'titlePlural')} домов: ${context.liveSummary?.emergencyHouses ?? 0}.`,
         kpis: sourceStatuses.map((status) => ({ label: status.key, value: `${status.source}/${status.status}` })),
         actions: [{ label: 'Открыть сводку', route: '/briefing' }],
         explain: { ...explainBase, dataType: 'real' },
@@ -149,22 +148,6 @@ export const executePlan = (
         actions: [{ label: 'Открыть отчет', route: '/briefing' }],
         explain: { ...explainBase, dataType: sourceStatuses.some((status) => status.type === 'mock-fallback') ? 'mock-fallback' : 'real' },
       }
-    case 'CONSTRUCTION': {
-      const district = getRequestedDistrict(plan)
-      const aggregates = district ? constructionAggregates.filter((item) => item.districtId === district) : constructionAggregates
-      const title = district ? `Строительство: ${getDistrictAnswerName(district)}` : 'Строительная активность по районам'
-      const summary = aggregates.length > 0
-        ? aggregates.map((item) => `${item.districtName}: active ${item.activeConstruction}`).join(' · ')
-        : 'Данных по выбранному району нет, показываю доступный snapshot open data.'
-      return {
-        type: 'CONSTRUCTION_AGGREGATES',
-        title,
-        summary,
-        constructionAggregates: aggregates.slice(0, 8),
-        actions: [{ label: 'Открыть историю', route: '/history' }, { label: 'Открыть отчет', route: '/briefing' }],
-        explain: { ...explainBase, source: 'OpenData Novosibirsk', dataType: 'real' },
-      }
-    }
     case 'PUBLIC_TRANSPORT_SUMMARY': {
       const { stops, fares, statuses, fallbackMode } = getTransportData(provider)
       const metrics = selectGlobalTransportMetrics(stops, fares)
@@ -345,7 +328,7 @@ export const executePlan = (
       return {
         type: 'HELP',
         title: 'Что умеет Сигма',
-        summary: `Сигма понимает запросы по 051, open data, истории, транспорту и навигации для роли «${role}». По транспорту можно спрашивать про остановки по районам и маршрутам, тарифы, связность районов, покрытие и карту.`,
+        summary: `Сигма понимает запросы по 051, истории, транспорту и навигации для роли «${role}». По транспорту можно спрашивать про остановки по районам и маршрутам, тарифы, связность районов, покрытие и карту.`,
         hints: supportedQuestions,
         explain: explainBase,
       }

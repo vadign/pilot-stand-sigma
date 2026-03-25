@@ -1,4 +1,4 @@
-import type { ConstructionDatasetBundle, LiveManifest, Power051Snapshot } from '../types'
+import type { LiveManifest, Power051Snapshot } from '../types'
 
 const fetchJson = async <T>(path: string): Promise<T> => {
   const response = await fetch(path, { cache: 'no-store' })
@@ -20,9 +20,5 @@ export class LiveSnapshotProvider {
     const record = manifest.records.find((item) => item.key === '051-history')
     if (!record) return []
     return fetchJson(record.path)
-  }
-
-  getConstructionBundle(): Promise<ConstructionDatasetBundle> {
-    return fetchJson('/live-data/opendata/construction-bundle.json')
   }
 }

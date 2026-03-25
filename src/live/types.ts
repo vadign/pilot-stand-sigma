@@ -1,7 +1,7 @@
 import type { DataType, Incident, IncidentStatus, Severity } from '../types'
 
 export type LiveSourceMode = 'mock' | 'hybrid' | 'live'
-export type LiveSourceKey = '051' | 'opendata'
+export type LiveSourceKey = '051'
 export type SigmaDataType = DataType | 'mock-fallback'
 export type UtilityType = 'hot_water' | 'cold_water' | 'sewer' | 'electricity' | 'gas' | 'heating'
 export type OutageKind = 'planned' | 'emergency'
@@ -86,79 +86,6 @@ export interface SigmaLiveOutageSummary {
   }
 }
 
-export interface OpendataDatasetMeta {
-  id: string
-  title: string
-  passportUrl: string
-  csvUrl?: string
-  updatedAt?: string
-  fetchedAt: string
-  rows: number
-  ttlMinutes: number
-}
-
-export interface ConstructionPermitRecord {
-  id: string
-  NomRazr: string
-  DatRazr: string
-  Zastr: string
-  NameOb: string
-  AdrOr: string
-  KadNom: string
-  districtId?: string
-  districtName?: string
-  raw: Record<string, string>
-}
-
-export interface ConstructionCommissionedRecord {
-  id: string
-  NomRazr: string
-  DatRazr: string
-  Zastr: string
-  NameOb: string
-  Raion: string
-  AdrOb: string
-  KadNom: string
-  districtId?: string
-  districtName?: string
-  raw: Record<string, string>
-}
-
-export interface ConstructionActiveRecord {
-  id: string
-  KadNom: string
-  permit?: ConstructionPermitRecord
-  commissioned?: ConstructionCommissionedRecord
-  status: 'active' | 'commissioned_without_permit'
-  districtId?: string
-  districtName?: string
-  address: string
-  developer: string
-  objectName: string
-}
-
-export interface DistrictConstructionAggregate {
-  districtId?: string
-  districtName: string
-  permits: number
-  commissioned: number
-  activeConstruction: number
-}
-
-export interface ConstructionDatasetBundle {
-  permitsMeta: OpendataDatasetMeta
-  commissionedMeta: OpendataDatasetMeta
-  permits: ConstructionPermitRecord[]
-  commissioned: ConstructionCommissionedRecord[]
-  active: ConstructionActiveRecord[]
-  aggregates: DistrictConstructionAggregate[]
-  sourceState?: {
-    type: SigmaDataType
-    status: SourceLoadStatus
-    message: string
-  }
-}
-
 export interface LiveManifestRecord {
   key: string
   title: string
@@ -207,7 +134,6 @@ export interface LiveSourceResult<T> {
 export interface LiveBundle {
   mode: LiveSourceMode
   outages: LiveSourceResult<{ snapshot: Power051Snapshot; summary: SigmaLiveOutageSummary; incidents: SigmaLiveOutageIncident[]; history: Power051Snapshot[] }>
-  construction: LiveSourceResult<ConstructionDatasetBundle>
   sourceStatuses: SourceStatusCard[]
 }
 
@@ -224,7 +150,6 @@ export interface SigmaLiveState {
   mode: LiveSourceMode
   isBootstrapping: boolean
   outages?: LiveBundle['outages']
-  construction?: LiveBundle['construction']
   sourceStatuses: SourceStatusCard[]
   liveIncidents: SigmaLiveOutageIncident[]
   liveHistory: Power051Snapshot[]
