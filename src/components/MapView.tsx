@@ -3,7 +3,7 @@ import { YMaps, Map, Placemark } from '@pbe/react-yandex-maps'
 import type { Incident } from '../types'
 import { getIncidentMapPresentation } from '../lib/incidentMapPresentation'
 import { selectCriticalAndOnePlannedPerCollisionBucket, stackNearbyPlacemarks } from '../lib/mapPlacemarkStack'
-import { selectTopIncidentsByHouses } from '../lib/selectTopIncidentsByHouses'
+import { selectEmergencyAndTopPlannedByHouses } from '../lib/selectEmergencyAndTopPlannedByHouses'
 
 const severityColor: Record<Incident['severity'], string> = {
   низкий: '#3b82f6',
@@ -18,16 +18,18 @@ export function MapView({
   incidents,
   onPick,
   overlapMode = 'stack',
-  topByHousesLimit,
+  plannedTopByHousesLimit,
 }: {
   incidents: Incident[]
   onPick?: (id: string) => void
   overlapMode?: 'stack' | 'critical-and-planned'
-  topByHousesLimit?: number
+  plannedTopByHousesLimit?: number
 }) {
   const mapIncidents = useMemo(() =>
-    topByHousesLimit ? selectTopIncidentsByHouses(incidents, topByHousesLimit) : incidents
-  , [incidents, topByHousesLimit])
+    typeof plannedTopByHousesLimit === 'number'
+      ? selectEmergencyAndTopPlannedByHouses(incidents, plannedTopByHousesLimit)
+      : incidents
+  , [incidents, plannedTopByHousesLimit])
 
   const mapState = useMemo(() => {
     if (mapIncidents.length === 0) {

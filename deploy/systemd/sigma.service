@@ -1,0 +1,21 @@
+[Unit]
+Description=Sigma frontend with live snapshot sync
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sigma
+Group=sigma
+WorkingDirectory=/opt/pilot-stand-sigma
+EnvironmentFile=/etc/sigma/sigma.env
+Environment=NODE_ENV=production
+ExecStart=/bin/sh -lc 'exec /usr/bin/npm run dev -- --host 0.0.0.0 --port "${SIGMA_PORT:-5173}"'
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+KillSignal=SIGTERM
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

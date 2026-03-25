@@ -358,7 +358,7 @@ export function MayorDashboardPage() {
           )}
 
           <div className="grid gap-4 lg:grid-cols-12">
-            <div className="lg:col-span-8"><Card><div className="mb-3 text-3xl font-bold">Карта территориальных проблем</div><MapView incidents={mapIncidents} overlapMode="stack" topByHousesLimit={isHeatTab ? 7 : undefined} /></Card></div>
+            <div className="lg:col-span-8"><Card><div className="mb-3 text-3xl font-bold">Карта территориальных проблем</div><MapView incidents={mapIncidents} overlapMode="stack" plannedTopByHousesLimit={isHeatTab ? 5 : undefined} /></Card></div>
             <div className="space-y-3 lg:col-span-4">
               <Card>
                 <div className="mb-2 text-2xl font-bold">{isHeatTab ? 'Срочные действия' : 'Приоритетные события'}</div>
@@ -518,7 +518,7 @@ export function OperationsPage() {
 
       <div className="col-span-8">
         <Card className="relative">
-          <MapView incidents={filtered} onPick={setSelectedIncident} topByHousesLimit={isHeatTab ? 7 : undefined} />
+          <MapView incidents={filtered} onPick={setSelectedIncident} plannedTopByHousesLimit={isHeatTab ? 5 : undefined} />
           <div className="absolute bottom-3 left-3 right-3 rounded-2xl border border-red-200 bg-white p-3 shadow lg:bottom-5 lg:left-auto lg:right-5">
             <div className="font-bold text-red-600"><AlertTriangle size={16} className="mr-1 inline" />{isHeatTab ? 'Поток 051 интегрирован в ленту' : `Контур «${subsystemTabs.find((item) => item.id === subsystem)?.title}» снова доступен`}</div>
             <div className="text-sm text-slate-600">{isHeatTab ? 'Факты из 051 не скрываются локальными действиями. Workflow ведется поверх сохраненного снимка.' : 'Вкладка показывает доменный поток событий на карте и в ленте без переключения между разделами.'}</div>
@@ -662,7 +662,7 @@ export function HistoryPage() {
               <div className="rounded-xl border border-dashed p-4 text-sm text-slate-600">История источника 051 только накапливается. В гибридном режиме текущий снимок уже используется, но длинный тренд пока ограничен.</div>
             )}
           </Card>
-          <Card><div className="mb-2 text-3xl font-bold">Очаги проблем</div><MapView incidents={incidents} topByHousesLimit={7} /></Card>
+          <Card><div className="mb-2 text-3xl font-bold">Очаги проблем</div><MapView incidents={incidents} plannedTopByHousesLimit={5} /></Card>
         </div>
 
         <div className="space-y-4 lg:col-span-4">
