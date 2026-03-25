@@ -11,6 +11,7 @@ const nav = [
   ['/mayor-dashboard', 'Панель мэра'],
   ['/briefing', 'Управленческий отчет'],
   ['/history', 'История и аналитика'],
+  ['/schools-kindergartens', 'Школы и детские сады'],
 ]
 
 export function Layout() {

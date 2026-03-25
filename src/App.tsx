@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { BriefingPage, DeputiesPage, HistoryPage, IncidentPage, MayorDashboardPage, OperationsPage, PlaceholderPage, RegulationsPage, ScenariosPage } from './features/pages'
+import { SchoolsKindergartensPage } from './features/schools-kindergartens/SchoolsKindergartensPage'
 import { applyMayorTransportParams } from './features/public-transport/navigation'
 
 function LegacyPublicTransportRedirect() {
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="/deputies" element={<DeputiesPage />} />
         <Route path="/regulations" element={<RegulationsPage />} />
         <Route path="/public-transport" element={<LegacyPublicTransportRedirect />} />
+        <Route path="/schools-kindergartens" element={<SchoolsKindergartensPage />} />
         <Route path="/resources" element={<PlaceholderPage />} />
         <Route path="/reports" element={<PlaceholderPage />} />
         <Route path="/settings" element={<PlaceholderPage />} />

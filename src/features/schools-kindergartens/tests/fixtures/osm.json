@@ -1,0 +1,1 @@
+{"elements":[{"type":"node","id":1,"lat":55.0,"lon":82.9,"tags":{"district":"Ленинский район","addr:street":"Ленина","addr:housenumber":"10"}},{"type":"way","id":2,"nodes":[1,2,3],"geometry":[{"lat":55.1,"lon":82.8},{"lat":55.1,"lon":82.81},{"lat":55.11,"lon":82.81}],"tags":{"district":"Центральный район"}}]}
