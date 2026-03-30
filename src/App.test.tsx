@@ -5,7 +5,9 @@ import { MemoryRouter } from 'react-router-dom'
 import App from './App'
 
 vi.mock('./components/MapView', () => ({
-  MapView: () => <div data-testid="mock-map">map</div>,
+  MapView: ({ incidents }: { incidents: Array<{ id: string }> }) => (
+    <div data-testid="mock-map">map:{incidents.length}</div>
+  ),
 }))
 
 vi.mock('./features/public-transport', async () => {
@@ -28,7 +30,48 @@ vi.mock('./live/hooks/useLiveDataBootstrap', () => ({
 
 describe('App smoke render', () => {
   ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+  let desktopMatches = true
   let container: HTMLDivElement
+  const mediaQueryListeners = new Set<(event: MediaQueryListEvent) => void>()
+
+  const installMatchMedia = (matches: boolean) => {
+    desktopMatches = matches
+    mediaQueryListeners.clear()
+
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: desktopMatches,
+        media: query,
+        onchange: null,
+        addEventListener: (_event: string, listener: (event: MediaQueryListEvent) => void) => {
+          mediaQueryListeners.add(listener)
+        },
+        removeEventListener: (_event: string, listener: (event: MediaQueryListEvent) => void) => {
+          mediaQueryListeners.delete(listener)
+        },
+        addListener: (listener: (event: MediaQueryListEvent) => void) => {
+          mediaQueryListeners.add(listener)
+        },
+        removeListener: (listener: (event: MediaQueryListEvent) => void) => {
+          mediaQueryListeners.delete(listener)
+        },
+        dispatchEvent: () => true,
+      })),
+    })
+  }
+
+  const setDesktopMatches = async (matches: boolean) => {
+    desktopMatches = matches
+
+    await act(async () => {
+      mediaQueryListeners.forEach((listener) =>
+        listener({ matches: desktopMatches, media: '(min-width: 1024px)' } as MediaQueryListEvent),
+      )
+      await Promise.resolve()
+    })
+  }
 
   const renderApp = async (initialEntries: string[]) => {
     const root = createRoot(container)
@@ -50,7 +93,7 @@ describe('App smoke render', () => {
   }
 
   const waitForText = async (text: string) => {
-    for (let attempt = 0; attempt < 20; attempt += 1) {
+    for (let attempt = 0; attempt < 60; attempt += 1) {
       if (container.textContent?.includes(text)) return
       await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 0))
@@ -58,7 +101,11 @@ describe('App smoke render', () => {
     }
   }
 
+  const findButton = (label: string) =>
+    Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.trim() === label)
+
   beforeEach(() => {
+    installMatchMedia(true)
     container = document.createElement('div')
     document.body.appendChild(container)
   })
@@ -68,6 +115,112 @@ describe('App smoke render', () => {
     await waitForText('ЖКХ и энергетика под управлением оперативных источников')
 
     expect(container.textContent).toContain('ЖКХ и энергетика под управлением оперативных источников')
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
+  it('defaults mayor dashboard events view to map on desktop', async () => {
+    const root = await renderApp(['/mayor-dashboard'])
+    await waitForText('Территориальные события')
+
+    expect(findButton('Карта')?.getAttribute('aria-pressed')).toBe('true')
+    expect(findButton('Список')?.getAttribute('aria-pressed')).toBe('false')
+    expect(container.querySelector('[data-testid="mock-map"]')?.textContent).toContain('map:')
+    expect(container.querySelector('[data-testid="mayor-events-list"]')).toBeNull()
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
+  it('defaults mayor dashboard events view to list on mobile', async () => {
+    installMatchMedia(false)
+
+    const root = await renderApp(['/mayor-dashboard'])
+    await waitForText('Территориальные события')
+
+    expect(findButton('Список')?.getAttribute('aria-pressed')).toBe('true')
+    expect(findButton('Карта')?.getAttribute('aria-pressed')).toBe('false')
+    expect(container.querySelector('[data-testid="mock-map"]')).toBeNull()
+    expect(container.querySelector('[data-testid="mayor-events-list"]')).toBeTruthy()
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
+  it('switches mayor dashboard events view manually and reapplies breakpoint default on resize', async () => {
+    const root = await renderApp(['/mayor-dashboard'])
+    await waitForText('Территориальные события')
+
+    await act(async () => {
+      findButton('Список')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(findButton('Список')?.getAttribute('aria-pressed')).toBe('true')
+    expect(container.querySelector('[data-testid="mayor-events-list"]')).toBeTruthy()
+    expect(container.querySelector('[data-testid="mock-map"]')).toBeNull()
+
+    await setDesktopMatches(false)
+
+    expect(findButton('Список')?.getAttribute('aria-pressed')).toBe('true')
+    expect(container.querySelector('[data-testid="mayor-events-list"]')).toBeTruthy()
+
+    await setDesktopMatches(true)
+
+    expect(findButton('Карта')?.getAttribute('aria-pressed')).toBe('true')
+    expect(container.querySelector('[data-testid="mock-map"]')).toBeTruthy()
+    expect(container.querySelector('[data-testid="mayor-events-list"]')).toBeNull()
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
+  it('applies district filter to both mayor dashboard list and map views', async () => {
+    installMatchMedia(false)
+
+    const root = await renderApp(['/mayor-dashboard?subsystem=roads'])
+    await waitForText('Территориальные события')
+
+    const districtSelect = container.querySelector('select') as HTMLSelectElement | null
+    expect(districtSelect).toBeTruthy()
+    expect(container.querySelectorAll('[data-testid="mayor-events-list-item"]')).toHaveLength(6)
+
+    await act(async () => {
+      if (districtSelect) {
+        districtSelect.value = 'len'
+        districtSelect.dispatchEvent(new Event('change', { bubbles: true }))
+      }
+    })
+
+    expect(container.textContent).toContain('1 в списке')
+    expect(container.querySelectorAll('[data-testid="mayor-events-list-item"]')).toHaveLength(1)
+
+    await act(async () => {
+      findButton('Карта')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(container.querySelector('[data-testid="mock-map"]')?.textContent).toBe('map:1')
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
+  it('uses the pale red critical badge in mayor dashboard priority events', async () => {
+    const root = await renderApp(['/mayor-dashboard?subsystem=roads'])
+    await waitForText('Приоритетные события')
+
+    const criticalBadge = Array.from(container.querySelectorAll('span')).find(
+      (element) => element.textContent?.trim() === 'критический',
+    ) as HTMLSpanElement | undefined
+
+    expect(criticalBadge).toBeTruthy()
+    expect(criticalBadge?.className).toContain('bg-red-100')
+    expect(criticalBadge?.className).toContain('text-red-700')
 
     await act(async () => {
       root.unmount()
@@ -117,6 +270,8 @@ describe('App smoke render', () => {
     expect(container.textContent).toContain('embedded transport')
     expect(container.textContent).toContain('mode:none')
     expect(container.textContent).toContain('route:none')
+    expect(findButton('Карта')).toBeFalsy()
+    expect(findButton('Список')).toBeFalsy()
 
     await act(async () => {
       root.unmount()
@@ -136,6 +291,8 @@ describe('App smoke render', () => {
 
     expect(container.textContent).toContain('Школы и детские сады в городском контуре социальной инфраструктуры')
     expect(container.textContent).toContain('embedded education')
+    expect(findButton('Карта')).toBeFalsy()
+    expect(findButton('Список')).toBeFalsy()
 
     await act(async () => {
       root.unmount()

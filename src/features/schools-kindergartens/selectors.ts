@@ -1,4 +1,5 @@
 import type { EducationDistrictStat, EducationInstitution, EducationKindFilter } from './types'
+import { isEducationCoordinateWithinNovosibirsk } from './coordinateBounds'
 
 const normalizeSearchValue = (value: string): string => value.trim().toLowerCase().replace(/ё/g, 'е')
 
@@ -50,7 +51,7 @@ export const buildEducationDistrictStats = (institutions: EducationInstitution[]
       current.kindergartenCount += 1
       current.kindergartenCapacity += institution.capacity ?? 0
     }
-    if (institution.coordinates) current.geocodedCount += 1
+    if (isEducationCoordinateWithinNovosibirsk(institution.coordinates)) current.geocodedCount += 1
 
     districtMap.set(institution.district, current)
   }

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { MapView } from '../../components/MapView'
 import { Badge, Card } from '../../components/ui'
 import { getDistrictName } from '../../lib/districts'
+import { useMediaQuery } from '../../lib/useMediaQuery'
 import { getOutageKindLabel } from '../../live/outageKindLabels'
 import { PublicTransportPage } from '../public-transport'
 import { applyMayorTransportParams } from '../public-transport/navigation'
@@ -10,11 +11,13 @@ import { SchoolsKindergartensPage } from '../schools-kindergartens'
 import {
   buildIncidentDistrictCards,
   buildStatusCards,
+  getOutageKindBadgeStyle,
   isEducationSubsystemTab,
   isHeatSubsystemTab,
   isTransportSubsystemTab,
   matchesSubsystemTab,
   readSubsystemFromParams,
+  severityStyles,
   sortIncidentsByPriority,
   subsystemTabDescriptions,
   SubsystemTabs,
@@ -24,10 +27,14 @@ import {
   useDashboardData,
 } from './shared'
 
+type MayorDashboardViewMode = 'map' | 'list'
+
 export default function MayorDashboardPage() {
   const { districts, incidents, outageSummary, districtCards } = useDashboardData()
   const [searchParams, setSearchParams] = useSearchParams()
+  const isDesktop = useMediaQuery('(min-width: 1024px)')
   const [district, setDistrict] = useState('')
+  const [viewMode, setViewMode] = useState<MayorDashboardViewMode>(() => isDesktop ? 'map' : 'list')
   const subsystem = readSubsystemFromParams(searchParams)
   const subsystemIncidents = incidents.filter((incident) => matchesSubsystemTab(incident, subsystem))
   const visibleIncidents = subsystemIncidents.filter((incident) => !district || incident.district === district)
@@ -49,7 +56,13 @@ export default function MayorDashboardPage() {
   const isTransportTab = isTransportSubsystemTab(subsystem)
   const isEducationTab = isEducationSubsystemTab(subsystem)
   const mapIncidents = visibleIncidents
+  const listIncidents = prioritizedIncidents
   const selectedTransportDistrict = searchParams.get('district') ?? ''
+  const primaryViewSummary = viewMode === 'map' ? 'Отображение на карте' : `${listIncidents.length} в списке`
+
+  useEffect(() => {
+    setViewMode(isDesktop ? 'map' : 'list')
+  }, [isDesktop])
 
   const handleSubsystemChange = (nextSubsystem: typeof subsystem) => {
     const nextParams = new URLSearchParams(searchParams)
@@ -194,12 +207,95 @@ export default function MayorDashboardPage() {
           <div className="grid gap-4 lg:grid-cols-12">
             <div className="lg:col-span-8">
               <Card>
-                <div className="mb-3 text-3xl font-bold">Карта территориальных проблем</div>
-                <MapView
-                  incidents={mapIncidents}
-                  overlapMode="stack"
-                  plannedTopByHousesLimit={isHeatTab ? 5 : undefined}
-                />
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="text-3xl font-bold">Территориальные события</div>
+                    <div className="mt-1 text-sm text-slate-500">{primaryViewSummary}</div>
+                  </div>
+                  <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('map')}
+                      aria-pressed={viewMode === 'map'}
+                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                        viewMode === 'map'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      Карта
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('list')}
+                      aria-pressed={viewMode === 'list'}
+                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                        viewMode === 'list'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      Список
+                    </button>
+                  </div>
+                </div>
+
+                {viewMode === 'map' ? (
+                  <MapView
+                    incidents={mapIncidents}
+                    overlapMode="stack"
+                    plannedTopByHousesLimit={isHeatTab ? 5 : undefined}
+                  />
+                ) : (
+                  <div data-testid="mayor-events-list" className="space-y-3">
+                    {listIncidents.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-slate-500">
+                        Нет событий для выбранных фильтров.
+                      </div>
+                    ) : (
+                      listIncidents.map((incident) => (
+                        <div
+                          key={incident.id}
+                          data-testid="mayor-events-list-item"
+                          className="rounded-xl border border-slate-200 p-4"
+                        >
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge
+                                text={
+                                  isHeatTab
+                                    ? getOutageKindLabel(
+                                        incident.liveMeta?.outageKind === 'emergency'
+                                          ? 'emergency'
+                                          : 'planned',
+                                        'singular',
+                                      )
+                                    : incident.severity
+                                }
+                                className={
+                                  isHeatTab
+                                    ? getOutageKindBadgeStyle(incident.liveMeta?.outageKind)
+                                    : severityStyles[incident.severity]
+                                }
+                              />
+                              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                {getDistrictName(incident.district)}
+                              </span>
+                            </div>
+                            <div className="text-sm text-slate-500">Статус: {incident.status}</div>
+                          </div>
+                          <div className="mt-3 text-xl font-bold text-slate-900">{incident.title}</div>
+                          <div className="mt-2 text-sm text-slate-600">{incident.summary}</div>
+                          <div className="mt-3 text-sm text-slate-500">
+                            {isHeatTab && incident.liveMeta
+                              ? `${utilityLabels[incident.liveMeta.utilityType]} · ${getOutageKindLabel(incident.liveMeta.outageKind, 'singular')} · население в зоне: ${incident.affectedPopulation}`
+                              : `Население в зоне: ${incident.affectedPopulation}`}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </Card>
             </div>
             <div className="space-y-3 lg:col-span-4">
@@ -221,7 +317,11 @@ export default function MayorDashboardPage() {
                               )
                             : incident.severity
                         }
-                        className="bg-red-50 text-red-700"
+                        className={
+                          isHeatTab
+                            ? getOutageKindBadgeStyle(incident.liveMeta?.outageKind)
+                            : severityStyles[incident.severity]
+                        }
                       />
                       <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                         {getDistrictName(incident.district)}

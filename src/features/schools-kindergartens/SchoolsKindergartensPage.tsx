@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Badge, Card, SectionTitle } from '../../components/ui'
+import { useMediaQuery } from '../../lib/useMediaQuery'
 import { EducationMap } from './components/EducationMap'
 import { hasInstitutionCoordinates } from './mapPresentation'
 import { buildEducationDistrictStats, filterEducationInstitutions, searchEducationInstitutions } from './selectors'
@@ -7,7 +8,10 @@ import type { EducationKindFilter, EducationSnapshot } from './types'
 
 const snapshotPath = '/education/novosibirsk-education-snapshot.json'
 
+type EducationPrimaryViewMode = 'map' | 'list'
+
 export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: boolean }) => {
+  const isDesktop = useMediaQuery('(min-width: 1024px)')
   const [snapshot, setSnapshot] = useState<EducationSnapshot>()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>()
@@ -16,6 +20,9 @@ export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: bool
   const [tableQuery, setTableQuery] = useState('')
   const [showCoverage, setShowCoverage] = useState(true)
   const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<EducationPrimaryViewMode>(() =>
+    embedded && !isDesktop ? 'list' : 'map',
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -58,12 +65,91 @@ export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: bool
   const districtCoverageCount = visibleDistrictStats.length
   const leadingDistrict = visibleDistrictStats[0]
   const selectedInstitution = visibleInstitutions.find((institution) => institution.id === selectedInstitutionId)
+  const primaryViewSummary = viewMode === 'map'
+    ? `На карте: ${visibleGeocoded.length} учреждений`
+    : `В списке: ${tableInstitutions.length} учреждений`
 
   useEffect(() => {
     if (selectedInstitutionId && !visibleInstitutions.some((institution) => institution.id === selectedInstitutionId)) {
       setSelectedInstitutionId(null)
     }
   }, [selectedInstitutionId, visibleInstitutions])
+
+  useEffect(() => {
+    if (!embedded) return
+    setViewMode(isDesktop ? 'map' : 'list')
+  }, [embedded, isDesktop])
+
+  const institutionsTable = (
+    <div data-testid="education-institution-list" className="space-y-3">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
+        <input
+          value={tableQuery}
+          onChange={(event) => setTableQuery(event.target.value)}
+          placeholder="Поиск по названию, району или адресу"
+          className="w-full rounded-xl border px-3 py-2 lg:max-w-md"
+        />
+      </div>
+      <div className="max-h-[560px] overflow-auto rounded-xl border">
+        <table className="min-w-full border-collapse text-sm">
+          <thead className="sticky top-0 bg-slate-50 text-left">
+            <tr>
+              <th className="border-b px-3 py-2">Тип</th>
+              <th className="border-b px-3 py-2">Название</th>
+              <th className="border-b px-3 py-2">Район</th>
+              <th className="border-b px-3 py-2">Адрес</th>
+              <th className="border-b px-3 py-2">Контакты</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tableInstitutions.map((institution) => (
+              <tr
+                key={institution.id}
+                data-testid="education-institution-list-item"
+                className={`cursor-pointer align-top odd:bg-white even:bg-slate-50/40 ${
+                  institution.id === selectedInstitutionId ? 'bg-blue-50/70' : ''
+                }`}
+                onClick={() => setSelectedInstitutionId(institution.id)}
+              >
+                <td className="border-b px-3 py-2">
+                  <Badge
+                    text={institution.kind === 'school' ? 'Школа' : 'Детсад'}
+                    className={institution.kind === 'school' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}
+                  />
+                </td>
+                <td className="border-b px-3 py-2 font-medium">{institution.name}</td>
+                <td className="border-b px-3 py-2 text-slate-600">{institution.district}</td>
+                <td className="border-b px-3 py-2 text-slate-600">
+                  <div>{institution.address}</div>
+                  {!hasInstitutionCoordinates(institution) && <div className="mt-1 text-xs text-red-600">Координаты не найдены</div>}
+                </td>
+                <td className="border-b px-3 py-2 text-slate-600">
+                  <div>{institution.phone ?? '—'}</div>
+                  {institution.site && (
+                    <a
+                      href={institution.site}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block text-blue-700 underline"
+                    >
+                      {institution.site}
+                    </a>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {tableInstitutions.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-3 py-6 text-center text-slate-500">
+                  Ничего не найдено по текущему поисковому запросу.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
 
   return (
     <div className="space-y-4">
@@ -123,22 +209,65 @@ export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: bool
           <div className="grid gap-4 lg:grid-cols-12">
             <div className="lg:col-span-8">
               <Card>
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <div className="text-3xl font-bold">Карта учреждений</div>
-                  <Badge text="школы" className="bg-blue-50 text-blue-700" />
-                  <Badge text="детские сады" className="bg-orange-50 text-orange-700" />
-                  {showCoverage && <Badge text="приближенные зоны покрытия" className="bg-emerald-50 text-emerald-700" />}
-                  <Badge text="кластеры по клику раскрываются" className="bg-slate-100 text-slate-700" />
+                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-2">
+                    <div className="text-3xl font-bold">
+                      {viewMode === 'map' ? 'Карта учреждений' : 'Список учреждений'}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge text="школы" className="bg-blue-50 text-blue-700" />
+                      <Badge text="детские сады" className="bg-orange-50 text-orange-700" />
+                      {viewMode === 'map' && showCoverage && <Badge text="приближенные зоны покрытия" className="bg-emerald-50 text-emerald-700" />}
+                      {viewMode === 'map' && <Badge text="кластеры по клику раскрываются" className="bg-slate-100 text-slate-700" />}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 sm:items-end">
+                    <div className="text-sm text-slate-500">{primaryViewSummary}</div>
+                    {embedded && (
+                      <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+                        <button
+                          type="button"
+                          onClick={() => setViewMode('map')}
+                          aria-pressed={viewMode === 'map'}
+                          className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                            viewMode === 'map'
+                              ? 'bg-white text-slate-900 shadow-sm'
+                              : 'text-slate-500 hover:text-slate-700'
+                          }`}
+                        >
+                          Карта
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setViewMode('list')}
+                          aria-pressed={viewMode === 'list'}
+                          className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                            viewMode === 'list'
+                              ? 'bg-white text-slate-900 shadow-sm'
+                              : 'text-slate-500 hover:text-slate-700'
+                          }`}
+                        >
+                          Список
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="mb-3 text-sm text-slate-500">
-                  На дальнем масштабе точки объединяются в кластеры. Подписи показываются выборочно и без критических наложений, а выбранное учреждение подсвечивается.
-                </div>
-                <EducationMap
-                  institutions={visibleGeocoded}
-                  showCoverage={showCoverage}
-                  selectedInstitutionId={selectedInstitutionId}
-                  onSelectInstitution={setSelectedInstitutionId}
-                />
+                {viewMode === 'map' ? (
+                  <>
+                    <div className="mb-3 text-sm text-slate-500">
+                      На дальнем масштабе точки объединяются в кластеры. Подписи показываются выборочно и без критических наложений, а выбранное учреждение подсвечивается.
+                    </div>
+                    <EducationMap
+                      institutions={visibleGeocoded}
+                      showCoverage={showCoverage}
+                      selectedInstitutionId={selectedInstitutionId}
+                      onSelectInstitution={setSelectedInstitutionId}
+                    />
+                  </>
+                ) : (
+                  institutionsTable
+                )}
               </Card>
             </div>
 
@@ -174,7 +303,9 @@ export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: bool
                   </div>
                 ) : (
                   <div className="text-sm text-slate-500">
-                    Кликните по точке на карте, чтобы увидеть карточку учреждения. Клик по кластеру приблизит карту к плотной зоне.
+                    {viewMode === 'map'
+                      ? 'Кликните по точке на карте, чтобы увидеть карточку учреждения. Клик по кластеру приблизит карту к плотной зоне.'
+                      : 'Выберите учреждение в списке, чтобы увидеть карточку с адресом, контактами и параметрами.'}
                   </div>
                 )}
               </Card>
@@ -201,63 +332,12 @@ export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: bool
             </div>
           </div>
 
-          <Card>
-            <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="text-3xl font-bold">Все учреждения</div>
-              <input
-                value={tableQuery}
-                onChange={(event) => setTableQuery(event.target.value)}
-                placeholder="Поиск по названию, району или адресу"
-                className="w-full rounded-xl border px-3 py-2 lg:max-w-md"
-              />
-            </div>
-            <div className="max-h-[560px] overflow-auto rounded-xl border">
-              <table className="min-w-full border-collapse text-sm">
-                <thead className="sticky top-0 bg-slate-50 text-left">
-                  <tr>
-                    <th className="border-b px-3 py-2">Тип</th>
-                    <th className="border-b px-3 py-2">Название</th>
-                    <th className="border-b px-3 py-2">Район</th>
-                    <th className="border-b px-3 py-2">Адрес</th>
-                    <th className="border-b px-3 py-2">Контакты</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableInstitutions.map((institution) => (
-                    <tr
-                      key={institution.id}
-                      className={`cursor-pointer align-top odd:bg-white even:bg-slate-50/40 ${institution.id === selectedInstitutionId ? 'bg-blue-50/70' : ''}`}
-                      onClick={() => setSelectedInstitutionId(institution.id)}
-                    >
-                      <td className="border-b px-3 py-2">
-                        <Badge
-                          text={institution.kind === 'school' ? 'Школа' : 'Детсад'}
-                          className={institution.kind === 'school' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}
-                        />
-                      </td>
-                      <td className="border-b px-3 py-2 font-medium">{institution.name}</td>
-                      <td className="border-b px-3 py-2 text-slate-600">{institution.district}</td>
-                      <td className="border-b px-3 py-2 text-slate-600">
-                        <div>{institution.address}</div>
-                        {!institution.coordinates && <div className="mt-1 text-xs text-red-600">Координаты не найдены</div>}
-                      </td>
-                      <td className="border-b px-3 py-2 text-slate-600">
-                        <div>{institution.phone ?? '—'}</div>
-                        {institution.site && <a href={institution.site} target="_blank" rel="noreferrer" className="block text-blue-700 underline">{institution.site}</a>}
-                      </td>
-                    </tr>
-                  ))}
-                  {tableInstitutions.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-3 py-6 text-center text-slate-500">
-                        Ничего не найдено по текущему поисковому запросу.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+          {!embedded && (
+            <Card>
+              <div className="mb-3 text-3xl font-bold">Все учреждения</div>
+              {institutionsTable}
+            </Card>
+          )}
         </>
       )}
     </div>

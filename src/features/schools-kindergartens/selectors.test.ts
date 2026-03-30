@@ -67,6 +67,24 @@ describe('schools-kindergartens selectors', () => {
     ])
   })
 
+  it('ignores out-of-bounds coordinates in geocoded counts', () => {
+    const institutions: EducationInstitution[] = [
+      { ...baseInstitution, id: 'school-1', district: 'Центральный район', coordinates: [55.460804, 78.293458] },
+      { ...baseInstitution, id: 'kg-1', kind: 'kindergarten', district: 'Центральный район', capacity: 120, coordinates: [55.027, 82.927] },
+    ]
+
+    expect(buildEducationDistrictStats(institutions)).toEqual([
+      {
+        district: 'Центральный район',
+        total: 2,
+        schoolCount: 1,
+        kindergartenCount: 1,
+        kindergartenCapacity: 120,
+        geocodedCount: 1,
+      },
+    ])
+  })
+
   it('searches institutions by name, district and address', () => {
     const institutions: EducationInstitution[] = [
       { ...baseInstitution, id: 'school-1', name: 'Школа №1', district: 'Советский район', address: 'улица Академическая, 1, Советский район, Новосибирск' },

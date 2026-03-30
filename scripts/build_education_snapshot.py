@@ -24,6 +24,12 @@ CACHE_PATH = Path("/tmp/novosibirsk-education-geocode-cache.json")
 GEOCODER_URL = "https://nominatim.openstreetmap.org/search"
 USER_AGENT = "pilot-stand-sigma/education-snapshot (https://github.com/vadign/pilot-stand-sigma)"
 REQUEST_DELAY_SECONDS = 1.0
+NOVOSIBIRSK_COORDINATE_BOUNDS = {
+    "min_lat": 54.75,
+    "max_lat": 55.25,
+    "min_lon": 82.75,
+    "max_lon": 83.2,
+}
 
 STREET_TYPE_SUFFIXES = {
     "улица": "улица",
@@ -112,13 +118,22 @@ def to_int(value: str) -> int | None:
     return int(digits) if digits else None
 
 
-def load_cache() -> dict[str, dict[str, float]]:
+def is_within_novosibirsk_bounds(point: dict[str, float] | None) -> bool:
+    if point is None:
+        return False
+    return (
+        NOVOSIBIRSK_COORDINATE_BOUNDS["min_lat"] <= point["lat"] <= NOVOSIBIRSK_COORDINATE_BOUNDS["max_lat"]
+        and NOVOSIBIRSK_COORDINATE_BOUNDS["min_lon"] <= point["lon"] <= NOVOSIBIRSK_COORDINATE_BOUNDS["max_lon"]
+    )
+
+
+def load_cache() -> dict[str, dict[str, float] | None]:
     if not CACHE_PATH.exists():
         return {}
     return json.loads(CACHE_PATH.read_text("utf-8"))
 
 
-def save_cache(cache: dict[str, dict[str, float]]) -> None:
+def save_cache(cache: dict[str, dict[str, float] | None]) -> None:
     CACHE_PATH.write_text(json.dumps(cache, ensure_ascii=False, indent=2), "utf-8")
 
 
@@ -165,7 +180,7 @@ def build_geocode_queries(street: str, house: str, district: str) -> Iterable[di
     }
 
 
-def geocode_address(street: str, house: str, district: str, cache: dict[str, dict[str, float]]) -> dict[str, float] | None:
+def geocode_address(street: str, house: str, district: str, cache: dict[str, dict[str, float] | None]) -> dict[str, float] | None:
     cache_key = json.dumps([street, house, district], ensure_ascii=False)
     if cache_key in MANUAL_COORDINATE_OVERRIDES:
         point = MANUAL_COORDINATE_OVERRIDES[cache_key]
@@ -173,7 +188,13 @@ def geocode_address(street: str, house: str, district: str, cache: dict[str, dic
         save_cache(cache)
         return point
     if cache_key in cache:
-        return cache[cache_key]
+        cached_point = cache[cache_key]
+        if is_within_novosibirsk_bounds(cached_point):
+            return cached_point
+        if cached_point is None:
+            return None
+        del cache[cache_key]
+        save_cache(cache)
 
     for params in build_geocode_queries(street, house, district):
         url = f"{GEOCODER_URL}?{urllib.parse.urlencode(params)}"
@@ -185,6 +206,9 @@ def geocode_address(street: str, house: str, district: str, cache: dict[str, dic
                 "lat": round(float(payload[0]["lat"]), 6),
                 "lon": round(float(payload[0]["lon"]), 6),
             }
+            if not is_within_novosibirsk_bounds(point):
+                time.sleep(REQUEST_DELAY_SECONDS)
+                continue
             cache[cache_key] = point
             save_cache(cache)
             time.sleep(REQUEST_DELAY_SECONDS)

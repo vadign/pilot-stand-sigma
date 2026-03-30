@@ -16,6 +16,7 @@ import {
   transportModeByRouteType,
 } from './queryState'
 import {
+  getTransportDistrictLabel,
   selectDistrictConnectivity,
   selectFilteredStops,
   selectGlobalTransportMetrics,
@@ -98,6 +99,11 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
       })),
     [liveRoutes],
   )
+  const primaryViewSummary = filters.route
+    ? `Сейчас на карте: маршрут № ${filters.route}`
+    : filters.district
+      ? `Сейчас на карте: район ${getTransportDistrictLabel(filters.district)}`
+      : 'Сейчас на карте: весь город'
 
   return (
     <div className="space-y-4">
@@ -122,20 +128,14 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.95fr)]">
             <div className="space-y-4">
               <Card>
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">
-                      Яндекс.Карта
+                      Транспортный контур
                     </div>
                     <div className="text-2xl font-bold">Карта общественного транспорта</div>
                   </div>
-                  <div className="text-sm text-slate-500">
-                    {filters.route
-                      ? `Сейчас на карте: маршрут № ${filters.route}`
-                      : filters.district
-                        ? `Сейчас на карте: район ${filters.district}`
-                        : 'Сейчас на карте: весь город'}
-                  </div>
+                  <div className="text-sm text-slate-500">{primaryViewSummary}</div>
                 </div>
                 <TransportMap
                   stops={visibleStopsForMap}
