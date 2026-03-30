@@ -26,21 +26,42 @@ describe('App smoke render', () => {
   ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
   let container: HTMLDivElement
 
+  const renderApp = async (initialEntries: string[]) => {
+    const root = createRoot(container)
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={initialEntries}>
+          <App />
+        </MemoryRouter>,
+      )
+    })
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    return root
+  }
+
+  const waitForText = async (text: string) => {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      if (container.textContent?.includes(text)) return
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
+    }
+  }
+
   beforeEach(() => {
     container = document.createElement('div')
     document.body.appendChild(container)
   })
 
   it('renders mayor dashboard route without crashing to a blank screen', async () => {
-    const root = createRoot(container)
-
-    await act(async () => {
-      root.render(
-        <MemoryRouter initialEntries={['/mayor-dashboard']}>
-          <App />
-        </MemoryRouter>,
-      )
-    })
+    const root = await renderApp(['/mayor-dashboard'])
+    await waitForText('ЖКХ и энергетика под управлением оперативных источников')
 
     expect(container.textContent).toContain('ЖКХ и энергетика под управлением оперативных источников')
 
@@ -50,15 +71,8 @@ describe('App smoke render', () => {
   })
 
   it('redirects legacy public transport route into mayor dashboard transport tab', async () => {
-    const root = createRoot(container)
-
-    await act(async () => {
-      root.render(
-        <MemoryRouter initialEntries={['/public-transport?route=36']}>
-          <App />
-        </MemoryRouter>,
-      )
-    })
+    const root = await renderApp(['/public-transport?route=36'])
+    await waitForText('Общественный транспорт в управленческом контуре мэра')
 
     expect(container.textContent).toContain('Общественный транспорт в управленческом контуре мэра')
     expect(container.textContent).toContain('embedded transport')
@@ -71,15 +85,8 @@ describe('App smoke render', () => {
   })
 
   it('defaults transport mode and route when opening transport from mayor dashboard button', async () => {
-    const root = createRoot(container)
-
-    await act(async () => {
-      root.render(
-        <MemoryRouter initialEntries={['/mayor-dashboard']}>
-          <App />
-        </MemoryRouter>,
-      )
-    })
+    const root = await renderApp(['/mayor-dashboard'])
+    await waitForText('ЖКХ и энергетика под управлением оперативных источников')
 
     const transportButton = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('Общественный транспорт'))
     expect(transportButton).toBeTruthy()
@@ -99,15 +106,8 @@ describe('App smoke render', () => {
   })
 
   it('does not force a transport mode or route when opening mayor dashboard transport tab', async () => {
-    const root = createRoot(container)
-
-    await act(async () => {
-      root.render(
-        <MemoryRouter initialEntries={['/mayor-dashboard?subsystem=transport']}>
-          <App />
-        </MemoryRouter>,
-      )
-    })
+    const root = await renderApp(['/mayor-dashboard?subsystem=transport'])
+    await waitForText('Общественный транспорт в управленческом контуре мэра')
 
     expect(container.textContent).toContain('Общественный транспорт в управленческом контуре мэра')
     expect(container.textContent).toContain('embedded transport')
