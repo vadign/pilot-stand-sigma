@@ -1,4 +1,3 @@
-import { getDistrictAnswerName } from '../../lib/districts'
 import { getOutageKindLabel } from '../../live/outageKindLabels'
 import { defaultTransportFares, defaultTransportStops } from '../public-transport/data/defaultTransportData'
 import { getTransportDistrictLabel, selectCurrentFareCards, selectDistrictConnectivity, selectFilteredStops, selectGlobalTransportMetrics, selectRouteDetails, selectSelectedDistrictSummary, selectStopsForRoute } from '../public-transport/selectors'
@@ -6,20 +5,7 @@ import type { AskSigmaPlan, AskSigmaResult, SigmaRole } from './types'
 import type { AskSigmaProvider } from './provider'
 import { supportedQuestions } from './suggestedQuestions'
 import { buildPublicTransportLink, detectRouteFromText, detectTransportDistrictFilters, detectTransportMode, formatTransportDistrictLabel } from './transportQuery'
-
-const getRequestedDistrict = (plan: AskSigmaPlan): string | undefined => String(plan.filters?.district ?? '').trim() || undefined
-const matchesDistrict = (district: string | undefined, incidentDistrict: string): boolean => !district || incidentDistrict === district
-const formatDistrictLabel = (district?: string): string => district ? `по району «${getDistrictAnswerName(district)}»` : ''
-const matchesSubsystem = (incidentSubsystem: string, subsystem: string | undefined): boolean => {
-  if (!subsystem) return true
-  if (subsystem === 'energy') return incidentSubsystem === 'heat' || incidentSubsystem === 'utilities'
-  return incidentSubsystem.includes(subsystem.slice(0, 4))
-}
-const matchesRegulationSubsystem = (linkedIncidentTypes: string[], subsystem: string | undefined): boolean => {
-  if (!subsystem) return true
-  if (subsystem === 'energy') return linkedIncidentTypes.some((type) => type === 'heat' || type === 'utilities')
-  return linkedIncidentTypes.some((type) => type.includes(subsystem.slice(0, 4)))
-}
+import { buildExplainBase, formatIncidentDistrictLabel, getRequestedDistrict, matchesDistrict, matchesIncidentSubsystem, matchesRegulationSubsystem } from './executionHelpers'
 
 const getTransportData = (provider: AskSigmaProvider) => {
   const context = provider.getContext()
@@ -43,8 +29,7 @@ export const executePlan = (
 ): AskSigmaResult => {
   const context = provider.getContext()
   const sourceStatuses = context.sourceStatuses ?? []
-  const primaryStatus = sourceStatuses[0]
-  const explainBase = { source: primaryStatus?.title ?? 'Sigma Zustand Store', updatedAt: primaryStatus?.updatedAt ?? context.now, dataType: primaryStatus?.type ?? 'calculated' as const }
+  const explainBase = buildExplainBase(context)
 
   switch (plan.operation) {
     case 'NAVIGATE':
@@ -53,7 +38,7 @@ export const executePlan = (
       const district = getRequestedDistrict(plan)
       const scopedIncidents = context.incidents.filter((incident) => matchesDistrict(district, incident.district))
       const liveIncidents = scopedIncidents.filter((incident) => incident.id.startsWith('051-'))
-      const districtLabel = formatDistrictLabel(district)
+      const districtLabel = formatIncidentDistrictLabel(district)
       return {
         type: 'SUMMARY',
         title: 'Оперативная обстановка по ЖКХ',
@@ -84,14 +69,14 @@ export const executePlan = (
       const filtered = context.incidents
         .filter((incident) => matchesDistrict(district, incident.district))
         .filter((incident) => !outageKind || (incident.id.startsWith('051-') && String((incident as { liveMeta?: { outageKind?: string } }).liveMeta?.outageKind) === outageKind))
-        .filter((incident) => matchesSubsystem(incident.subsystem, subsystem || undefined))
+        .filter((incident) => matchesIncidentSubsystem(incident.subsystem, subsystem || undefined))
         .filter((incident) => !severity || incident.severity === severity)
         .slice(0, 6)
       return {
         type: 'INCIDENT_LIST',
         title: 'Найденные отключения',
         incidents: filtered,
-        summary: `Найдено ${filtered.length} событий ${district ? formatDistrictLabel(district) : 'по городу'}.`,
+        summary: `Найдено ${filtered.length} событий ${district ? formatIncidentDistrictLabel(district) : 'по городу'}.`,
         actions: [{ label: 'Открыть монитор', route: '/operations', district }],
         explain: { ...explainBase, dataType: filtered.some((incident) => incident.id.startsWith('051-')) ? 'real' : 'mock-fallback' },
       }
