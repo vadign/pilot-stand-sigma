@@ -6,6 +6,25 @@ import { createNskgortransProxy } from './src/features/public-transport/server/n
 
 const nskgortransProxy = createNskgortransProxy()
 
+const reactRefreshPreamblePlugin = (): Plugin => ({
+  name: 'sigma-react-refresh-preamble',
+  apply: 'serve',
+  transformIndexHtml() {
+    return [{
+      tag: 'script',
+      attrs: { type: 'module' },
+      children: [
+        `import RefreshRuntime from '/@react-refresh'`,
+        'RefreshRuntime.injectIntoGlobalHook(window)',
+        'window.$RefreshReg$ = () => {}',
+        'window.$RefreshSig$ = () => (type) => type',
+        'window.__vite_plugin_react_preamble_installed__ = true',
+      ].join(';'),
+      injectTo: 'head-prepend',
+    }]
+  },
+})
+
 const handleVehiclesRequest = (req: IncomingMessage, res: ServerResponse, next: () => void) => {
   if (!req.url) {
     next()
@@ -59,7 +78,7 @@ const transportVehiclesApiPlugin = (): Plugin => ({
 })
 
 export default defineConfig({
-  plugins: [react(), transportVehiclesApiPlugin()],
+  plugins: [react(), reactRefreshPreamblePlugin(), transportVehiclesApiPlugin()],
   test: {
     environment: 'jsdom',
     globals: true,

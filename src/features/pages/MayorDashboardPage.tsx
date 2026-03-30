@@ -6,9 +6,11 @@ import { getDistrictName } from '../../lib/districts'
 import { getOutageKindLabel } from '../../live/outageKindLabels'
 import { PublicTransportPage } from '../public-transport'
 import { applyMayorTransportParams } from '../public-transport/navigation'
+import { SchoolsKindergartensPage } from '../schools-kindergartens'
 import {
   buildIncidentDistrictCards,
   buildStatusCards,
+  isEducationSubsystemTab,
   isHeatSubsystemTab,
   isTransportSubsystemTab,
   matchesSubsystemTab,
@@ -45,6 +47,7 @@ export default function MayorDashboardPage() {
   const selectedSubsystemMeta = subsystemTabDescriptions[subsystem]
   const isHeatTab = isHeatSubsystemTab(subsystem)
   const isTransportTab = isTransportSubsystemTab(subsystem)
+  const isEducationTab = isEducationSubsystemTab(subsystem)
   const mapIncidents = visibleIncidents
   const selectedTransportDistrict = searchParams.get('district') ?? ''
 
@@ -72,7 +75,7 @@ export default function MayorDashboardPage() {
       <Card>
         <div className="flex flex-col gap-3">
           <SubsystemTabs value={subsystem} onChange={handleSubsystemChange} />
-          {!isTransportTab ? (
+          {!isTransportTab && !isEducationTab ? (
             <div className="flex flex-wrap gap-2">
               <select
                 className="rounded-xl border px-3 py-2"
@@ -87,7 +90,7 @@ export default function MayorDashboardPage() {
                 ))}
               </select>
             </div>
-          ) : (
+          ) : isTransportTab ? (
             <div className="flex flex-wrap gap-2">
               <select
                 className="rounded-xl border px-3 py-2"
@@ -107,7 +110,8 @@ export default function MayorDashboardPage() {
                 ))}
               </select>
             </div>
-          )}
+          ) : null
+          }
         </div>
       </Card>
 
@@ -126,6 +130,8 @@ export default function MayorDashboardPage() {
 
       {isTransportTab ? (
         <PublicTransportPage embedded />
+      ) : isEducationTab ? (
+        <SchoolsKindergartensPage embedded />
       ) : (
         <>
           {isHeatTab ? (

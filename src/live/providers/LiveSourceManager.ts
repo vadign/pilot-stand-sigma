@@ -12,6 +12,15 @@ interface ManagerOptions {
   runtimeEnabled: boolean
 }
 
+interface CachedOutagesPayload {
+  snapshot: Power051Snapshot
+  incidents: SigmaLiveOutageIncident[]
+  summary: LiveBundle['outages']['payload']['summary']
+  history: Power051Snapshot[]
+}
+
+type CachedOutagesReadResult = { entry?: { payload: CachedOutagesPayload; fetchedAt: string; sourceUrl: string }; fresh: boolean }
+
 const createCacheEntry = <T,>(key: string, payload: T, ttlMinutes: number, sourceUrl: string) => ({
   key,
   payload,
@@ -72,50 +81,67 @@ export class LiveSourceManager {
     }
 
     if (mode !== 'mock' && snapshot.latest) {
-      const current = snapshot.latest
-      return {
-        payload: {
-          snapshot: current,
-          incidents: normalize051ToSigmaIncidents(current),
-          summary: summarize051Snapshot(current, previousSnapshot),
-          history: snapshot.history,
-        },
-        meta: {
-          source: 'snapshot',
-          type: 'real',
-          fetchedAt: current.fetchedAt,
-          updatedAt: current.snapshotAt,
-          sourceUrl: current.sourceUrl,
-          status: 'ready',
-          message: 'Показан последний локальный snapshot 051.',
-        },
-      }
+      return this.buildSnapshotResult(snapshot.latest, snapshot.history, previousSnapshot)
     }
 
-    const cache = await this.cacheProvider.read<{ snapshot: Power051Snapshot; incidents: SigmaLiveOutageIncident[]; summary: LiveBundle['outages']['payload']['summary']; history: Power051Snapshot[] }>('051')
-    if (mode !== 'mock' && cache.entry) {
-      return {
-        payload: cache.entry.payload,
-        meta: {
-          source: 'cache',
-          type: cache.fresh ? 'real' : 'mock-fallback',
-          fetchedAt: cache.entry.fetchedAt,
-          updatedAt: cache.entry.payload.snapshot.snapshotAt,
-          sourceUrl: cache.entry.sourceUrl,
-          status: cache.fresh ? 'ready' : 'stale',
-          message: cache.fresh ? 'Показан кэшированный ответ 051.' : 'Показан устаревший кэш 051.',
-        },
-      }
+    const cache = await this.cacheProvider.read<CachedOutagesPayload>('051')
+    if (mode !== 'mock') {
+      const cacheResult = this.buildCacheResult(cache)
+      if (cacheResult) return cacheResult
     }
 
+    return this.buildMockResult()
+  }
+
+
+
+  private buildSnapshotResult(snapshot: Power051Snapshot, history: Power051Snapshot[], previousSnapshot?: Power051Snapshot): LiveBundle['outages'] {
+    return {
+      payload: {
+        snapshot,
+        incidents: normalize051ToSigmaIncidents(snapshot),
+        summary: summarize051Snapshot(snapshot, previousSnapshot),
+        history,
+      },
+      meta: {
+        source: 'snapshot',
+        type: 'real',
+        fetchedAt: snapshot.fetchedAt,
+        updatedAt: snapshot.snapshotAt,
+        sourceUrl: snapshot.sourceUrl,
+        status: 'ready',
+        message: 'Показан последний локальный snapshot 051.',
+      },
+    }
+  }
+
+  private buildCacheResult(cache: CachedOutagesReadResult): LiveBundle['outages'] | null {
+    if (!cache.entry) return null
+    return {
+      payload: cache.entry.payload,
+      meta: {
+        source: 'cache',
+        type: cache.fresh ? 'real' : 'mock-fallback',
+        fetchedAt: cache.entry.fetchedAt,
+        updatedAt: cache.entry.payload.snapshot.snapshotAt,
+        sourceUrl: cache.entry.sourceUrl,
+        status: cache.fresh ? 'ready' : 'stale',
+        message: cache.fresh ? 'Показан кэшированный ответ 051.' : 'Показан устаревший кэш 051.',
+      },
+    }
+  }
+
+  private buildMockResult(): LiveBundle['outages'] {
+    const now = new Date().toISOString()
     const mock = build051Snapshot({
       sourceUrl: sourceRegistry.power051.sourceUrl,
-      snapshotAt: new Date().toISOString(),
-      fetchedAt: new Date().toISOString(),
+      snapshotAt: now,
+      fetchedAt: now,
       parseVersion: PARSE_VERSION,
       planned: [],
       emergency: [],
     })
+
     return {
       payload: {
         snapshot: mock,

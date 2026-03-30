@@ -45,12 +45,13 @@ export const utilityLabels: Record<string, string> = {
 export const subsystemTabs = [
   { id: 'heat', title: 'Энергетика' },
   { id: 'transport', title: 'Общественный транспорт' },
+  { id: 'education', title: 'Школы и детские сады' },
   { id: 'roads', title: 'Дороги' },
   { id: 'noise', title: 'Шум' },
   { id: 'air', title: 'Воздух' },
 ] as const
 
-export const operationalSubsystemTabs = subsystemTabs.filter((tab) => tab.id !== 'transport')
+export const operationalSubsystemTabs = subsystemTabs.filter((tab) => tab.id !== 'transport' && tab.id !== 'education')
 
 export type SubsystemTabId = (typeof subsystemTabs)[number]['id']
 
@@ -74,6 +75,10 @@ export const subsystemTabDescriptions: Record<SubsystemTabId, { title: string; d
   transport: {
     title: 'Общественный транспорт в управленческом контуре мэра',
     description: 'Карта, маршруты, тарифы и связность районов в одном представлении для управленческого обзора.',
+  },
+  education: {
+    title: 'Школы и детские сады в городском контуре социальной инфраструктуры',
+    description: 'Реальные учреждения Новосибирска по официальным CSV: адреса, районная статистика и примерные зоны покрытия.',
   },
 }
 
@@ -102,12 +107,14 @@ export const transportDistrictOptions = selectTransportFilterOptions(defaultTran
 
 export const isHeatSubsystemTab = (tab: SubsystemTabId): boolean => tab === 'heat'
 export const isTransportSubsystemTab = (tab: SubsystemTabId): boolean => tab === 'transport'
+export const isEducationSubsystemTab = (tab: SubsystemTabId): boolean => tab === 'education'
 
 export const matchesSubsystemTab = (incident: LiveIncidentView, tab: SubsystemTabId): boolean => {
   if (tab === 'heat') {
     return incident.sourceKind === 'live' || incident.subsystem === 'heat' || incident.subsystem === 'utilities'
   }
   if (tab === 'transport') return false
+  if (tab === 'education') return false
   return incident.subsystem === tab
 }
 

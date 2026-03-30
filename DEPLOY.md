@@ -1,50 +1,54 @@
 # Server Deploy
 
-Этот проект сейчас корректно деплоится как long-running Node process через `systemd`.
-Причина простая: приложение не только отдает UI, но и:
+Базовый изолированный вариант для сервера теперь такой: `Docker` + `docker compose`.
+На хосте не нужны `node`, `npm` и `systemd`.
+
+Причина та же: приложение не только отдает UI, но и:
 
 - при старте делает `sync:live`;
 - потом повторяет sync по расписанию;
 - проксирует `/api/routes` и `/api/vehicles` для live-транспорта через Vite middleware.
 
-Из-за этого обычная схема `npm run build` + статический `nginx` без Node-процесса здесь не подходит.
+Из-за этого схема `npm run build` + просто раздача `dist` статикой не подходит.
 
 ## Что использовать
 
-- systemd unit: [`deploy/systemd/sigma.service`](/Users/vadign/pilot-stand-sigma/deploy/systemd/sigma.service)
-- nginx config: [`deploy/nginx/sigma.conf`](/Users/vadign/pilot-stand-sigma/deploy/nginx/sigma.conf)
-- server env example: [`deploy/sigma.env.example`](/Users/vadign/pilot-stand-sigma/deploy/sigma.env.example)
+- Docker image: [`Dockerfile`](/Users/vadign/pilot-stand-sigma/Dockerfile)
+- Compose stack: [`compose.yml`](/Users/vadign/pilot-stand-sigma/compose.yml)
+- app env example: [`deploy/docker/sigma.env.example`](/Users/vadign/pilot-stand-sigma/deploy/docker/sigma.env.example)
+- optional host nginx config: [`deploy/nginx/sigma.conf`](/Users/vadign/pilot-stand-sigma/deploy/nginx/sigma.conf)
+
+## Требования на сервере
+
+Нужны только:
+
+- `docker`
+- `docker compose`
+
+Проверка:
+
+```bash
+docker --version
+docker compose version
+```
 
 ## Быстрый запуск
 
 ### 1. Подготовить код
 
 ```bash
-sudo mkdir -p /opt
 cd /opt
-sudo git clone https://github.com/vadign/pilot-stand-sigma.git
-sudo chown -R $USER:$USER /opt/pilot-stand-sigma
+git clone https://github.com/vadign/pilot-stand-sigma.git
 cd /opt/pilot-stand-sigma
-npm ci
 ```
 
-### 2. Создать системного пользователя
+### 2. Подготовить env-файл для контейнера
 
 ```bash
-sudo useradd --system --create-home --shell /usr/sbin/nologin sigma
-sudo chown -R sigma:sigma /opt/pilot-stand-sigma
+cp deploy/docker/sigma.env.example deploy/docker/sigma.env
 ```
 
-### 3. Подготовить env-файл
-
-```bash
-sudo mkdir -p /etc/sigma
-sudo cp /opt/pilot-stand-sigma/deploy/sigma.env.example /etc/sigma/sigma.env
-sudo chown root:sigma /etc/sigma/sigma.env
-sudo chmod 640 /etc/sigma/sigma.env
-```
-
-Рекомендуемые значения:
+Минимально важные значения:
 
 ```env
 VITE_SOURCE_MODE=hybrid
@@ -54,56 +58,29 @@ SIGMA_SNAPSHOT_SYNC_INTERVAL_MS=3600000
 VITE_051_PORTAL_URL=https://map.novo-sibirsk.ru/portal/disconnections?t=
 ```
 
-### 4. Установить systemd unit
+Если нужен ключ Яндекс.Карт, добавь его в `VITE_YANDEX_MAPS_API_KEY`.
+
+### 3. Поднять контейнер
 
 ```bash
-sudo cp /opt/pilot-stand-sigma/deploy/systemd/sigma.service /etc/systemd/system/sigma.service
+docker compose up -d --build
 ```
 
-Если у тебя другой путь к проекту или другой пользователь, поправь в unit:
+По умолчанию compose поднимет один контейнер `app` с Node runtime внутри.
+Он публикуется наружу на `5173` порт.
 
-- `User=`
-- `Group=`
-- `WorkingDirectory=`
-
-### 5. Запустить сервис
+Если нужен другой внешний порт:
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now sigma
-sudo systemctl status sigma
+SIGMA_APP_PORT=8080 docker compose up -d --build
 ```
 
-Полезные команды:
+## Как это работает
+
+Контейнер `app` запускает:
 
 ```bash
-journalctl -u sigma -f
-systemctl restart sigma
-systemctl stop sigma
-```
-
-## Nginx
-
-Установи конфиг:
-
-```bash
-sudo cp /opt/pilot-stand-sigma/deploy/nginx/sigma.conf /etc/nginx/sites-available/sigma.conf
-sudo ln -sf /etc/nginx/sites-available/sigma.conf /etc/nginx/sites-enabled/sigma.conf
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-Перед этим при необходимости поправь в конфиге:
-
-- `server_name`
-- `proxy_pass`, если выберешь другой `SIGMA_PORT`
-
-## Как это работает после запуска
-
-Сервис стартует командой:
-
-```bash
-npm run dev -- --host 0.0.0.0 --port 5173
+node --import tsx scripts/dev.mts --host 0.0.0.0 --port 5173
 ```
 
 Это дает сразу три вещи:
@@ -112,16 +89,41 @@ npm run dev -- --host 0.0.0.0 --port 5173
 - повторный sync по расписанию;
 - HTTP-сервер приложения с транспортными `/api/*` endpoint'ами.
 
+## Полезные команды
+
+Статус:
+
+```bash
+docker compose ps
+```
+
+Логи приложения:
+
+```bash
+docker compose logs -f app
+```
+
+Перезапуск:
+
+```bash
+docker compose restart
+```
+
+Остановка:
+
+```bash
+docker compose down
+```
+
 ## Обновление приложения
 
 ```bash
 cd /opt/pilot-stand-sigma
 git pull
-npm ci
-sudo systemctl restart sigma
+docker compose up -d --build
 ```
 
-## Что проверить после деплоя
+## Что проверить после запуска
 
 Открыть в браузере:
 
@@ -129,6 +131,11 @@ sudo systemctl restart sigma
 - `/operations`
 - `/history`
 - `/public-transport`
+- `/mayor-dashboard?subsystem=education`
+
+То есть по умолчанию:
+
+- `http://server:5173/`
 
 Проверить ответы:
 
@@ -136,11 +143,37 @@ sudo systemctl restart sigma
 - `/live-data/051/latest.json`
 - `/api/routes`
 
-## Важное ограничение
+## Если у тебя уже есть свой nginx
 
-Если захочешь именно классический production-режим без Vite dev server, это уже отдельная задача.
-Тогда нужно выносить:
+Тогда ничего дополнительного в compose не нужно.
+Просто проксируй на опубликованный порт приложения:
 
-- планировщик sync в отдельный процесс;
-- `/api/routes` и `/api/vehicles` в отдельный backend/proxy;
-- раздачу UI в отдельный static server.
+- `http://127.0.0.1:5173`
+
+Готовый пример конфига уже есть в [`deploy/nginx/sigma.conf`](/Users/vadign/pilot-stand-sigma/deploy/nginx/sigma.conf).
+
+Если не хочешь светить порт наружу вообще, в [`compose.yml`](/Users/vadign/pilot-stand-sigma/compose.yml) можно заменить:
+
+```yaml
+ports:
+  - "${SIGMA_APP_PORT:-5173}:5173"
+```
+
+на:
+
+```yaml
+ports:
+  - "127.0.0.1:5173:5173"
+```
+
+Тогда приложение будет доступно только локально на хосте, а наружу его будет отдавать уже ваш `nginx`.
+
+## Альтернатива
+
+Старый вариант с host `systemd` и host `nginx` оставлен как запасной:
+
+- [`deploy/systemd/sigma.service`](/Users/vadign/pilot-stand-sigma/deploy/systemd/sigma.service)
+- [`deploy/nginx/sigma.conf`](/Users/vadign/pilot-stand-sigma/deploy/nginx/sigma.conf)
+- [`deploy/sigma.env.example`](/Users/vadign/pilot-stand-sigma/deploy/sigma.env.example)
+
+Но для изолированного деплоя его больше использовать не нужно.
