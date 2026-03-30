@@ -6,6 +6,7 @@ export const TransportMap = ({
   selectedStop,
   selectedDistrict,
   vehicles,
+  onSelectStop,
 }: {
   stops: TransitStop[]
   selectedStop?: TransitStop
@@ -20,6 +21,7 @@ export const TransportMap = ({
     selectedStop,
     selectedDistrict,
     vehicles,
+    onSelectStop,
   })
 
   return (

@@ -23,6 +23,7 @@ export default function OperationsPage() {
   const archiveIncident = useSigmaStore((state) => state.archiveIncident)
   const takeLiveIncident = useSigmaStore((state) => state.takeLiveIncident)
   const setSelectedIncident = useSigmaStore((state) => state.setSelectedIncident)
+  const selectedIncidentId = useSigmaStore((state) => state.selectedIncidentId)
   const [searchParams] = useSearchParams()
   const [subsystem, setSubsystem] = useState<SubsystemTabId>('heat')
   const [severity, setSeverity] = useState(searchParams.get('severity') ?? '')
@@ -186,6 +187,7 @@ export default function OperationsPage() {
             incidents={filtered}
             onPick={setSelectedIncident}
             plannedTopByHousesLimit={isHeatTab ? 5 : undefined}
+            selectedIncidentId={selectedIncidentId}
           />
           <div className="absolute bottom-3 left-3 right-3 rounded-2xl border border-red-200 bg-white p-3 shadow lg:bottom-5 lg:left-auto lg:right-5">
             <div className="font-bold text-red-600">

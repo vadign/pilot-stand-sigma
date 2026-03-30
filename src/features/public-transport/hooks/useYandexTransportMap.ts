@@ -1,23 +1,54 @@
 import { useEffect, useRef, useState } from 'react'
+import { selectVisibleMapLabelIds } from '../../../lib/mapLabelDeclutter'
+import { getModerateClusterZoom } from '../../../lib/mapClusterZoom'
 import { districts } from '../../../mocks/data'
 import type { TransitStop, TransportVehicle } from '../types'
+
+type YMapsEventManager = {
+  add: (eventName: string, handler: (event: { get: (key: string) => unknown }) => void) => void
+  remove: (eventName: string, handler: (event: { get: (key: string) => unknown }) => void) => void
+}
 
 type YMapsPlacemark = {
   geometry?: {
     setCoordinates: (coordinates: [number, number]) => void
   }
   properties: {
-    set: (key: string, value: string) => void
+    set: (key: string, value: unknown) => void
   }
+  events: YMapsEventManager
 }
+
+type YMapsClusterer = {
+  add: (geoObjects: YMapsPlacemark[] | YMapsPlacemark) => void
+  removeAll: () => void
+  events: YMapsEventManager
+}
+
+type YMapsGeoObject = YMapsPlacemark | YMapsClusterer
 
 type YMapsMap = {
   setCenter: (center: [number, number], zoom?: number, options?: { duration?: number }) => void
   destroy: () => void
+  events: YMapsEventManager
   geoObjects: {
-    add: (geoObject: YMapsPlacemark) => void
-    remove: (geoObject: YMapsPlacemark) => void
+    add: (geoObject: YMapsGeoObject) => void
+    remove: (geoObject: YMapsGeoObject) => void
   }
+}
+
+type PlacemarkOptions = {
+  preset?: string
+  iconColor?: string
+  openBalloonOnClick?: boolean
+  zIndex?: number
+}
+
+type PlacemarkProperties = {
+  hintContent?: string
+  balloonContentHeader?: string
+  balloonContentBody?: string
+  iconCaption?: string
 }
 
 type YMapsApi = {
@@ -29,14 +60,23 @@ type YMapsApi = {
   ) => YMapsMap
   Placemark: new (
     geometry: [number, number],
-    properties?: { hintContent?: string },
-    options?: { preset?: string },
+    properties?: PlacemarkProperties,
+    options?: PlacemarkOptions,
   ) => YMapsPlacemark
+  Clusterer: new (options?: Record<string, unknown>) => YMapsClusterer
 }
 
 const mapOptions: Record<string, unknown> & { yandexMapType: 'transit' } = {
   suppressMapOpenBlock: true,
   yandexMapType: 'transit',
+}
+
+const stopClustererOptions = {
+  groupByCoordinates: false,
+  gridSize: 100,
+  clusterDisableClickZoom: true,
+  clusterOpenBalloonOnClick: false,
+  preset: 'islands#invertedBlueClusterIcons',
 }
 
 const zoomOutForOverview = (zoom: number): number => Math.max(0, zoom - 2)
@@ -128,28 +168,72 @@ const loadYandexMapsApi = (): Promise<YMapsApi> => {
 const getYMapsApi = (): YMapsApi | undefined =>
   (window as unknown as Window & { ymaps?: YMapsApi }).ymaps
 
+const formatStopLabel = (stop: TransitStop): string =>
+  stop.name.length > 22 ? `${stop.name.slice(0, 21).trimEnd()}…` : stop.name
+
+const buildStopBalloonBody = (stop: TransitStop): string => [
+  `<div><b>Район:</b> ${stop.district}</div>`,
+  `<div><b>Улица:</b> ${stop.street || '—'}</div>`,
+  `<div><b>Павильон:</b> ${stop.hasPavilion ? 'есть' : 'нет'}</div>`,
+  `<div><b>Маршруты:</b> ${stop.routesParsed.map((route) => route.number).join(', ') || '—'}</div>`,
+].join('')
+
 export const useYandexTransportMap = ({
   stops,
   selectedStop,
   selectedDistrict,
   vehicles,
+  onSelectStop,
 }: {
   stops: TransitStop[]
   selectedStop?: TransitStop
   selectedDistrict?: string
   vehicles: TransportVehicle[]
+  onSelectStop: (stop: TransitStop) => void
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<YMapsMap | null>(null)
+  const stopClustererRef = useRef<YMapsClusterer | null>(null)
   const vehiclesRef = useRef<Map<string, YMapsPlacemark>>(new Map())
   const selectedStopRef = useRef<YMapsPlacemark | null>(null)
   const initialStateRef = useRef({ stops, selectedStop, selectedDistrict })
   const [loadError, setLoadError] = useState<string | null>(null)
   const [mapReady, setMapReady] = useState(false)
+  const [mapZoom, setMapZoom] = useState(
+    getMapState(initialStateRef.current.stops, initialStateRef.current.selectedDistrict, initialStateRef.current.selectedStop).zoom,
+  )
+  const mapZoomRef = useRef(mapZoom)
+
+  useEffect(() => {
+    mapZoomRef.current = mapZoom
+  }, [mapZoom])
 
   useEffect(() => {
     let cancelled = false
     const vehiclesMap = vehiclesRef.current
+    const handleBoundsChange = (event: { get: (key: string) => unknown }) => {
+      const nextZoom = event.get('newZoom')
+      if (typeof nextZoom === 'number') setMapZoom(nextZoom)
+    }
+    const handleClusterClick = (event: { get: (key: string) => unknown }) => {
+      const map = mapRef.current
+      if (!map) return
+
+      const rawCoords = event.get('coords')
+      const target = event.get('target') as { geometry?: { getCoordinates?: () => unknown } } | undefined
+      const targetCoords = target?.geometry?.getCoordinates?.()
+      const nextCenter = Array.isArray(rawCoords)
+        ? [Number(rawCoords[0]), Number(rawCoords[1])] as [number, number]
+        : Array.isArray(targetCoords)
+          ? [Number(targetCoords[0]), Number(targetCoords[1])] as [number, number]
+          : undefined
+      const nextZoom = getModerateClusterZoom(mapZoomRef.current)
+
+      if (nextCenter) {
+        map.setCenter(nextCenter, nextZoom, { duration: 250 })
+        setMapZoom(nextZoom)
+      }
+    }
 
     void loadYandexMapsApi()
       .then((api) => {
@@ -160,6 +244,10 @@ export const useYandexTransportMap = ({
           getMapState(initialState.stops, initialState.selectedDistrict, initialState.selectedStop),
           mapOptions,
         )
+        stopClustererRef.current = new api.Clusterer(stopClustererOptions)
+        mapRef.current.geoObjects.add(stopClustererRef.current)
+        mapRef.current.events.add('boundschange', handleBoundsChange)
+        stopClustererRef.current.events.add('click', handleClusterClick)
         setMapReady(true)
       })
       .catch(() => {
@@ -168,6 +256,8 @@ export const useYandexTransportMap = ({
 
     return () => {
       cancelled = true
+      mapRef.current?.events.remove('boundschange', handleBoundsChange)
+      stopClustererRef.current?.events.remove('click', handleClusterClick)
       for (const placemark of vehiclesMap.values()) {
         mapRef.current?.geoObjects.remove(placemark)
       }
@@ -176,8 +266,12 @@ export const useYandexTransportMap = ({
         mapRef.current?.geoObjects.remove(selectedStopRef.current)
         selectedStopRef.current = null
       }
+      if (stopClustererRef.current) {
+        stopClustererRef.current.removeAll()
+      }
       mapRef.current?.destroy()
       mapRef.current = null
+      stopClustererRef.current = null
     }
   }, [])
 
@@ -185,8 +279,91 @@ export const useYandexTransportMap = ({
     const map = mapRef.current
     if (!mapReady || !map) return
     const nextState = getMapState(stops, selectedDistrict, selectedStop)
+    setMapZoom(nextState.zoom)
     map.setCenter(nextState.center, nextState.zoom, { duration: 250 })
   }, [mapReady, selectedDistrict, selectedStop, stops])
+
+  useEffect(() => {
+    const clusterer = stopClustererRef.current
+    if (!mapReady || !clusterer) return
+
+    const ymapsApi = getYMapsApi()
+    if (!ymapsApi) return
+
+    const geocodedStops = stops.filter(hasCoordinates).filter((stop) => stop.id !== selectedStop?.id)
+    const visibleLabelIds = selectVisibleMapLabelIds(geocodedStops, mapZoom, {
+      minZoom: 13,
+      getPriority: (stop) => stop.routesParsed.length,
+    })
+
+    clusterer.removeAll()
+
+    const stopPlacemarks = geocodedStops.map((stop) => {
+      const placemark = new ymapsApi.Placemark(
+        stop.coordinates,
+        {
+          hintContent: stop.name,
+          balloonContentHeader: stop.name,
+          balloonContentBody: buildStopBalloonBody(stop),
+          iconCaption: visibleLabelIds.has(stop.id) ? formatStopLabel(stop) : '',
+        },
+        {
+          preset: stop.hasPavilion ? 'islands#darkBlueCircleDotIcon' : 'islands#blueCircleDotIcon',
+          iconColor: stop.hasPavilion ? '#1d4ed8' : '#3b82f6',
+          openBalloonOnClick: false,
+          zIndex: 1200,
+        },
+      )
+
+      placemark.events.add('click', () => onSelectStop(stop))
+      return placemark
+    })
+
+    if (stopPlacemarks.length > 0) clusterer.add(stopPlacemarks)
+  }, [mapReady, mapZoom, onSelectStop, selectedStop?.id, stops])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!mapReady || !map) return
+
+    if (!selectedStop?.coordinates) {
+      if (selectedStopRef.current) {
+        map.geoObjects.remove(selectedStopRef.current)
+        selectedStopRef.current = null
+      }
+      return
+    }
+
+    const ymapsApi = getYMapsApi()
+    if (!ymapsApi) return
+
+    if (!selectedStopRef.current) {
+      selectedStopRef.current = new ymapsApi.Placemark(
+        selectedStop.coordinates,
+        {
+          hintContent: selectedStop.name,
+          balloonContentHeader: selectedStop.name,
+          balloonContentBody: buildStopBalloonBody(selectedStop),
+          iconCaption: formatStopLabel(selectedStop),
+        },
+        {
+          preset: 'islands#redCircleIcon',
+          iconColor: '#dc2626',
+          openBalloonOnClick: false,
+          zIndex: 2800,
+        },
+      )
+      selectedStopRef.current.events.add('click', () => onSelectStop(selectedStop))
+      map.geoObjects.add(selectedStopRef.current)
+      return
+    }
+
+    selectedStopRef.current.geometry?.setCoordinates(selectedStop.coordinates)
+    selectedStopRef.current.properties.set('hintContent', selectedStop.name)
+    selectedStopRef.current.properties.set('balloonContentHeader', selectedStop.name)
+    selectedStopRef.current.properties.set('balloonContentBody', buildStopBalloonBody(selectedStop))
+    selectedStopRef.current.properties.set('iconCaption', formatStopLabel(selectedStop))
+  }, [mapReady, onSelectStop, selectedStop])
 
   useEffect(() => {
     const map = mapRef.current
@@ -206,7 +383,7 @@ export const useYandexTransportMap = ({
         const placemark = new ymapsApi.Placemark(
           coordinates,
           { hintContent: `Маршрут ${vehicle.route}` },
-          { preset: 'islands#blueCircleDotIcon' },
+          { preset: 'islands#orangeCircleDotIcon', iconColor: '#ea580c', zIndex: 2200 },
         )
         vehiclesRef.current.set(vehicle.id, placemark)
         map.geoObjects.add(placemark)
@@ -223,35 +400,6 @@ export const useYandexTransportMap = ({
       vehiclesRef.current.delete(id)
     }
   }, [mapReady, vehicles])
-
-  useEffect(() => {
-    const map = mapRef.current
-    if (!mapReady || !map) return
-
-    if (!selectedStop?.coordinates) {
-      if (selectedStopRef.current) {
-        map.geoObjects.remove(selectedStopRef.current)
-        selectedStopRef.current = null
-      }
-      return
-    }
-
-    if (!selectedStopRef.current) {
-      const ymapsApi = getYMapsApi()
-      if (!ymapsApi) return
-
-      selectedStopRef.current = new ymapsApi.Placemark(
-        selectedStop.coordinates,
-        { hintContent: selectedStop.name },
-        { preset: 'islands#redCircleDotIcon' },
-      )
-      map.geoObjects.add(selectedStopRef.current)
-      return
-    }
-
-    selectedStopRef.current.geometry?.setCoordinates(selectedStop.coordinates)
-    selectedStopRef.current.properties.set('hintContent', selectedStop.name)
-  }, [mapReady, selectedStop])
 
   return { containerRef, loadError }
 }

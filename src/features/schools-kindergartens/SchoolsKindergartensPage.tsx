@@ -1,30 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Circle, Map, Placemark, YMaps } from '@pbe/react-yandex-maps'
 import { Badge, Card, SectionTitle } from '../../components/ui'
+import { EducationMap } from './components/EducationMap'
+import { hasInstitutionCoordinates } from './mapPresentation'
 import { buildEducationDistrictStats, filterEducationInstitutions, searchEducationInstitutions } from './selectors'
-import type { EducationInstitution, EducationKindFilter, EducationSnapshot } from './types'
+import type { EducationKindFilter, EducationSnapshot } from './types'
 
 const snapshotPath = '/education/novosibirsk-education-snapshot.json'
-const markerColorByKind = {
-  school: '#2563eb',
-  kindergarten: '#f97316',
-} as const
-const fillColorByKind = {
-  school: 'rgba(37, 99, 235, 0.08)',
-  kindergarten: 'rgba(249, 115, 22, 0.10)',
-} as const
-const coverageRadiusMetersByKind = {
-  school: 900,
-  kindergarten: 500,
-} as const
-const novosibirskOverviewMapState = {
-  center: [55.03, 82.98] as [number, number],
-  zoom: 8,
-} as const
-
-const hasCoordinates = (
-  institution: EducationInstitution,
-): institution is EducationInstitution & { coordinates: [number, number] } => Array.isArray(institution.coordinates)
 
 export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: boolean }) => {
   const [snapshot, setSnapshot] = useState<EducationSnapshot>()
@@ -34,6 +15,7 @@ export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: bool
   const [kind, setKind] = useState<EducationKindFilter>('all')
   const [tableQuery, setTableQuery] = useState('')
   const [showCoverage, setShowCoverage] = useState(true)
+  const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -69,12 +51,19 @@ export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: bool
   , [tableQuery, visibleInstitutions])
   const districtStats = useMemo(() => buildEducationDistrictStats(snapshot?.institutions ?? []), [snapshot?.institutions])
   const visibleDistrictStats = useMemo(() => buildEducationDistrictStats(visibleInstitutions), [visibleInstitutions])
-  const visibleGeocoded = useMemo(() => visibleInstitutions.filter(hasCoordinates), [visibleInstitutions])
+  const visibleGeocoded = useMemo(() => visibleInstitutions.filter(hasInstitutionCoordinates), [visibleInstitutions])
   const totalSchools = visibleInstitutions.filter((item) => item.kind === 'school').length
   const totalKindergartens = visibleInstitutions.filter((item) => item.kind === 'kindergarten').length
   const districtOptions = snapshot?.districts ?? []
   const districtCoverageCount = visibleDistrictStats.length
   const leadingDistrict = visibleDistrictStats[0]
+  const selectedInstitution = visibleInstitutions.find((institution) => institution.id === selectedInstitutionId)
+
+  useEffect(() => {
+    if (selectedInstitutionId && !visibleInstitutions.some((institution) => institution.id === selectedInstitutionId)) {
+      setSelectedInstitutionId(null)
+    }
+  }, [selectedInstitutionId, visibleInstitutions])
 
   return (
     <div className="space-y-4">
@@ -139,47 +128,57 @@ export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: bool
                   <Badge text="школы" className="bg-blue-50 text-blue-700" />
                   <Badge text="детские сады" className="bg-orange-50 text-orange-700" />
                   {showCoverage && <Badge text="приближенные зоны покрытия" className="bg-emerald-50 text-emerald-700" />}
+                  <Badge text="кластеры по клику раскрываются" className="bg-slate-100 text-slate-700" />
                 </div>
-
-                <div className="h-[460px] overflow-hidden rounded-2xl border border-slate-200">
-                  <YMaps query={{ lang: 'ru_RU' }}>
-                    <Map state={novosibirskOverviewMapState} width="100%" height="100%" options={{ suppressMapOpenBlock: true }}>
-                      {showCoverage && visibleGeocoded.map((institution) => (
-                        <Circle
-                          key={`coverage-${institution.id}`}
-                          geometry={[institution.coordinates, coverageRadiusMetersByKind[institution.kind]]}
-                          options={{
-                            fillColor: fillColorByKind[institution.kind],
-                            strokeColor: markerColorByKind[institution.kind],
-                            strokeOpacity: 0.18,
-                            strokeWidth: 1,
-                          }}
-                        />
-                      ))}
-                      {visibleGeocoded.map((institution) => (
-                        <Placemark
-                          key={institution.id}
-                          geometry={institution.coordinates}
-                          properties={{
-                            balloonContentHeader: institution.name,
-                            balloonContentBody: `<div>${institution.address}</div><div>${institution.phone ?? 'Телефон не указан'}</div>`,
-                            hintContent: institution.name,
-                            iconCaption: institution.kind === 'school' ? 'Школа' : 'Детсад',
-                          }}
-                          options={{
-                            preset: 'islands#circleDotIcon',
-                            iconColor: markerColorByKind[institution.kind],
-                          }}
-                          modules={['geoObject.addon.balloon', 'geoObject.addon.hint']}
-                        />
-                      ))}
-                    </Map>
-                  </YMaps>
+                <div className="mb-3 text-sm text-slate-500">
+                  На дальнем масштабе точки объединяются в кластеры. Подписи показываются выборочно и без критических наложений, а выбранное учреждение подсвечивается.
                 </div>
+                <EducationMap
+                  institutions={visibleGeocoded}
+                  showCoverage={showCoverage}
+                  selectedInstitutionId={selectedInstitutionId}
+                  onSelectInstitution={setSelectedInstitutionId}
+                />
               </Card>
             </div>
 
             <div className="space-y-4 lg:col-span-4">
+              <Card>
+                <div className="mb-3 text-2xl font-bold">Выбранное учреждение</div>
+                {selectedInstitution ? (
+                  <div className="space-y-3">
+                    <Badge
+                      text={selectedInstitution.kind === 'school' ? 'Школа' : 'Детский сад'}
+                      className={selectedInstitution.kind === 'school' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}
+                    />
+                    <div className="text-lg font-semibold">{selectedInstitution.name}</div>
+                    <div className="text-sm text-slate-600">{selectedInstitution.address}</div>
+                    <div className="text-sm text-slate-600">Район: {selectedInstitution.district}</div>
+                    <div className="text-sm text-slate-600">Телефон: {selectedInstitution.phone ?? '—'}</div>
+                    {selectedInstitution.capacity && (
+                      <div className="text-sm text-slate-600">Вместимость: {selectedInstitution.capacity}</div>
+                    )}
+                    {selectedInstitution.workingHours && (
+                      <div className="text-sm text-slate-600">Режим работы: {selectedInstitution.workingHours}</div>
+                    )}
+                    {selectedInstitution.site && (
+                      <a
+                        href={selectedInstitution.site}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-slate-50"
+                      >
+                        Открыть сайт
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-sm text-slate-500">
+                    Кликните по точке на карте, чтобы увидеть карточку учреждения. Клик по кластеру приблизит карту к плотной зоне.
+                  </div>
+                )}
+              </Card>
+
               <Card>
                 <div className="mb-3 text-2xl font-bold">Статистика по районам</div>
                 <div className="space-y-2">
@@ -225,7 +224,11 @@ export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: bool
                 </thead>
                 <tbody>
                   {tableInstitutions.map((institution) => (
-                    <tr key={institution.id} className="align-top odd:bg-white even:bg-slate-50/40">
+                    <tr
+                      key={institution.id}
+                      className={`cursor-pointer align-top odd:bg-white even:bg-slate-50/40 ${institution.id === selectedInstitutionId ? 'bg-blue-50/70' : ''}`}
+                      onClick={() => setSelectedInstitutionId(institution.id)}
+                    >
                       <td className="border-b px-3 py-2">
                         <Badge
                           text={institution.kind === 'school' ? 'Школа' : 'Детсад'}
