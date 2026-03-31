@@ -2,13 +2,14 @@ name: sigma
 
 services:
   app:
+    container_name: ${CONTAINER_NAME}
     build:
       context: .
       dockerfile: Dockerfile
     env_file:
       - ./deploy/docker/sigma.env
     ports:
-      - "${SIGMA_APP_PORT:-5173}:5173"
+      - "${SIGMA_APP_PORT}:5173"
     restart: unless-stopped
     healthcheck:
       test:
