@@ -47,7 +47,7 @@ export default function IncidentPage() {
             {incident.subsystem === 'heat' && (
               <button
                 onClick={() => navigate(`/incidents/${incident.id}/replay`)}
-                className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 font-semibold text-blue-700"
+                className="hidden rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 font-semibold text-blue-700 sm:inline-flex"
               >
                 Открыть воспроизведение и прогноз
               </button>
