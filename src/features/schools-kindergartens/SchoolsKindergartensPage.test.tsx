@@ -137,6 +137,9 @@ describe('SchoolsKindergartensPage embedded views', () => {
   const findButton = (label: string) =>
     Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.trim() === label)
 
+  const findButtonContaining = (label: string) =>
+    Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes(label))
+
   beforeEach(() => {
     installMatchMedia(false)
     container = document.createElement('div')
@@ -147,25 +150,26 @@ describe('SchoolsKindergartensPage embedded views', () => {
     } as Response)
   })
 
-  it('shows institution list by default on mobile and switches to map on resize', async () => {
+  it('hides the primary education block on mobile and restores it on desktop resize', async () => {
     const root = await renderPage()
 
-    expect(findButton('Список')?.getAttribute('aria-pressed')).toBe('true')
-    expect(container.querySelector('[data-testid="education-institution-list"]')).toBeTruthy()
-    expect(container.querySelectorAll('[data-testid="education-institution-list-item"]')).toHaveLength(2)
+    expect(findButton('Список')).toBeFalsy()
+    expect(findButton('Карта')).toBeFalsy()
+    expect(container.querySelector('[data-testid="education-institution-list"]')).toBeNull()
+    expect(container.querySelectorAll('[data-testid="education-institution-list-item"]')).toHaveLength(0)
     expect(container.querySelector('[data-testid="education-map"]')).toBeNull()
-
-    await act(async () => {
-      findButton('Карта')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-    })
-
-    expect(findButton('Карта')?.getAttribute('aria-pressed')).toBe('true')
-    expect(container.querySelector('[data-testid="education-map"]')).toBeTruthy()
+    expect(container.textContent).not.toContain('Районов в контуре')
+    expect(container.textContent).not.toContain('Статистика по районам')
+    expect(findButtonContaining('Сводка по контуру')?.getAttribute('aria-expanded')).toBe('false')
+    expect(findButtonContaining('Районная аналитика')?.getAttribute('aria-expanded')).toBe('false')
+    expect(container.textContent).not.toContain('Зоны покрытия')
+    expect(container.textContent).not.toContain('Выбранное учреждение')
 
     await setDesktopMatches(true)
     expect(findButton('Карта')?.getAttribute('aria-pressed')).toBe('true')
     expect(container.querySelector('[data-testid="education-map"]')).toBeTruthy()
     expect(container.querySelector('[data-testid="education-institution-list"]')).toBeNull()
+    expect(container.textContent).toContain('Зоны покрытия')
 
     await act(async () => {
       root.unmount()
@@ -183,6 +187,10 @@ describe('SchoolsKindergartensPage embedded views', () => {
     expect(findButton('Карта')?.getAttribute('aria-pressed')).toBe('true')
     expect(container.querySelector('[data-testid="education-map"]')).toBeTruthy()
     expect(container.querySelector('[data-testid="education-institution-list"]')).toBeNull()
+    expect(container.textContent).toContain('Районов в контуре')
+    expect(container.textContent).toContain('Статистика по районам')
+    expect(findButtonContaining('Сводка по контуру')).toBeFalsy()
+    expect(container.textContent).not.toContain('Выбранное учреждение')
 
     await act(async () => {
       root.unmount()

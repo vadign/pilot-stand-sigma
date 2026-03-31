@@ -13,6 +13,10 @@ const nav = [
   ['/history', 'История и аналитика'],
 ]
 
+const mobileNav = [
+  ['/mayor-dashboard', 'Панель мэра'],
+]
+
 export function Layout() {
   const bump = useSigmaStore((s) => s.bumpLive)
   const isAnswerOpen = useAskSigmaStore((s) => s.isOpen)
@@ -66,9 +70,9 @@ export function Layout() {
         </div>
 
         {mobileNavOpen && (
-          <div className="mb-4 rounded-xl border border-slate-200 bg-white p-2 lg:hidden">
+          <div data-testid="mobile-nav" className="mb-4 rounded-xl border border-slate-200 bg-white p-2 lg:hidden">
             <nav className="space-y-1.5">
-              {nav.map(([to, label]) => (
+              {mobileNav.map(([to, label]) => (
                 <NavLink
                   key={to}
                   to={to}

@@ -184,12 +184,12 @@ export const SubsystemTabs = ({
   onChange: (tab: SubsystemTabId) => void
   tabs?: readonly { id: SubsystemTabId; title: string }[]
 }) => (
-  <div className="flex flex-wrap gap-2">
+  <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
     {tabs.map((tab) => (
       <button
         key={tab.id}
         onClick={() => onChange(tab.id)}
-        className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+        className={`min-w-0 rounded-xl border px-3 py-2 text-left text-sm font-semibold whitespace-normal break-words transition sm:text-center ${
           value === tab.id ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
         }`}
       >

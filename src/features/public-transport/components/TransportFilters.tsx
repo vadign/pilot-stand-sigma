@@ -60,7 +60,7 @@ export const TransportFilters = ({
       )}
       <div className="flex flex-col gap-1 text-sm font-medium text-slate-700">
         Тип транспорта на карте
-        <div className="flex flex-wrap gap-2 rounded-xl border border-slate-200 p-2">
+        <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 p-2 sm:flex sm:flex-wrap">
           {modeOptions.map((mode) => {
             const isActive = filters.mode === mode
             return (
@@ -68,7 +68,7 @@ export const TransportFilters = ({
                 key={mode}
                 type="button"
                 onClick={() => onChange({ ...filters, mode })}
-                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                className={`min-w-0 rounded-full px-3 py-1.5 text-sm font-medium whitespace-normal break-words transition ${
                   isActive ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >

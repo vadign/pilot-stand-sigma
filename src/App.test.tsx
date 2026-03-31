@@ -104,6 +104,9 @@ describe('App smoke render', () => {
   const findButton = (label: string) =>
     Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.trim() === label)
 
+  const findButtonContaining = (label: string) =>
+    Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes(label))
+
   beforeEach(() => {
     installMatchMedia(true)
     container = document.createElement('div')
@@ -145,6 +148,52 @@ describe('App smoke render', () => {
     expect(findButton('Карта')?.getAttribute('aria-pressed')).toBe('false')
     expect(container.querySelector('[data-testid="mock-map"]')).toBeNull()
     expect(container.querySelector('[data-testid="mayor-events-list"]')).toBeTruthy()
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
+  it('shows only the mayor dashboard entry in the mobile navigation menu', async () => {
+    installMatchMedia(false)
+
+    const root = await renderApp(['/mayor-dashboard'])
+    await waitForText('Территориальные события')
+
+    await act(async () => {
+      findButton('Разделы')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    const mobileNav = container.querySelector('[data-testid="mobile-nav"]')
+
+    expect(mobileNav?.textContent).toContain('Панель мэра')
+    expect(mobileNav?.textContent).not.toContain('Управленческий отчет')
+    expect(mobileNav?.textContent).not.toContain('История и аналитика')
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
+  it('keeps secondary mayor dashboard sections collapsed on mobile until expanded', async () => {
+    installMatchMedia(false)
+
+    const root = await renderApp(['/mayor-dashboard?subsystem=roads'])
+    await waitForText('Территориальные события')
+
+    expect(findButtonContaining('Приоритетные события')?.getAttribute('aria-expanded')).toBe('false')
+    expect(findButtonContaining('Районы под нагрузкой')?.getAttribute('aria-expanded')).toBe('false')
+    expect(findButtonContaining('Аналитика')?.getAttribute('aria-expanded')).toBe('false')
+    expect(container.textContent).not.toContain('Разбивка по статусам')
+    expect(container.textContent).not.toContain('В работе / эскалированы')
+
+    await act(async () => {
+      findButtonContaining('Аналитика')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(findButtonContaining('Аналитика')?.getAttribute('aria-expanded')).toBe('true')
+    expect(container.textContent).toContain('Разбивка по статусам')
+    expect(container.textContent).toContain('В работе / эскалированы')
 
     await act(async () => {
       root.unmount()
@@ -221,6 +270,19 @@ describe('App smoke render', () => {
     expect(criticalBadge).toBeTruthy()
     expect(criticalBadge?.className).toContain('bg-red-100')
     expect(criticalBadge?.className).toContain('text-red-700')
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
+  it('keeps secondary mayor dashboard analytics visible on desktop', async () => {
+    const root = await renderApp(['/mayor-dashboard?subsystem=roads'])
+    await waitForText('Разбивка по статусам')
+
+    expect(container.textContent).toContain('Разбивка по статусам')
+    expect(container.textContent).toContain('В работе / эскалированы')
+    expect(container.textContent).toContain('Население в зоне')
 
     await act(async () => {
       root.unmount()

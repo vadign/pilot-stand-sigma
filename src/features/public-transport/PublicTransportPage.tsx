@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Card, SectionTitle } from '../../components/ui'
+import { Card, CollapsibleCardSection, SectionTitle } from '../../components/ui'
+import { useMediaQuery } from '../../lib/useMediaQuery'
 import { useSigmaStore } from '../../store/useSigmaStore'
 import { RouteDetailsPanel } from './components/RouteDetailsPanel'
 import { StopDetailsDrawer } from './components/StopDetailsDrawer'
@@ -28,6 +29,7 @@ import {
 import type { TransitStop } from './types'
 
 export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }) => {
+  const isDesktop = useMediaQuery('(min-width: 1024px)')
   const sourceMode = useSigmaStore((state) => state.sourceMode)
   const { filters, updateFilters, connectivity, updateConnectivity } = useTransportQueryState()
   const { bundle, loading } = useTransportData(sourceMode)
@@ -104,6 +106,58 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
     : filters.district
       ? `Сейчас на карте: район ${getTransportDistrictLabel(filters.district)}`
       : 'Сейчас на карте: весь город'
+  const isEmbeddedMobile = embedded && !isDesktop
+  const networkSummary = `${globalMetrics.totalStops} остановок · ${globalMetrics.totalUniqueRoutes} маршрутов`
+  const connectivitySummary = connectivity.from && connectivity.to
+    ? `${districtConnectivity.count} общих маршрутов`
+    : 'Выберите два района для сравнения'
+
+  const connectivitySection = (
+    <>
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
+        <select
+          value={connectivity.from}
+          onChange={(event) => updateConnectivity('from', event.target.value)}
+          className="rounded-xl border border-slate-200 px-3 py-2"
+        >
+          <option value="">Район отправления</option>
+          {filterOptions.districts.map((district) => (
+            <option key={district} value={district}>
+              {district}
+            </option>
+          ))}
+        </select>
+        <select
+          value={connectivity.to}
+          onChange={(event) => updateConnectivity('to', event.target.value)}
+          className="rounded-xl border border-slate-200 px-3 py-2"
+        >
+          <option value="">Район назначения</option>
+          {filterOptions.districts.map((district) => (
+            <option key={district} value={district}>
+              {district}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="mt-4 space-y-3 text-sm">
+        <div className="rounded-xl border border-slate-200 p-3">
+          Общих маршрутов: <span className="font-semibold">{districtConnectivity.count}</span>
+        </div>
+        <div className="rounded-xl border border-slate-200 p-3">
+          Номера: {districtConnectivity.commonRoutes.join(', ') || 'нет пересечений'}
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 p-3">
+            Примеры в A: {districtConnectivity.examplesA.map((stop) => stop.name).join(', ') || '—'}
+          </div>
+          <div className="rounded-xl border border-slate-200 p-3">
+            Примеры в B: {districtConnectivity.examplesB.map((stop) => stop.name).join(', ') || '—'}
+          </div>
+        </div>
+      </div>
+    </>
+  )
 
   return (
     <div className="space-y-4">
@@ -133,7 +187,9 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
                     <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">
                       Транспортный контур
                     </div>
-                    <div className="text-2xl font-bold">Карта общественного транспорта</div>
+                    <div className={isEmbeddedMobile ? 'text-xl font-bold' : 'text-2xl font-bold'}>
+                      Карта общественного транспорта
+                    </div>
                   </div>
                   <div className="text-sm text-slate-500">{primaryViewSummary}</div>
                 </div>
@@ -147,68 +203,63 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
                 />
               </Card>
 
-              <Card>
-                <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">
-                  Связность районов
-                </div>
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
-                  <select
-                    value={connectivity.from}
-                    onChange={(event) => updateConnectivity('from', event.target.value)}
-                    className="rounded-xl border border-slate-200 px-3 py-2"
-                  >
-                    <option value="">Район отправления</option>
-                    {filterOptions.districts.map((district) => (
-                      <option key={district} value={district}>
-                        {district}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={connectivity.to}
-                    onChange={(event) => updateConnectivity('to', event.target.value)}
-                    className="rounded-xl border border-slate-200 px-3 py-2"
-                  >
-                    <option value="">Район назначения</option>
-                    {filterOptions.districts.map((district) => (
-                      <option key={district} value={district}>
-                        {district}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="mt-4 space-y-3 text-sm">
-                  <div className="rounded-xl border border-slate-200 p-3">
-                    Общих маршрутов: <span className="font-semibold">{districtConnectivity.count}</span>
+              {isEmbeddedMobile && <StopDetailsDrawer stop={activeSelectedStop} relatedHubs={relatedHubs} />}
+              {isEmbeddedMobile && <RouteDetailsPanel route={selectedRoute} />}
+
+              {isEmbeddedMobile ? (
+                <CollapsibleCardSection
+                  mobile
+                  title="Связность районов"
+                  summary={connectivitySummary}
+                  titleClassName="text-lg font-bold"
+                >
+                  {connectivitySection}
+                </CollapsibleCardSection>
+              ) : (
+                <Card>
+                  <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">
+                    Связность районов
                   </div>
-                  <div className="rounded-xl border border-slate-200 p-3">
-                    Номера: {districtConnectivity.commonRoutes.join(', ') || 'нет пересечений'}
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="rounded-xl border border-slate-200 p-3">
-                      Примеры в A: {districtConnectivity.examplesA.map((stop) => stop.name).join(', ') || '—'}
-                    </div>
-                    <div className="rounded-xl border border-slate-200 p-3">
-                      Примеры в B: {districtConnectivity.examplesB.map((stop) => stop.name).join(', ') || '—'}
-                    </div>
-                  </div>
-                </div>
-              </Card>
+                  {connectivitySection}
+                </Card>
+              )}
             </div>
 
             <div className="space-y-4">
-              <TransportMetrics
-                totalStops={globalMetrics.totalStops}
-                totalUniqueRoutes={globalMetrics.totalUniqueRoutes}
-                pavilionShare={globalMetrics.pavilionShare}
-                districtCount={globalMetrics.districtCount}
-                topStopsByRouteCount={globalMetrics.topStopsByRouteCount}
-                topDistrictsByStopCount={globalMetrics.topDistrictsByStopCount}
-                topDistrictsByUniqueRoutes={globalMetrics.topDistrictsByUniqueRoutes}
-                selectedDistrict={selectedDistrict}
-              />
-              <StopDetailsDrawer stop={activeSelectedStop} relatedHubs={relatedHubs} />
-              <RouteDetailsPanel route={selectedRoute} />
+              {isEmbeddedMobile ? (
+                <CollapsibleCardSection
+                  mobile
+                  title="Сводка сети"
+                  summary={networkSummary}
+                  titleClassName="text-lg font-bold"
+                >
+                  <TransportMetrics
+                    totalStops={globalMetrics.totalStops}
+                    totalUniqueRoutes={globalMetrics.totalUniqueRoutes}
+                    pavilionShare={globalMetrics.pavilionShare}
+                    districtCount={globalMetrics.districtCount}
+                    topStopsByRouteCount={globalMetrics.topStopsByRouteCount}
+                    topDistrictsByStopCount={globalMetrics.topDistrictsByStopCount}
+                    topDistrictsByUniqueRoutes={globalMetrics.topDistrictsByUniqueRoutes}
+                    selectedDistrict={selectedDistrict}
+                  />
+                </CollapsibleCardSection>
+              ) : (
+                <>
+                  <TransportMetrics
+                    totalStops={globalMetrics.totalStops}
+                    totalUniqueRoutes={globalMetrics.totalUniqueRoutes}
+                    pavilionShare={globalMetrics.pavilionShare}
+                    districtCount={globalMetrics.districtCount}
+                    topStopsByRouteCount={globalMetrics.topStopsByRouteCount}
+                    topDistrictsByStopCount={globalMetrics.topDistrictsByStopCount}
+                    topDistrictsByUniqueRoutes={globalMetrics.topDistrictsByUniqueRoutes}
+                    selectedDistrict={selectedDistrict}
+                  />
+                  <StopDetailsDrawer stop={activeSelectedStop} relatedHubs={relatedHubs} />
+                  <RouteDetailsPanel route={selectedRoute} />
+                </>
+              )}
             </div>
           </div>
         </div>
