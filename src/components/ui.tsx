@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { formatSourceStatusLabel, formatSourceTypeLabel } from '../lib/sourcePresentation'
 
 export const Card = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
   <section className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}>{children}</section>
@@ -99,7 +100,10 @@ export const SourceMetaFooter = ({
       <div><span className="font-semibold text-slate-900">Источник:</span> {source}</div>
       <div><span className="font-semibold text-slate-900">Обновлено:</span> {updatedAt ? new Date(updatedAt).toLocaleString('ru-RU') : '—'}</div>
       <div><span className="font-semibold text-slate-900">Период обновления:</span> {ttl}</div>
-      <div><span className="font-semibold text-slate-900">Характер сведений:</span> {type} · {status}</div>
+      <div>
+        <span className="font-semibold text-slate-900">Характер сведений:</span>{' '}
+        {formatSourceTypeLabel(type)} · {formatSourceStatusLabel(status)}
+      </div>
     </div>
   </div>
 )

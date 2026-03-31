@@ -12,6 +12,8 @@ import {
 } from '../../live/selectors'
 import type { LiveIncidentView, OutageKind } from '../../live/types'
 
+export { sourceModeLabels, sourceTypeLabels } from '../../lib/sourcePresentation'
+
 const paleRedBadgeStyle = 'border-red-200 bg-red-100 text-red-700'
 
 export const severityStyles: Record<string, string> = {
@@ -19,20 +21,6 @@ export const severityStyles: Record<string, string> = {
   высокий: 'border-amber-200 bg-amber-50 text-amber-700',
   средний: 'border-sky-200 bg-sky-50 text-sky-700',
   низкий: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-}
-
-export const sourceTypeLabels: Record<string, string> = {
-  real: 'real',
-  calculated: 'calculated',
-  simulation: 'simulation',
-  pilot: 'mock',
-  'mock-fallback': 'mock-fallback',
-}
-
-export const sourceModeLabels: Record<string, string> = {
-  live: 'прямой',
-  hybrid: 'гибридный',
-  mock: 'mock',
 }
 
 export const utilityLabels: Record<string, string> = {

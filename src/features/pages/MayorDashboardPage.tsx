@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { MapView } from '../../components/MapView'
 import { Badge, Card, CollapsibleCardSection } from '../../components/ui'
 import { getDistrictName } from '../../lib/districts'
@@ -47,7 +47,10 @@ const mobileSubsystemDescriptions: Record<SubsystemTabId, string> = {
   education: 'Учреждения, покрытие и районы дефицита.',
 }
 
+const pinnedHeatPriorityIncidentId = '051-kal-planned-heating-3'
+
 export default function MayorDashboardPage() {
+  const navigate = useNavigate()
   const { districts, incidents, outageSummary, districtCards } = useDashboardData()
   const [searchParams, setSearchParams] = useSearchParams()
   const isDesktop = useMediaQuery('(min-width: 1024px)')
@@ -59,6 +62,9 @@ export default function MayorDashboardPage() {
   const liveIncidents = visibleIncidents.filter((incident) => incident.sourceKind === 'live')
   const urgent = liveIncidents.filter((incident) => incident.liveMeta?.outageKind === 'emergency')
   const prioritizedIncidents = sortIncidentsByPriority(visibleIncidents)
+  const pinnedHeatPriorityIncident = subsystemIncidents.find(
+    (incident) => incident.id === pinnedHeatPriorityIncidentId,
+  )
   const subsystemDistrictCards = buildIncidentDistrictCards(visibleIncidents)
   const statusCards = buildStatusCards(visibleIncidents)
   const criticalIncidents = visibleIncidents.filter((incident) => incident.severity === 'критический').length
@@ -77,7 +83,12 @@ export default function MayorDashboardPage() {
   const listIncidents = prioritizedIncidents
   const selectedTransportDistrict = searchParams.get('district') ?? ''
   const primaryViewSummary = viewMode === 'map' ? 'Отображение на карте' : `${listIncidents.length} в списке`
-  const priorityItems = (isHeatTab ? urgent : prioritizedIncidents).slice(0, 4)
+  const priorityItems = isHeatTab
+    ? [
+        ...(pinnedHeatPriorityIncident ? [pinnedHeatPriorityIncident] : []),
+        ...urgent.filter((incident) => incident.id !== pinnedHeatPriorityIncidentId),
+      ].slice(0, 4)
+    : prioritizedIncidents.slice(0, 4)
   const heatAreaItems = districtCards.slice(0, 5)
   const subsystemAreaItems = subsystemDistrictCards.slice(0, 5)
   const metricCards: MetricCard[] = isHeatTab
@@ -194,7 +205,14 @@ export default function MayorDashboardPage() {
     <>
       {priorityItems.length > 0 ? (
         priorityItems.map((incident) => (
-          <div key={incident.id} className="mb-2 rounded-xl border bg-blue-50 p-3">
+          <button
+            key={incident.id}
+            type="button"
+            data-testid="mayor-priority-item"
+            data-incident-id={incident.id}
+            onClick={() => navigate(`/incidents/${incident.id}`)}
+            className="mb-2 w-full rounded-xl border bg-blue-50 p-3 text-left transition hover:bg-blue-100"
+          >
             <div className="flex flex-wrap items-center gap-2">
               <Badge
                 text={
@@ -219,7 +237,7 @@ export default function MayorDashboardPage() {
             </div>
             <div className="mt-2 font-bold">{incident.title}</div>
             <div className="text-sm text-slate-500">{incident.summary}</div>
-          </div>
+          </button>
         ))
       ) : (
         <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">

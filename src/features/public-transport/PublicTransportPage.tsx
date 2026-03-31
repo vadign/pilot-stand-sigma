@@ -164,7 +164,7 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
       {!embedded && (
         <SectionTitle
           title="Общественный транспорт"
-          subtitle="Остановки и маршруты из официальных открытых наборов Новосибирска без симуляции live GPS."
+          subtitle="Остановки и маршруты из официальных открытых наборов Новосибирска без имитации координат транспорта в реальном времени."
         />
       )}
       <TransportFilters

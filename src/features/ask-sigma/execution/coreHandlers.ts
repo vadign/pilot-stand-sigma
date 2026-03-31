@@ -1,4 +1,5 @@
 import { getOutageKindLabel } from '../../../live/outageKindLabels'
+import { formatSourceOriginLabel, formatSourceStatusLabel } from '../../../lib/sourcePresentation'
 import { supportedQuestions } from '../suggestedQuestions'
 import type { AskSigmaOperation } from '../types'
 import type { AskSigmaExecutionHandler } from './context'
@@ -43,7 +44,10 @@ export const coreOperationHandlers: Partial<Record<AskSigmaOperation, AskSigmaEx
     type: 'BRIEFING',
     title: 'Сводка за 24 часа',
     summary: `По 051 активных событий: ${context.liveSummary?.activeIncidents ?? 0}. ${getOutageKindLabel('emergency', 'titlePlural')} домов: ${context.liveSummary?.emergencyHouses ?? 0}.`,
-    kpis: sourceStatuses.map((status) => ({ label: status.key, value: `${status.source}/${status.status}` })),
+    kpis: sourceStatuses.map((status) => ({
+      label: status.key,
+      value: `${formatSourceOriginLabel(status.source)} / ${formatSourceStatusLabel(status.status)}`,
+    })),
     actions: [{ label: 'Открыть сводку', route: '/briefing' }],
     explain: { ...explainBase, dataType: 'real' },
   }),
@@ -86,7 +90,7 @@ export const coreOperationHandlers: Partial<Record<AskSigmaOperation, AskSigmaEx
       title: `Карточка ${incident.id}`,
       incident,
       regulations,
-      summary: `${incident.title}. Источник: ${incident.id.startsWith('051-') ? '051' : 'mock'}. Статус: ${incident.status}.`,
+      summary: `${incident.title}. Источник: ${incident.id.startsWith('051-') ? '051' : 'демонстрационный контур'}. Статус: ${incident.status}.`,
       actions: [{ label: 'Перейти в карточку', route: `/incidents/${incident.id}` }],
       explain: { ...explainBase, dataType: incident.id.startsWith('051-') ? 'real' : 'pilot' },
     }
@@ -123,7 +127,7 @@ export const coreOperationHandlers: Partial<Record<AskSigmaOperation, AskSigmaEx
   HISTORY_TREND: ({ explainBase }) => ({
     type: 'HISTORY_ANALYTICS',
     title: 'История и аналитика',
-    summary: 'История 051 snapshots накапливается и используется в аналитике вместе с hybrid/mock графиками.',
+    summary: 'История снимков 051 накапливается и используется в аналитике вместе с гибридными и демонстрационными графиками.',
     actions: [{ label: 'Открыть историю', route: '/history' }],
     explain: { ...explainBase, dataType: 'calculated' },
   }),
@@ -198,7 +202,9 @@ export const coreOperationHandlers: Partial<Record<AskSigmaOperation, AskSigmaEx
   LIVE_SOURCES: ({ explainBase, sourceStatuses }) => ({
     type: 'LIVE_SOURCE_STATUS',
     title: 'Статус источников',
-    summary: sourceStatuses.map((status) => `${status.key}: ${status.source}/${status.status}`).join(' · '),
+    summary: sourceStatuses
+      .map((status) => `${status.key}: ${formatSourceOriginLabel(status.source)} / ${formatSourceStatusLabel(status.status)}`)
+      .join(' · '),
     sourceStatuses,
     actions: [{ label: 'Открыть отчет', route: '/briefing' }],
     explain: {

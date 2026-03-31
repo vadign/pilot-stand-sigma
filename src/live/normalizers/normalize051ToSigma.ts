@@ -79,7 +79,7 @@ export const normalize051ToSigmaIncidents = (snapshot: Power051Snapshot): SigmaL
       recommendations: [
         {
           id: `rec-${index}`,
-          title: 'Базовый workflow Sigma',
+          title: 'Базовый рабочий процесс Сигмы',
           sourceId: 'live-051',
           steps: [
             { id: `step-${index}-1`, title: 'Подтвердить район и контур отключения', done: true },

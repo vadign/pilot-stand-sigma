@@ -2,7 +2,7 @@ import { Download } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Card, SourceMetaFooter } from '../../components/ui'
 import { getOutageKindLabel } from '../../live/outageKindLabels'
-import { formatDelta, sourceTypeLabels, useDashboardData } from './shared'
+import { formatDelta, useDashboardData } from './shared'
 
 export default function BriefingPage() {
   const navigate = useNavigate()
@@ -31,7 +31,7 @@ export default function BriefingPage() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="mb-2 text-sm font-semibold uppercase tracking-wider text-blue-700">
-              Sigma Управленческий отчет
+              Сигма. Управленческий отчет
             </div>
             <h1 className="text-4xl font-extrabold">
               Ежедневный управленческий отчет: {new Date().toLocaleDateString('ru-RU')}
@@ -45,7 +45,7 @@ export default function BriefingPage() {
             className="rounded-xl border px-3 py-2 font-semibold"
           >
             <Download size={14} className="mr-1 inline" />
-            Экспорт PDF
+            Печать отчета
           </button>
         </div>
       </Card>
@@ -66,7 +66,7 @@ export default function BriefingPage() {
           <div className="text-slate-500">домов: {outageSummary?.plannedHouses ?? 0}</div>
         </Card>
         <Card>
-          <div className="text-sm text-slate-500">Δ к предыдущему snapshot</div>
+          <div className="text-sm text-slate-500">Изменение к предыдущему снимку</div>
           <div className="mt-2 text-5xl font-bold text-blue-700">
             {formatDelta(outageSummary?.delta?.incidents)}
           </div>
@@ -75,7 +75,7 @@ export default function BriefingPage() {
         <Card>
           <div className="text-sm text-slate-500">Районов с нагрузкой</div>
           <div className="mt-2 text-5xl font-bold text-emerald-600">{districtCards.length}</div>
-          <div className="text-slate-500">по данным текущего snapshot 051</div>
+          <div className="text-slate-500">по данным текущего снимка 051</div>
         </Card>
       </div>
 
@@ -97,7 +97,7 @@ export default function BriefingPage() {
             source={formatSourceLabel(liveStatus051.sourceUrl, '051.novo-sibirsk.ru')}
             updatedAt={liveStatus051.updatedAt}
             ttl={`${liveStatus051.ttlMinutes} мин`}
-            type={sourceTypeLabels[liveStatus051.type] ?? liveStatus051.type}
+            type={liveStatus051.type}
             status={liveStatus051.status}
           />
         )}
@@ -143,7 +143,7 @@ export default function BriefingPage() {
               source={formatSourceLabel(liveStatus051.sourceUrl, '051.novo-sibirsk.ru')}
               updatedAt={liveStatus051.updatedAt}
               ttl={`${liveStatus051.ttlMinutes} мин`}
-              type={sourceTypeLabels[liveStatus051.type] ?? liveStatus051.type}
+              type={liveStatus051.type}
               status={liveStatus051.status}
             />
           )}

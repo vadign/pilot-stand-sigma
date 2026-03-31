@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'
 import { act } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
+import { createSigmaState, useSigmaStore } from './store/useSigmaStore'
+import { createTestLiveBundle } from './testUtils/liveBundle'
 
 vi.mock('./components/MapView', () => ({
   MapView: ({ incidents }: { incidents: Array<{ id: string }> }) => (
@@ -32,6 +34,7 @@ describe('App smoke render', () => {
   ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
   let desktopMatches = true
   let container: HTMLDivElement
+  let heatIncidentId = ''
   const mediaQueryListeners = new Set<(event: MediaQueryListEvent) => void>()
 
   const installMatchMedia = (matches: boolean) => {
@@ -108,6 +111,10 @@ describe('App smoke render', () => {
     Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes(label))
 
   beforeEach(() => {
+    useSigmaStore.setState(createSigmaState(useSigmaStore.setState, useSigmaStore.getState), true)
+    const { bundle, heatIncidentId: nextHeatIncidentId } = createTestLiveBundle()
+    useSigmaStore.getState().applyLiveBundle(bundle)
+    heatIncidentId = nextHeatIncidentId
     installMatchMedia(true)
     container = document.createElement('div')
     document.body.appendChild(container)
@@ -276,6 +283,29 @@ describe('App smoke render', () => {
     })
   })
 
+  it('keeps 051-kal-planned-heating-3 first in urgent actions and opens the incident card on click', async () => {
+    const root = await renderApp(['/mayor-dashboard'])
+    await waitForText('Срочные действия')
+
+    const priorityItems = Array.from(
+      container.querySelectorAll('[data-testid="mayor-priority-item"]'),
+    ) as HTMLButtonElement[]
+
+    expect(priorityItems[0]?.getAttribute('data-incident-id')).toBe('051-kal-planned-heating-3')
+    expect(priorityItems[0]?.textContent).toContain('Запланированное отключение отопления')
+
+    await act(async () => {
+      priorityItems[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    await waitForText('Журнал решений')
+    expect(container.textContent).toContain('ID: 051-kal-planned-heating-3')
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
   it('keeps secondary mayor dashboard analytics visible on desktop', async () => {
     const root = await renderApp(['/mayor-dashboard?subsystem=roads'])
     await waitForText('Разбивка по статусам')
@@ -355,6 +385,30 @@ describe('App smoke render', () => {
     expect(container.textContent).toContain('embedded education')
     expect(findButton('Карта')).toBeFalsy()
     expect(findButton('Список')).toBeFalsy()
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
+  it('renders the incident replay route for heat incidents', async () => {
+    const root = await renderApp([`/incidents/${heatIncidentId}/replay`])
+    await waitForText('Воспроизведение и прогноз инцидента')
+
+    expect(container.textContent).toContain('Аварийный прорыв участка')
+    expect(container.querySelector('[data-testid="incident-replay-range"]')).toBeTruthy()
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
+  it('shows the replay fallback state for non-heat incidents', async () => {
+    const root = await renderApp(['/incidents/INC-1001/replay'])
+    await waitForText('Воспроизведение пока доступно только для теплового контура')
+
+    expect(container.textContent).toContain('Воспроизведение пока доступно только для теплового контура')
+    expect(container.querySelector('[data-testid="incident-replay-range"]')).toBeNull()
 
     await act(async () => {
       root.unmount()

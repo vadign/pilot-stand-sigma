@@ -29,7 +29,7 @@ export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: bool
 
     void fetch(snapshotPath, { cache: 'no-store' })
       .then(async (response) => {
-        if (!response.ok) throw new Error(`snapshot fetch failed: ${response.status}`)
+        if (!response.ok) throw new Error(`Не удалось загрузить снимок: ${response.status}`)
         return response.json() as Promise<EducationSnapshot>
       })
       .then((payload) => {
@@ -39,7 +39,7 @@ export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: bool
       })
       .catch((reason) => {
         if (cancelled) return
-        setError(reason instanceof Error ? reason.message : 'Не удалось загрузить snapshot школ и детских садов')
+        setError(reason instanceof Error ? reason.message : 'Не удалось загрузить снимок школ и детских садов')
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -236,7 +236,7 @@ export const SchoolsKindergartensPage = ({ embedded = false }: { embedded?: bool
         </div>
       </Card>
 
-      {loading && <Card>Загружаю snapshot школ и детских садов…</Card>}
+      {loading && <Card>Загружаю снимок школ и детских садов…</Card>}
       {error && <Card className="border-red-200 bg-red-50 text-red-700">{error}</Card>}
 
       {!loading && !error && snapshot && (

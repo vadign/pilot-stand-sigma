@@ -66,7 +66,7 @@ export const useAskSigmaStore = create<AskSigmaState>((set, get) => ({
         type: 'ROLE_SWITCH',
         title: 'Роль обновлена',
         summary: `Текущая роль: ${plan.role}${plan.district ? `, район: ${getDistrictAnswerName(plan.district)}` : ''}`,
-        explain: { dataType: 'pilot', source: 'Voice/Text command', updatedAt: new Date().toISOString() },
+        explain: { dataType: 'pilot', source: 'Голосовая или текстовая команда', updatedAt: new Date().toISOString() },
       }
       set({ lastResult: result, isLoading: false, isOpen: true })
       localStorage.setItem(LS_RESULT, JSON.stringify(result))

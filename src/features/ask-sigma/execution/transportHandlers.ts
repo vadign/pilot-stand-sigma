@@ -36,7 +36,7 @@ export const transportOperationHandlers: Partial<Record<AskSigmaOperation, AskSi
         { label: 'Открыть вкладку транспорта', route: buildPublicTransportLink() },
         { label: 'Показать на карте', route: buildPublicTransportLink({ focus: 'map' }) },
       ],
-      explain: { source: 'opendata.novo-sibirsk.ru datasets 49/51', updatedAt: refreshedAt, dataType },
+      explain: { source: 'opendata.novo-sibirsk.ru, наборы данных 49/51', updatedAt: refreshedAt, dataType },
     }
   },
 
@@ -92,7 +92,7 @@ export const transportOperationHandlers: Partial<Record<AskSigmaOperation, AskSi
         },
       ],
       explain: {
-        source: 'opendata.novo-sibirsk.ru dataset 49',
+        source: 'opendata.novo-sibirsk.ru, набор данных 49',
         updatedAt: stops[0]?.updatedAt ?? context.now,
         dataType: 'mock-fallback',
       },
@@ -140,7 +140,7 @@ export const transportOperationHandlers: Partial<Record<AskSigmaOperation, AskSi
         },
       ],
       explain: {
-        source: 'opendata.novo-sibirsk.ru dataset 49',
+        source: 'opendata.novo-sibirsk.ru, набор данных 49',
         updatedAt: stops[0]?.updatedAt ?? context.now,
         dataType: 'mock-fallback',
       },
@@ -159,7 +159,7 @@ export const transportOperationHandlers: Partial<Record<AskSigmaOperation, AskSi
       transportHubs: hubs.map((stop) => ({ name: stop.name, district: stop.district, routes: stop.routesParsed.length })),
       actions: [{ label: 'Открыть транспорт', route: buildPublicTransportLink({ focus: 'hubs' }) }],
       explain: {
-        source: 'opendata.novo-sibirsk.ru dataset 49',
+        source: 'opendata.novo-sibirsk.ru, набор данных 49',
         updatedAt: stops[0]?.updatedAt ?? context.now,
         dataType: 'calculated',
       },
@@ -185,7 +185,7 @@ export const transportOperationHandlers: Partial<Record<AskSigmaOperation, AskSi
             count: compare.count,
             examplesFrom: compare.examplesA.map((item) => item.name),
             examplesTo: compare.examplesB.map((item) => item.name),
-            note: 'Это пересечение маршрутов по остановкам, а не точный роутинг door-to-door.',
+            note: 'Это пересечение маршрутов по остановкам, а не точный маршрут от двери до двери.',
           }
         : undefined,
       actions: [
@@ -193,7 +193,7 @@ export const transportOperationHandlers: Partial<Record<AskSigmaOperation, AskSi
         { label: 'Показать на карте', route: buildPublicTransportLink({ fromDistrict, toDistrict, focus: 'map' }) },
       ],
       explain: {
-        source: 'opendata.novo-sibirsk.ru dataset 49',
+        source: 'opendata.novo-sibirsk.ru, набор данных 49',
         updatedAt: stops[0]?.updatedAt ?? context.now,
         dataType: 'calculated',
       },
@@ -223,7 +223,7 @@ export const transportOperationHandlers: Partial<Record<AskSigmaOperation, AskSi
         : undefined,
       actions: [{ label: 'Открыть транспорт', route: buildPublicTransportLink({ fromDistrict: from || undefined, toDistrict: to || undefined }) }],
       explain: {
-        source: 'opendata.novo-sibirsk.ru dataset 49',
+        source: 'opendata.novo-sibirsk.ru, набор данных 49',
         updatedAt: stops[0]?.updatedAt ?? context.now,
         dataType: 'calculated',
       },
@@ -246,7 +246,7 @@ export const transportOperationHandlers: Partial<Record<AskSigmaOperation, AskSi
         { label: 'Открыть транспорт', route: buildPublicTransportLink({ mode: mode || undefined }) },
       ],
       explain: {
-        source: 'opendata.novo-sibirsk.ru dataset 51',
+        source: 'opendata.novo-sibirsk.ru, набор данных 51',
         updatedAt: fares[0]?.updatedAt ?? context.now,
         dataType: 'mock-fallback',
       },

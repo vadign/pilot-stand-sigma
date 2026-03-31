@@ -7,6 +7,7 @@ const BriefingPage = lazy(() => import('./features/pages/BriefingPage'))
 const MayorDashboardPage = lazy(() => import('./features/pages/MayorDashboardPage'))
 const OperationsPage = lazy(() => import('./features/pages/OperationsPage'))
 const IncidentPage = lazy(() => import('./features/pages/IncidentPage'))
+const IncidentReplayPage = lazy(() => import('./features/pages/IncidentReplayPage'))
 const HistoryPage = lazy(() => import('./features/pages/HistoryPage'))
 const ScenariosPage = lazy(() => import('./features/pages/ScenariosPage'))
 const DeputiesPage = lazy(() => import('./features/pages/DeputiesPage'))
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/briefing" element={renderLazyRoute(BriefingPage)} />
         <Route path="/mayor-dashboard" element={renderLazyRoute(MayorDashboardPage)} />
         <Route path="/operations" element={renderLazyRoute(OperationsPage)} />
+        <Route path="/incidents/:id/replay" element={renderLazyRoute(IncidentReplayPage)} />
         <Route path="/incidents/:id" element={renderLazyRoute(IncidentPage)} />
         <Route path="/history" element={renderLazyRoute(HistoryPage)} />
         <Route path="/scenarios" element={renderLazyRoute(ScenariosPage)} />

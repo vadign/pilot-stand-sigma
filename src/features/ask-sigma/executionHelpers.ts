@@ -22,7 +22,7 @@ export const matchesRegulationSubsystem = (linkedIncidentTypes: string[], subsys
 export const buildExplainBase = (context: AskSigmaContext): AskSigmaExplain => {
   const primaryStatus = context.sourceStatuses?.[0]
   return {
-    source: primaryStatus?.title ?? 'Sigma Zustand Store',
+    source: primaryStatus?.title ?? 'Хранилище Сигмы',
     updatedAt: primaryStatus?.updatedAt ?? context.now,
     dataType: primaryStatus?.type ?? 'calculated',
   }

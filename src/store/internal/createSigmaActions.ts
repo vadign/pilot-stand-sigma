@@ -57,8 +57,8 @@ export const createSigmaActions = (set: SigmaSet, get: SigmaGet) => ({
               state.live.workflow,
               id,
               'escalate',
-              'Инцидент 051 эскалирован в локальный workflow.',
-              'Sigma',
+              'Инцидент 051 эскалирован в локальный рабочий процесс.',
+              'Сигма',
             ),
           },
         }
@@ -76,7 +76,7 @@ export const createSigmaActions = (set: SigmaSet, get: SigmaGet) => ({
                   {
                     id: crypto.randomUUID(),
                     at: new Date().toISOString(),
-                    author: 'Sigma',
+                    author: 'Сигма',
                     text: 'Инцидент эскалирован',
                   },
                 ],

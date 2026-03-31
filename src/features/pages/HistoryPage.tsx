@@ -16,7 +16,7 @@ import { getDistrictName } from '../../lib/districts'
 import { getOutageKindLabel } from '../../live/outageKindLabels'
 import { useSigmaStore } from '../../store/useSigmaStore'
 import { useIncidentViews, useOutageHistorySeries } from '../../live/selectors'
-import { sourceModeLabels } from './shared'
+import { formatSourceModeLabel } from '../../lib/sourcePresentation'
 
 export default function HistoryPage() {
   const incidents = useIncidentViews()
@@ -36,7 +36,7 @@ export default function HistoryPage() {
       <Card className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <SectionTitle
           title="История и аналитика"
-          subtitle="Тренды по накопленным snapshot 051 и оперативным событиям."
+          subtitle="Тренды по накопленным снимкам 051 и оперативным событиям."
         />
         <div className="flex gap-2">
           {['7 дней', 'месяц', 'квартал', 'год'].map((item) => (
@@ -62,17 +62,17 @@ export default function HistoryPage() {
         <Card>
           <div className="text-slate-500">Период</div>
           <div className="text-4xl font-bold lg:text-5xl">{period}</div>
-          <div className="text-slate-500">если история короткая, UI честно показывает ограничение</div>
+          <div className="text-slate-500">если история короткая, интерфейс честно показывает ограничение</div>
         </Card>
         <Card>
           <div className="text-slate-500">Активные события 051</div>
           <div className="text-4xl font-bold lg:text-5xl">{liveIncidentCount}</div>
-          <div className="text-slate-500">текущий live-контур ЖКХ</div>
+          <div className="text-slate-500">текущий оперативный контур ЖКХ</div>
         </Card>
         <Card>
           <div className="text-slate-500">Режим данных</div>
-          <div className="text-4xl font-bold lg:text-5xl">{sourceModeLabels[live.mode] ?? live.mode}</div>
-          <div className="text-slate-500">прямой / гибридный / mock</div>
+          <div className="text-4xl font-bold lg:text-5xl">{formatSourceModeLabel(live.mode)}</div>
+          <div className="text-slate-500">прямой / гибридный / демонстрационный</div>
         </Card>
       </div>
 
@@ -81,7 +81,7 @@ export default function HistoryPage() {
           <Card>
             <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-3xl font-bold">Тренд отключений 051</div>
-              <div className="text-slate-500">накопленная история snapshots</div>
+              <div className="text-slate-500">накопленная история снимков</div>
             </div>
             {series.length > 1 ? (
               <ResponsiveContainer width="100%" height={300}>

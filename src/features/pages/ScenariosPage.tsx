@@ -34,16 +34,16 @@ export default function ScenariosPage() {
             </button>
           ))}
           <SourceMetaFooter
-            source="baseline only"
+            source="исходная обстановка"
             updatedAt={new Date().toISOString()}
-            ttl="n/a"
-            type="simulation + baseline"
-            status="simulation"
+            ttl="не применяется"
+            type="сценарные и исходные"
+            status="моделирование"
           />
         </Card>
         <Card>
           <div className="mb-2 text-xl font-bold uppercase tracking-widest text-slate-500">
-            Baseline
+            Исходная обстановка
           </div>
           <div className="text-sm text-slate-500">
             Текущая нагрузка ЖКХ: {outageSummary?.activeIncidents ?? 0} активных событий
@@ -62,7 +62,7 @@ export default function ScenariosPage() {
         <Card className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <SectionTitle
             title={scenario.title}
-            subtitle="Оперативные источники используются только как baseline, не как post hoc факт сценария."
+            subtitle="Оперативные источники используются как исходная база, а не как подтверждение результата сценария."
           />
           <button
             disabled={!run}

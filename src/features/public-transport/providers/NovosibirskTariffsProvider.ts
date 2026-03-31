@@ -29,7 +29,7 @@ export class NovosibirskTariffsProvider {
     if (mode !== 'mock') {
       try {
         const response = await this.fetchImpl(faresCsvUrl(), { cache: 'no-store' })
-        if (!response.ok) throw new Error(`runtime fares fetch failed: ${response.status}`)
+        if (!response.ok) throw new Error(`Не удалось получить тарифы напрямую: ${response.status}`)
         const fetchedAt = new Date().toISOString()
         const fares = parseTariffsCsv(await response.text(), fetchedAt, 'opendata.novo-sibirsk.ru')
         await this.cacheProvider.write({
@@ -42,7 +42,7 @@ export class NovosibirskTariffsProvider {
         })
         return {
           fares,
-          status: { key: 'transport-fares', datasetId: '51', title: 'Тарифы на проезд', sourceUrl: faresPassportUrl(), source: 'runtime', dataType: 'real', status: 'ready', updatedAt: fetchedAt, fetchedAt, ttlHours, message: 'Данные dataset 51 загружены напрямую из браузера.' },
+          status: { key: 'transport-fares', datasetId: '51', title: 'Тарифы на проезд', sourceUrl: faresPassportUrl(), source: 'runtime', dataType: 'real', status: 'ready', updatedAt: fetchedAt, fetchedAt, ttlHours, message: 'Набор данных 51 загружен напрямую из браузера.' },
         }
       } catch {
         // fall through
@@ -54,7 +54,7 @@ export class NovosibirskTariffsProvider {
           const payload = await snapshotResponse.json() as TariffsPayload
           return {
             fares: payload.fares,
-            status: { key: 'transport-fares', datasetId: '51', title: 'Тарифы на проезд', sourceUrl: faresPassportUrl(), source: 'snapshot', dataType: 'real', status: 'ready', updatedAt: payload.updatedAt, fetchedAt: new Date().toISOString(), ttlHours, message: 'Показан последний сохраненный снимок dataset 51.' },
+            status: { key: 'transport-fares', datasetId: '51', title: 'Тарифы на проезд', sourceUrl: faresPassportUrl(), source: 'snapshot', dataType: 'real', status: 'ready', updatedAt: payload.updatedAt, fetchedAt: new Date().toISOString(), ttlHours, message: 'Показан последний сохраненный снимок набора данных 51.' },
           }
         }
       } catch {
@@ -76,7 +76,7 @@ export class NovosibirskTariffsProvider {
             updatedAt: cache.entry.payload.updatedAt,
             fetchedAt: cache.entry.fetchedAt,
             ttlHours,
-            message: cache.fresh ? 'Показан кэш dataset 51.' : 'Показан устаревший кэш dataset 51.',
+            message: cache.fresh ? 'Показан кэш набора данных 51.' : 'Показан устаревший кэш набора данных 51.',
           },
         }
       }
@@ -96,7 +96,7 @@ export class NovosibirskTariffsProvider {
         updatedAt: defaultTransportFares[0]?.updatedAt,
         fetchedAt,
         ttlHours,
-        message: 'Показан mock-fallback: локальный пример структуры dataset 51.',
+        message: 'Показан демонстрационный резервный набор: локальный пример структуры набора данных 51.',
       },
     }
   }

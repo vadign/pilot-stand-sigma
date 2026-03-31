@@ -23,7 +23,7 @@ export const createExecutionContext = (
   const sourceStatuses = context.sourceStatuses ?? []
   const primaryStatus = sourceStatuses[0]
   const explainBase: AskSigmaExplain = {
-    source: primaryStatus?.title ?? 'Sigma Zustand Store',
+    source: primaryStatus?.title ?? 'Хранилище Сигмы',
     updatedAt: primaryStatus?.updatedAt ?? context.now,
     dataType: primaryStatus?.type ?? 'calculated',
   }

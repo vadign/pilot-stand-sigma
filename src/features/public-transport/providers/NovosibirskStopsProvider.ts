@@ -29,7 +29,7 @@ export class NovosibirskStopsProvider {
     if (mode !== 'mock') {
       try {
         const response = await this.fetchImpl(stopsCsvUrl(), { cache: 'no-store' })
-        if (!response.ok) throw new Error(`runtime stops fetch failed: ${response.status}`)
+        if (!response.ok) throw new Error(`Не удалось получить остановки напрямую: ${response.status}`)
         const fetchedAt = new Date().toISOString()
         const stops = parseStopsCsv(await response.text(), fetchedAt, 'opendata.novo-sibirsk.ru')
         await this.cacheProvider.write({
@@ -42,7 +42,7 @@ export class NovosibirskStopsProvider {
         })
         return {
           stops,
-          status: { key: 'transport-stops', datasetId: '49', title: 'Остановки наземного транспорта', sourceUrl: stopsPassportUrl(), source: 'runtime', dataType: 'real', status: 'ready', updatedAt: fetchedAt, fetchedAt, ttlHours, message: 'Данные dataset 49 загружены напрямую из браузера.' },
+          status: { key: 'transport-stops', datasetId: '49', title: 'Остановки наземного транспорта', sourceUrl: stopsPassportUrl(), source: 'runtime', dataType: 'real', status: 'ready', updatedAt: fetchedAt, fetchedAt, ttlHours, message: 'Набор данных 49 загружен напрямую из браузера.' },
         }
       } catch {
         // fall through
@@ -54,7 +54,7 @@ export class NovosibirskStopsProvider {
           const payload = await snapshotResponse.json() as StopsPayload
           return {
             stops: payload.stops,
-            status: { key: 'transport-stops', datasetId: '49', title: 'Остановки наземного транспорта', sourceUrl: stopsPassportUrl(), source: 'snapshot', dataType: 'real', status: 'ready', updatedAt: payload.updatedAt, fetchedAt: new Date().toISOString(), ttlHours, message: 'Показан последний сохраненный снимок dataset 49.' },
+            status: { key: 'transport-stops', datasetId: '49', title: 'Остановки наземного транспорта', sourceUrl: stopsPassportUrl(), source: 'snapshot', dataType: 'real', status: 'ready', updatedAt: payload.updatedAt, fetchedAt: new Date().toISOString(), ttlHours, message: 'Показан последний сохраненный снимок набора данных 49.' },
           }
         }
       } catch {
@@ -76,7 +76,7 @@ export class NovosibirskStopsProvider {
             updatedAt: cache.entry.payload.updatedAt,
             fetchedAt: cache.entry.fetchedAt,
             ttlHours,
-            message: cache.fresh ? 'Показан кэш dataset 49.' : 'Показан устаревший кэш dataset 49.',
+            message: cache.fresh ? 'Показан кэш набора данных 49.' : 'Показан устаревший кэш набора данных 49.',
           },
         }
       }
@@ -96,7 +96,7 @@ export class NovosibirskStopsProvider {
         updatedAt: defaultTransportStops[0]?.updatedAt,
         fetchedAt,
         ttlHours,
-        message: 'Показан mock-fallback: локальный пример структуры dataset 49.',
+        message: 'Показан демонстрационный резервный набор: локальный пример структуры набора данных 49.',
       },
     }
   }

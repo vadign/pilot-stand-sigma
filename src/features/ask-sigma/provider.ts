@@ -25,8 +25,8 @@ export class LocalAskSigmaProvider implements AskSigmaProvider {
         stops: defaultTransportStops,
         fares: defaultTransportFares,
         statuses: [
-          { key: 'transport-stops', datasetId: '49', title: 'Остановки наземного транспорта', sourceUrl: 'https://opendata.novo-sibirsk.ru/pass.aspx?ID=49', source: 'mock', dataType: 'mock-fallback', status: 'stale', updatedAt: defaultTransportStops[0]?.updatedAt, fetchedAt: new Date().toISOString(), ttlHours: 24, message: 'Локальный fallback dataset 49' },
-          { key: 'transport-fares', datasetId: '51', title: 'Тарифы на проезд', sourceUrl: 'https://opendata.novo-sibirsk.ru/pass.aspx?ID=51', source: 'mock', dataType: 'mock-fallback', status: 'stale', updatedAt: defaultTransportFares[0]?.updatedAt, fetchedAt: new Date().toISOString(), ttlHours: 24, message: 'Локальный fallback dataset 51' },
+          { key: 'transport-stops', datasetId: '49', title: 'Остановки наземного транспорта', sourceUrl: 'https://opendata.novo-sibirsk.ru/pass.aspx?ID=49', source: 'mock', dataType: 'mock-fallback', status: 'stale', updatedAt: defaultTransportStops[0]?.updatedAt, fetchedAt: new Date().toISOString(), ttlHours: 24, message: 'Локальный резервный набор данных 49' },
+          { key: 'transport-fares', datasetId: '51', title: 'Тарифы на проезд', sourceUrl: 'https://opendata.novo-sibirsk.ru/pass.aspx?ID=51', source: 'mock', dataType: 'mock-fallback', status: 'stale', updatedAt: defaultTransportFares[0]?.updatedAt, fetchedAt: new Date().toISOString(), ttlHours: 24, message: 'Локальный резервный набор данных 51' },
         ],
       },
       now: new Date().toISOString(),
@@ -40,6 +40,6 @@ export class LocalAskSigmaProvider implements AskSigmaProvider {
 
 export class RemoteAskSigmaProvider implements AskSigmaProvider {
   getContext(): AskSigmaContext {
-    throw new Error('RemoteAskSigmaProvider is a placeholder for future backend integration')
+    throw new Error('RemoteAskSigmaProvider пока не подключен к серверной интеграции')
   }
 }

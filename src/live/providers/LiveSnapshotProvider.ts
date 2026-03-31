@@ -2,7 +2,7 @@ import type { LiveManifest, Power051Snapshot } from '../types'
 
 const fetchJson = async <T>(path: string): Promise<T> => {
   const response = await fetch(path, { cache: 'no-store' })
-  if (!response.ok) throw new Error(`snapshot fetch failed: ${response.status}`)
+  if (!response.ok) throw new Error(`Не удалось загрузить снимок: ${response.status}`)
   return response.json() as Promise<T>
 }
 

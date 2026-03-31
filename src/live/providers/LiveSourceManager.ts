@@ -110,7 +110,7 @@ export class LiveSourceManager {
         updatedAt: snapshot.snapshotAt,
         sourceUrl: snapshot.sourceUrl,
         status: 'ready',
-        message: 'Показан последний локальный snapshot 051.',
+        message: 'Показан последний локальный снимок 051.',
       },
     }
   }
@@ -156,7 +156,7 @@ export class LiveSourceManager {
         updatedAt: mock.snapshotAt,
         sourceUrl: mock.sourceUrl,
         status: 'stale',
-        message: 'Данные 051 недоступны, показан mock fallback.',
+        message: 'Данные 051 недоступны, показан демонстрационный резервный набор.',
       },
     }
   }

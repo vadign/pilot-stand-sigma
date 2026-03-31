@@ -3,6 +3,7 @@ import { AlertTriangle, Siren } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { MapView } from '../../components/MapView'
 import { Badge, Card } from '../../components/ui'
+import { formatSourceBadgeLabel } from '../../lib/sourcePresentation'
 import { getOutageKindLabel } from '../../live/outageKindLabels'
 import { useSigmaStore } from '../../store/useSigmaStore'
 import {
@@ -81,7 +82,7 @@ export default function OperationsPage() {
               onChange={(event) => setSource(event.target.value)}
             >
               <option value="all">Источник: все</option>
-              {isHeatTab ? <option value="live">051</option> : <option value="mock">mock</option>}
+              {isHeatTab ? <option value="live">051</option> : <option value="mock">демонстрационный контур</option>}
             </select>
             {isHeatTab && (
               <>
@@ -124,7 +125,7 @@ export default function OperationsPage() {
           >
             <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <Badge
-                text={`${incident.sourceBadge.toUpperCase()} · ${incident.severity.toUpperCase()}`}
+                text={`${formatSourceBadgeLabel(incident.sourceBadge)} · ${incident.severity.toUpperCase()}`}
                 className={severityStyles[incident.severity]}
               />
               <span className="text-xs text-slate-500">
@@ -198,7 +199,7 @@ export default function OperationsPage() {
             </div>
             <div className="text-sm text-slate-600">
               {isHeatTab
-                ? 'Факты из 051 не скрываются локальными действиями. Workflow ведется поверх сохраненного снимка.'
+                ? 'Факты из 051 не скрываются локальными действиями. Рабочий процесс ведется поверх сохраненного снимка.'
                 : 'Вкладка показывает доменный поток событий на карте и в ленте без переключения между разделами.'}
             </div>
           </div>

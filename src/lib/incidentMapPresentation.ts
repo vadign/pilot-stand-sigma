@@ -2,6 +2,7 @@ import type { Incident } from '../types'
 import { getOutageKindLabel } from '../live/outageKindLabels'
 import { getOutageCompactCaption, getOutageTitle, getUtilityLabel } from '../live/outagePresentation'
 import { getDistrictName } from './districts'
+import { formatSourceBadgeLabel } from './sourcePresentation'
 
 type MapIncidentInput = Incident & {
   sourceBadge?: string
@@ -42,7 +43,8 @@ const truncateText = (value: string, maxLength = 40): string => value.length > m
 const isOutageKind = (value?: string): value is 'planned' | 'emergency' => value === 'planned' || value === 'emergency'
 
 const getSubsystemLabel = (incident: MapIncidentInput): string => subsystemLabels[incident.subsystem] ?? 'Городской контур'
-const getSourceLabel = (incident: MapIncidentInput): string => sourceLabels[incident.sourceId] ?? incident.sourceBadge?.toUpperCase() ?? 'Sigma'
+const getSourceLabel = (incident: MapIncidentInput): string =>
+  sourceLabels[incident.sourceId] ?? formatSourceBadgeLabel(incident.sourceBadge) ?? 'Сигма'
 
 const getIncidentTitle = (incident: MapIncidentInput): string => {
   const liveOutageKind = incident.liveMeta?.outageKind
