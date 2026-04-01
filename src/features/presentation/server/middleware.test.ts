@@ -2,9 +2,12 @@ import type { IncomingMessage } from 'node:http'
 import { describe, expect, it } from 'vitest'
 import { buildRequestOrigin } from './middleware'
 
+const createSocket = (encrypted: boolean): IncomingMessage['socket'] =>
+  ({ encrypted } as unknown as IncomingMessage['socket'])
+
 const createRequest = (overrides: Partial<IncomingMessage> = {}): IncomingMessage => ({
   headers: {},
-  socket: { encrypted: false },
+  socket: createSocket(false),
   ...overrides,
 } as IncomingMessage)
 
@@ -36,7 +39,7 @@ describe('buildRequestOrigin', () => {
       headers: {
         host: 'intranet.example:5173',
       },
-      socket: { encrypted: true } as IncomingMessage['socket'],
+      socket: createSocket(true),
     })
 
     expect(buildRequestOrigin(req)).toBe('https://intranet.example:5173')
@@ -47,7 +50,7 @@ describe('buildRequestOrigin', () => {
       headers: {
         host: 'localhost:5173',
       },
-      socket: { encrypted: true } as IncomingMessage['socket'],
+      socket: createSocket(true),
     })
 
     const origin = new URL(buildRequestOrigin(req))

@@ -14,7 +14,6 @@ const jsonHeaders = {
 
 const sessionRoutePattern = /^\/session\/([^/]+)\/(info|stream|command|ask|present)$/
 const localhostHosts = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]'])
-const forwardedProtoPattern = /^(http|https)$/
 const presentationDebugOriginEnabled = process.env.SIGMA_PRESENTATION_DEBUG_ORIGIN === '1'
 
 const isPrivateIpv4 = (address: string): boolean =>
@@ -86,7 +85,7 @@ const resolveRequestProtocol = (req: IncomingMessage): 'http' | 'https' => {
   const forwardedProto = getHeaderValue(req.headers['x-forwarded-proto'])
   const normalizedProto = forwardedProto?.split(',')[0]?.trim().toLowerCase()
 
-  if (normalizedProto && forwardedProtoPattern.test(normalizedProto)) {
+  if (normalizedProto === 'http' || normalizedProto === 'https') {
     return normalizedProto
   }
 
