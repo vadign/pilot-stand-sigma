@@ -43,6 +43,17 @@ const writeJson = (res: ServerResponse, statusCode: number, payload: unknown) =>
   res.end(JSON.stringify(payload))
 }
 
+const getRemoteIp = (req: IncomingMessage): string => {
+  const forwardedFor = req.headers['x-forwarded-for']
+  if (typeof forwardedFor === 'string' && forwardedFor.trim()) {
+    return forwardedFor.split(',')[0]?.trim() ?? 'unknown'
+  }
+  if (Array.isArray(forwardedFor) && forwardedFor[0]) {
+    return forwardedFor[0].split(',')[0]?.trim() ?? 'unknown'
+  }
+  return req.socket.remoteAddress ?? 'unknown'
+}
+
 const readJsonBody = async <T>(req: IncomingMessage): Promise<T> => {
   const chunks: Buffer[] = []
   for await (const chunk of req) {
@@ -179,6 +190,10 @@ export const createPresentationSessionMiddleware = (
           res.setHeader('X-Accel-Buffering', 'no')
           res.flushHeaders?.()
 
+          const connectedAt = Date.now()
+          const remoteIp = getRemoteIp(req)
+          console.info(`[presentation:sse] open sid=${sid} ip=${remoteIp}`)
+
           const unsubscribe = manager.subscribe(sid, origin, {
             send: (event) => {
               res.write(`event: ${event.type}\n`)
@@ -189,10 +204,20 @@ export const createPresentationSessionMiddleware = (
             },
           })
 
-          req.on('close', () => {
+          let closed = false
+          const closeSubscription = (reason: 'req_close' | 'req_aborted' | 'res_close' | 'res_error') => {
+            if (closed) return
+            closed = true
             unsubscribe()
+            const lifetimeMs = Date.now() - connectedAt
+            console.info(`[presentation:sse] close sid=${sid} ip=${remoteIp} lifetimeMs=${lifetimeMs} reason=${reason}`)
             if (!res.writableEnded) res.end()
-          })
+          }
+
+          req.on('close', () => closeSubscription('req_close'))
+          req.on('aborted', () => closeSubscription('req_aborted'))
+          res.on('close', () => closeSubscription('res_close'))
+          res.on('error', () => closeSubscription('res_error'))
           return
         }
 

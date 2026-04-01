@@ -161,6 +161,32 @@ docker compose up -d --build
 - оставлять длинные `proxy_read_timeout` и `proxy_send_timeout`;
 - прокидывать `X-Forwarded-Proto`, чтобы QR и session URLs строились с правильным `http/https`.
 
+### Smoke-check presentation SSE
+
+Быстрый ручной smoke после деплоя:
+
+1. Создай сессию:
+
+```bash
+curl -sS -X POST http://127.0.0.1:5173/session/create
+```
+
+Сохрани `sid` из ответа.
+
+2. Открой stream и проверь, что приходят `snapshot` и периодические `heartbeat`:
+
+```bash
+curl -N http://127.0.0.1:5173/session/<sid>/stream
+```
+
+3. В другом терминале отправь команду и убедись, что в stream появился `scene` event:
+
+```bash
+curl -sS -X POST http://127.0.0.1:5173/session/<sid>/command \
+  -H 'Content-Type: application/json' \
+  -d '{"clientId":"smoke-mobile","role":"mobile","type":"navigate","scene":{"kind":"operations"}}'
+```
+
 Если не хочешь светить порт наружу вообще, в [`compose.yml`](/Users/vadign/pilot-stand-sigma/compose.yml) можно заменить:
 
 ```yaml
