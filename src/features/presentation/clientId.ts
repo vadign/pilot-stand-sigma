@@ -7,12 +7,31 @@ const clientIdKeys: Record<PresentationRole, string> = {
   viewer: 'sigma.presentation.viewerClientId',
 }
 
+const volatileClientIds: Partial<Record<PresentationRole, string>> = {}
+
+const readStoredClientId = (storageKey: string): string | undefined => {
+  try {
+    return window.localStorage.getItem(storageKey) ?? undefined
+  } catch {
+    return undefined
+  }
+}
+
+const writeStoredClientId = (storageKey: string, clientId: string) => {
+  try {
+    window.localStorage.setItem(storageKey, clientId)
+  } catch {
+    return undefined
+  }
+}
+
 export const getPresentationClientId = (role: PresentationRole): string => {
   const storageKey = clientIdKeys[role]
-  const existing = window.localStorage.getItem(storageKey)
+  const existing = readStoredClientId(storageKey) ?? volatileClientIds[role]
   if (existing) return existing
 
   const clientId = createRandomId()
-  window.localStorage.setItem(storageKey, clientId)
+  volatileClientIds[role] = clientId
+  writeStoredClientId(storageKey, clientId)
   return clientId
 }

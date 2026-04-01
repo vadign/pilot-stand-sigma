@@ -141,6 +141,44 @@ describe('presentation display routes', () => {
     expect(container.querySelector('svg')).toBeTruthy()
   })
 
+  it('renders a fallback qr link when session info is temporarily unavailable', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url === '/session/create') {
+        return new Response(JSON.stringify({ sid: idleSession.sid, expiresAt: idleSession.expiresAt }), { status: 200 })
+      }
+
+      if (url.startsWith(`/session/${idleSession.sid}/info`)) {
+        return new Response(JSON.stringify({ error: 'temporary failure' }), { status: 500 })
+      }
+
+      throw new Error(`Unhandled fetch: ${url}`)
+    }))
+
+    const originalLocation = window.location
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        ...originalLocation,
+        origin: 'https://sigma.test',
+        hostname: 'sigma.test',
+      },
+    })
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={['/display']}>
+          <App />
+        </MemoryRouter>,
+      )
+    })
+
+    await waitForText('https://sigma.test/mobile?s=session-1')
+
+    expect(container.querySelector('svg')).toBeTruthy()
+  })
+
   it('shows fullscreen answer overlay and navigates to presentation pages without layout chrome', async () => {
     await act(async () => {
       root.render(

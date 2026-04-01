@@ -2,21 +2,29 @@ import { CheckCircle2, Copy, LoaderCircle, QrCode, Smartphone } from 'lucide-rea
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Badge, Card } from '../../components/ui'
-import { createPresentationSession } from './api'
+import { createPresentationSession, fetchPresentationSessionInfo } from './api'
+import { getPresentationClientId } from './clientId'
 import { usePresentationStore } from './store'
 import { SessionQrCode } from './SessionQrCode'
-import { buildDisplayRoute, getPresentationSessionId } from './url'
+import { buildDisplayRoute, buildFallbackMobileUrl, getPresentationSessionId } from './url'
 
 export default function PresentationDisplayPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const session = usePresentationStore((state) => state.session)
+  const setSnapshot = usePresentationStore((state) => state.setSnapshot)
   const connection = usePresentationStore((state) => state.connection)
   const error = usePresentationStore((state) => state.error)
+  const setError = usePresentationStore((state) => state.setError)
   const sessionId = useMemo(() => getPresentationSessionId(searchParams), [searchParams])
+  const clientId = useMemo(() => getPresentationClientId('display'), [])
   const [creatingSession, setCreatingSession] = useState(false)
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState('')
+  const mobileUrl = useMemo(
+    () => session?.mobileUrl ?? (sessionId ? buildFallbackMobileUrl(sessionId) : undefined),
+    [session?.mobileUrl, sessionId],
+  )
 
   useEffect(() => {
     if (sessionId || creatingSession) return
@@ -39,10 +47,33 @@ export default function PresentationDisplayPage() {
     }
   }, [creatingSession, navigate, sessionId])
 
+  useEffect(() => {
+    if (!sessionId) return
+    if (session?.sid === sessionId) return
+
+    let isMounted = true
+
+    void fetchPresentationSessionInfo({
+      sid: sessionId,
+      clientId,
+      role: 'display',
+    }).then((info) => {
+      if (!isMounted) return
+      setSnapshot(info)
+    }).catch((nextError) => {
+      if (!isMounted) return
+      setError(nextError instanceof Error ? nextError.message : String(nextError))
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [clientId, session?.sid, sessionId, setError, setSnapshot])
+
   const handleCopy = async () => {
-    if (!session?.mobileUrl) return
+    if (!mobileUrl) return
     try {
-      await navigator.clipboard.writeText(session.mobileUrl)
+      await navigator.clipboard.writeText(mobileUrl)
       setCopied(true)
       setCopyError('')
       window.setTimeout(() => setCopied(false), 1600)
@@ -51,7 +82,7 @@ export default function PresentationDisplayPage() {
     }
   }
 
-  const showLoading = !sessionId || (!session && !error)
+  const showLoading = !sessionId || (!mobileUrl && !session && !error)
 
   return (
     <div className="min-h-screen bg-slate-100 px-6 py-10 text-slate-900">
@@ -106,8 +137,8 @@ export default function PresentationDisplayPage() {
                 <div className="flex min-h-[280px] w-full max-w-[280px] items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-500">
                   <LoaderCircle className="animate-spin" size={28} />
                 </div>
-              ) : session?.mobileUrl ? (
-                <SessionQrCode value={session.mobileUrl} />
+              ) : mobileUrl ? (
+                <SessionQrCode value={mobileUrl} />
               ) : (
                 <div className="min-h-[280px] w-full max-w-[280px] rounded-2xl border border-slate-200 bg-slate-50" />
               )}
@@ -116,12 +147,12 @@ export default function PresentationDisplayPage() {
             <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-500">Ссылка пульта</div>
               <div className="mt-2 break-all text-sm text-slate-900">
-                {session?.mobileUrl ?? 'Готовлю ссылку сессии…'}
+                {mobileUrl ?? 'Готовлю ссылку сессии…'}
               </div>
               <button
                 type="button"
                 onClick={() => void handleCopy()}
-                disabled={!session?.mobileUrl}
+                disabled={!mobileUrl}
                 className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
