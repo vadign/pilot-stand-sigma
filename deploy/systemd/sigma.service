@@ -10,7 +10,8 @@ Group=sigma
 WorkingDirectory=/opt/pilot-stand-sigma
 EnvironmentFile=/etc/sigma/sigma.env
 Environment=NODE_ENV=production
-ExecStart=/bin/sh -lc 'exec /usr/bin/npm run dev -- --host 0.0.0.0 --port "${SIGMA_PORT:-5173}"'
+ExecStartPre=/bin/sh -lc 'cd /opt/pilot-stand-sigma && /usr/bin/npm run build'
+ExecStart=/bin/sh -lc 'exec /usr/bin/npm run start -- --host 0.0.0.0 --port "${SIGMA_PORT:-4173}"'
 Restart=always
 RestartSec=5
 TimeoutStopSec=20
