@@ -135,7 +135,8 @@ export default function PresentationMobilePage() {
   useEffect(() => {
     if (!sessionId) return
     void refreshSessionInfo().catch((nextError) => {
-      setError(nextError instanceof Error ? nextError.message : String(nextError))
+      const details = nextError instanceof Error ? nextError.message : String(nextError)
+      setError(`Не удалось получить состояние сессии: ${details}`)
     })
   }, [clientId, isViewerMode, sessionId])
 
@@ -172,7 +173,8 @@ export default function PresentationMobilePage() {
         setError('Эта сессия уже управляется с другого телефона.')
         await refreshSessionInfo()
       } else {
-        setError(nextError instanceof Error ? nextError.message : String(nextError))
+        const details = nextError instanceof Error ? nextError.message : String(nextError)
+        setError(`Не удалось отправить команду: ${details}`)
       }
     } finally {
       setLoading(false)

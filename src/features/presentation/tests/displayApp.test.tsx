@@ -102,11 +102,11 @@ describe('presentation display routes', () => {
       const url = String(input)
 
       if (url === '/session/create') {
-        return new Response(JSON.stringify({ sid: idleSession.sid, expiresAt: idleSession.expiresAt }), { status: 200 })
+        return new Response(JSON.stringify({ sid: idleSession.sid, expiresAt: idleSession.expiresAt }), { status: 200, headers: { 'Content-Type': 'application/json' } })
       }
 
       if (url.startsWith(`/session/${idleSession.sid}/info`)) {
-        return new Response(JSON.stringify(idleSession), { status: 200 })
+        return new Response(JSON.stringify(idleSession), { status: 200, headers: { 'Content-Type': 'application/json' } })
       }
 
       throw new Error(`Unhandled fetch: ${url} ${init?.method ?? 'GET'}`)
@@ -146,11 +146,11 @@ describe('presentation display routes', () => {
       const url = String(input)
 
       if (url === '/session/create') {
-        return new Response(JSON.stringify({ sid: idleSession.sid, expiresAt: idleSession.expiresAt }), { status: 200 })
+        return new Response(JSON.stringify({ sid: idleSession.sid, expiresAt: idleSession.expiresAt }), { status: 200, headers: { 'Content-Type': 'application/json' } })
       }
 
       if (url.startsWith(`/session/${idleSession.sid}/info`)) {
-        return new Response(JSON.stringify({ error: 'temporary failure' }), { status: 500 })
+        return new Response(JSON.stringify({ error: 'temporary failure' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
       }
 
       throw new Error(`Unhandled fetch: ${url}`)

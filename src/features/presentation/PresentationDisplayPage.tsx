@@ -62,7 +62,8 @@ export default function PresentationDisplayPage() {
       setSnapshot(info)
     }).catch((nextError) => {
       if (!isMounted) return
-      setError(nextError instanceof Error ? nextError.message : String(nextError))
+      const details = nextError instanceof Error ? nextError.message : String(nextError)
+      setError(`Не удалось загрузить состояние сессии: ${details}`)
     })
 
     return () => {

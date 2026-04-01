@@ -58,7 +58,7 @@ describe('PresentationMobilePage', () => {
       const url = String(input)
 
       if (url.startsWith('/session/session-1/info')) {
-        return new Response(JSON.stringify(buildSessionInfo({ type: 'idle', requestedAt: '2026-04-01T12:00:00.000Z' })), { status: 200 })
+        return new Response(JSON.stringify(buildSessionInfo({ type: 'idle', requestedAt: '2026-04-01T12:00:00.000Z' })), { status: 200, headers: { 'Content-Type': 'application/json' } })
       }
 
       if (url === '/session/session-1/command' && init?.method === 'POST') {
@@ -72,7 +72,7 @@ describe('PresentationMobilePage', () => {
             result: command.result,
             actions: command.actions ?? command.result.actions ?? [],
             requestedAt: '2026-04-01T12:01:00.000Z',
-          }, { clientId: body.clientId, claimedAt: '2026-04-01T12:01:00.000Z' })), { status: 200 })
+          }, { clientId: body.clientId, claimedAt: '2026-04-01T12:01:00.000Z' })), { status: 200, headers: { 'Content-Type': 'application/json' } })
         }
 
         if (command.type === 'PATCH_PAGE_STATE') {
@@ -95,7 +95,7 @@ describe('PresentationMobilePage', () => {
               pavilionOnly: false,
             },
             requestedAt: '2026-04-01T12:02:00.000Z',
-          }, { clientId: body.clientId, claimedAt: '2026-04-01T12:02:00.000Z' })), { status: 200 })
+          }, { clientId: body.clientId, claimedAt: '2026-04-01T12:02:00.000Z' })), { status: 200, headers: { 'Content-Type': 'application/json' } })
         }
 
         if (command.type === 'OPEN_PAGE') {
@@ -106,7 +106,7 @@ describe('PresentationMobilePage', () => {
             pageKey: command.page.pageKey,
             state: command.page,
             requestedAt: '2026-04-01T12:02:00.000Z',
-          }, { clientId: body.clientId, claimedAt: '2026-04-01T12:02:00.000Z' })), { status: 200 })
+          }, { clientId: body.clientId, claimedAt: '2026-04-01T12:02:00.000Z' })), { status: 200, headers: { 'Content-Type': 'application/json' } })
         }
       }
 
@@ -159,14 +159,14 @@ describe('PresentationMobilePage', () => {
         return new Response(JSON.stringify(buildSessionInfo(
           { type: 'idle', requestedAt: '2026-04-01T12:00:00.000Z' },
           { clientId: 'other-mobile', claimedAt: '2026-04-01T12:00:00.000Z' },
-        )), { status: 200 })
+        )), { status: 200, headers: { 'Content-Type': 'application/json' } })
       }
 
       if (url === '/session/session-1/command') {
         return new Response(JSON.stringify({
           error: 'controller_conflict',
           controller: { clientId: 'other-mobile', claimedAt: '2026-04-01T12:00:00.000Z' },
-        }), { status: 409 })
+        }), { status: 409, headers: { 'Content-Type': 'application/json' } })
       }
 
       throw new Error(`Unhandled fetch: ${url} ${init?.method ?? 'GET'}`)

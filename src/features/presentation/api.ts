@@ -18,17 +18,53 @@ export class PresentationControllerConflictError extends Error {
   }
 }
 
+const ERROR_PREVIEW_LENGTH = 180
+
+const isJsonContentType = (contentType: string | null): boolean => {
+  if (!contentType) return false
+  const normalized = contentType.toLowerCase()
+  return normalized.includes('application/json') || normalized.includes('+json')
+}
+
+const buildResponseError = (response: Response, rawText: string): Error => {
+  const normalizedBody = rawText.trim()
+  const bodyPreview = normalizedBody.slice(0, ERROR_PREVIEW_LENGTH)
+  const bodyFragment = bodyPreview
+    ? ` — ${bodyPreview}${normalizedBody.length > ERROR_PREVIEW_LENGTH ? '…' : ''}`
+    : ' — пустой ответ'
+
+  return new Error(`Request failed: ${response.status} ${response.statusText}${bodyFragment}`)
+}
+
 const readJson = async <T>(response: Response): Promise<T> => {
-  const payload = await response.json() as T | { error?: string }
+  const rawText = await response.text()
+  const shouldParseJson = isJsonContentType(response.headers.get('content-type'))
+
+  let payload: T | { error?: string } | undefined
+  if (shouldParseJson && rawText) {
+    payload = JSON.parse(rawText) as T | { error?: string }
+  }
+
   if (!response.ok) {
-    if (response.status === 409 && typeof payload === 'object' && payload && 'error' in payload) {
+    if (response.status === 409 && payload && typeof payload === 'object' && 'error' in payload) {
       throw new PresentationControllerConflictError(payload as PresentationControllerConflict)
     }
-    const message = typeof payload === 'object' && payload && 'error' in payload
-      ? String(payload.error)
-      : response.statusText
-    throw new Error(message)
+
+    if (payload && typeof payload === 'object' && 'error' in payload) {
+      throw new Error(String(payload.error))
+    }
+
+    throw buildResponseError(response, rawText)
   }
+
+  if (!shouldParseJson) {
+    throw buildResponseError(response, rawText)
+  }
+
+  if (!payload) {
+    throw new Error(`Request failed: ${response.status} ${response.statusText} — пустой ответ`)
+  }
+
   return payload as T
 }
 
