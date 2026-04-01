@@ -14,7 +14,8 @@
     "snapshot:education": "python3 scripts/build_education_snapshot.py",
     "sync:051": "tsx scripts/sync-051.mts",
     "sync:live": "tsx scripts/sync-live.mts",
-    "sync:live:hourly": "tsx scripts/sync-live.mts --watch"
+    "sync:live:hourly": "tsx scripts/sync-live.mts --watch",
+    "start": "tsx scripts/start.mts"
   },
   "dependencies": {
     "@pbe/react-yandex-maps": "^1.2.5",

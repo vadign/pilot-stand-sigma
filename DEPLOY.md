@@ -10,7 +10,7 @@
 - проксирует `/api/routes` и `/api/vehicles` для live-транспорта через Vite middleware.
 - держит in-memory presentation sessions и SSE-стрим `/session/*/stream` для двухэкранного режима.
 
-Из-за этого схема `npm run build` + просто раздача `dist` статикой не подходит.
+Поэтому в деплое нельзя держать `vite dev`/HMR. Нужна production-схема: `npm run build` и запуск `vite preview` (через `npm run start`) с middleware для `/api/*` и `/session/*/stream`.
 
 ## Что использовать
 
@@ -54,7 +54,7 @@ cp deploy/docker/sigma.env.example deploy/docker/sigma.env
 ```env
 VITE_SOURCE_MODE=hybrid
 VITE_ENABLE_RUNTIME_LIVE_FETCH=false
-SIGMA_PORT=5173
+SIGMA_PORT=4173
 SIGMA_SNAPSHOT_SYNC_INTERVAL_MS=3600000
 VITE_051_PORTAL_URL=https://map.novo-sibirsk.ru/portal/disconnections?t=
 ```
@@ -68,7 +68,7 @@ docker compose up -d --build
 ```
 
 По умолчанию compose поднимет один контейнер `app` с Node runtime внутри.
-Он публикуется наружу на `5173` порт.
+Он публикуется наружу на `4173` порт (production preview).
 
 Если нужен другой внешний порт:
 
@@ -81,7 +81,7 @@ SIGMA_APP_PORT=8080 docker compose up -d --build
 Контейнер `app` запускает:
 
 ```bash
-node --import tsx scripts/dev.mts --host 0.0.0.0 --port 5173
+npm run build && node --import tsx scripts/start.mts --host 0.0.0.0 --port 4173
 ```
 
 Это дает сразу три вещи:
@@ -136,7 +136,7 @@ docker compose up -d --build
 
 То есть по умолчанию:
 
-- `http://server:5173/`
+- `http://server:4173/`
 
 Проверить ответы:
 
@@ -151,7 +151,7 @@ docker compose up -d --build
 Тогда ничего дополнительного в compose не нужно.
 Просто проксируй на опубликованный порт приложения:
 
-- `http://127.0.0.1:5173`
+- `http://127.0.0.1:4173`
 
 Готовый пример конфига уже есть в [`deploy/nginx/sigma.conf`](/Users/vadign/pilot-stand-sigma/deploy/nginx/sigma.conf).
 
@@ -165,14 +165,14 @@ docker compose up -d --build
 
 ```yaml
 ports:
-  - "${SIGMA_APP_PORT:-5173}:5173"
+  - "${SIGMA_APP_PORT:-4173}:4173"
 ```
 
 на:
 
 ```yaml
 ports:
-  - "127.0.0.1:5173:5173"
+  - "127.0.0.1:4173:4173"
 ```
 
 Тогда приложение будет доступно только локально на хосте, а наружу его будет отдавать уже ваш `nginx`.
@@ -186,3 +186,37 @@ ports:
 - [`deploy/sigma.env.example`](/Users/vadign/pilot-stand-sigma/deploy/sigma.env.example)
 
 Но для изолированного деплоя его больше использовать не нужно.
+
+
+## Проверка, что не запущен dev-сервер
+
+На хосте проверьте активный процесс и unit/compose/pm2 команды запуска. В конфигурации не должно быть `vite`, `vite dev`, `npm run dev` для production-инстанса.
+
+```bash
+# systemd
+systemctl cat sigma.service
+systemctl status sigma --no-pager
+ps -fp $(pgrep -f "sigma|vite|tsx scripts/start.mts" | tr "\n" " ")
+
+# docker compose
+docker compose ps
+docker compose logs --tail=100 app
+docker compose exec app ps -ef
+
+# pm2 (если используется)
+pm2 list
+pm2 show sigma
+```
+
+Ожидаемо в запуске: `npm run start` / `vite preview`, а не `npm run dev`.
+
+## Проверка после деплоя (cache + network)
+
+1. Откройте DevTools → Network.
+2. Включите **Disable cache**.
+3. Сделайте **Hard Reload** (Ctrl+Shift+R).
+4. Убедитесь, что больше нет запросов к:
+   - `/src/*.tsx`
+   - `/node_modules/.vite/deps/...`
+
+Если такие запросы есть, значит трафик все еще идет на dev/HMR endpoint.

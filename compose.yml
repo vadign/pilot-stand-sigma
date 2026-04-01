@@ -9,7 +9,7 @@ services:
     env_file:
       - ./deploy/docker/sigma.env
     ports:
-      - "${SIGMA_APP_PORT}:5173"
+      - "${SIGMA_APP_PORT}:4173"
     restart: unless-stopped
     healthcheck:
       test:
@@ -17,7 +17,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:5173/live-data/manifest.json').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+          "fetch('http://127.0.0.1:4173/live-data/manifest.json').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
         ]
       interval: 30s
       timeout: 5s
