@@ -32,7 +32,7 @@ import {
   type PresentationSessionStorage,
 } from './storage'
 
-export const PRESENTATION_SESSION_TTL_MS = 8 * 60 * 60 * 1000
+export const PRESENTATION_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000
 export const PRESENTATION_HEARTBEAT_MS = 20_000
 export const PRESENTATION_CLEANUP_MS = 60_000
 export const PRESENTATION_HISTORY_LIMIT = 20
