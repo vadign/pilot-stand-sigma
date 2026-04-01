@@ -1,4 +1,5 @@
 import type { StateCreator } from 'zustand'
+import { createRandomId } from '../../lib/randomId'
 import type { LiveBundle } from '../../live/types'
 import type { ScenarioRun } from '../../types'
 import type { SigmaState } from '../useSigmaStore'
@@ -8,7 +9,7 @@ type SigmaSet = Parameters<StateCreator<SigmaState>>[0]
 type SigmaGet = Parameters<StateCreator<SigmaState>>[1]
 
 const createScenarioRun = (scenarioId: string): ScenarioRun => ({
-  id: crypto.randomUUID(),
+  id: createRandomId(),
   scenarioId,
   at: new Date().toISOString(),
   status: 'выполняется',
@@ -18,7 +19,7 @@ const createScenarioRun = (scenarioId: string): ScenarioRun => ({
 })
 
 const createRegulationDraft = (title: string, domain: string, count: number) => ({
-  id: crypto.randomUUID(),
+  id: createRandomId(),
   code: `РГ-${200 + count}`,
   title,
   domain,
@@ -74,7 +75,7 @@ export const createSigmaActions = (set: SigmaSet, get: SigmaGet) => ({
                 timeline: [
                   ...incident.timeline,
                   {
-                    id: crypto.randomUUID(),
+                    id: createRandomId(),
                     at: new Date().toISOString(),
                     author: 'Сигма',
                     text: 'Инцидент эскалирован',
@@ -99,7 +100,7 @@ export const createSigmaActions = (set: SigmaSet, get: SigmaGet) => ({
                 timeline: [
                   ...incident.timeline,
                   {
-                    id: crypto.randomUUID(),
+                    id: createRandomId(),
                     at: new Date().toISOString(),
                     author: 'Диспетчер',
                     text: 'Инцидент закрыт',
@@ -147,7 +148,7 @@ export const createSigmaActions = (set: SigmaSet, get: SigmaGet) => ({
                 timeline: [
                   ...incident.timeline,
                   {
-                    id: crypto.randomUUID(),
+                    id: createRandomId(),
                     at: new Date().toISOString(),
                     author: 'Оператор',
                     text: `Назначен: ${assignee}`,
@@ -227,7 +228,7 @@ export const createSigmaActions = (set: SigmaSet, get: SigmaGet) => ({
                 timeline: [
                   ...incident.timeline,
                   {
-                    id: crypto.randomUUID(),
+                    id: createRandomId(),
                     at: new Date().toISOString(),
                     author: 'Руководитель',
                     text,
@@ -249,7 +250,7 @@ export const createSigmaActions = (set: SigmaSet, get: SigmaGet) => ({
               timeline: [
                 ...incident.timeline,
                 {
-                  id: crypto.randomUUID(),
+                  id: createRandomId(),
                   at: new Date().toISOString(),
                   author: 'Мэр',
                   text: 'Действие одобрено',
@@ -301,7 +302,7 @@ export const createSigmaActions = (set: SigmaSet, get: SigmaGet) => ({
       ),
       notifications: [
         {
-          id: crypto.randomUUID(),
+          id: createRandomId(),
           text: 'Новый alert: превышение порога по шуму',
           level: 'высокий' as const,
           createdAt: new Date().toISOString(),

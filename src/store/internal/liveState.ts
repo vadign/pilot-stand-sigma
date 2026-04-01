@@ -1,4 +1,5 @@
 import type { SigmaLiveState } from '../../live/types'
+import { createRandomId } from '../../lib/randomId'
 
 export const createInitialLiveState = (): SigmaLiveState => ({
   mode: 'hybrid',
@@ -22,7 +23,7 @@ export const addWorkflowEntry = (
   [incidentId]: [
     ...(workflow[incidentId] ?? []),
     {
-      id: crypto.randomUUID(),
+      id: createRandomId(),
       incidentId,
       action,
       text,

@@ -1,4 +1,5 @@
 import type { PresentationRole } from './types'
+import { createRandomId } from '../../lib/randomId'
 
 const clientIdKeys: Record<PresentationRole, string> = {
   mobile: 'sigma.presentation.mobileClientId',
@@ -11,7 +12,7 @@ export const getPresentationClientId = (role: PresentationRole): string => {
   const existing = window.localStorage.getItem(storageKey)
   if (existing) return existing
 
-  const clientId = crypto.randomUUID()
+  const clientId = createRandomId()
   window.localStorage.setItem(storageKey, clientId)
   return clientId
 }
