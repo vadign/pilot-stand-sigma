@@ -3,8 +3,10 @@ import { createRoot } from 'react-dom/client'
 import { act } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
+import { build051Snapshot, normalize051ToSigmaIncidents, summarize051Snapshot } from './live/normalizers/normalize051ToSigma'
 import { createSigmaState, useSigmaStore } from './store/useSigmaStore'
 import { createTestLiveBundle } from './testUtils/liveBundle'
+import type { LiveBundle } from './live/types'
 
 vi.mock('./components/MapView', () => ({
   MapView: ({ incidents }: { incidents: Array<{ id: string }> }) => (
@@ -35,6 +37,7 @@ describe('App smoke render', () => {
   let desktopMatches = true
   let container: HTMLDivElement
   let heatIncidentId = ''
+  let electricityEmergencyIncidentId = ''
   const mediaQueryListeners = new Set<(event: MediaQueryListEvent) => void>()
 
   const installMatchMedia = (matches: boolean) => {
@@ -110,11 +113,63 @@ describe('App smoke render', () => {
   const findButtonContaining = (label: string) =>
     Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes(label))
 
+  const createElectricityOnlyLiveBundle = (): LiveBundle => {
+    const snapshot = build051Snapshot({
+      sourceUrl: 'https://051.novo-sibirsk.ru/SitePages/off.aspx',
+      snapshotAt: '2026-03-20T09:30:00.000Z',
+      fetchedAt: '2026-03-20T09:31:00.000Z',
+      parseVersion: '1.0.0',
+      planned: [{ district: 'Ленинский район', outageKind: 'planned', utilityType: 'hot_water', houses: 2 }],
+      emergency: [{ district: 'Кировский район', outageKind: 'emergency', utilityType: 'electricity', houses: 1 }],
+    })
+
+    return {
+      mode: 'hybrid',
+      outages: {
+        payload: {
+          snapshot,
+          incidents: normalize051ToSigmaIncidents(snapshot),
+          summary: summarize051Snapshot(snapshot),
+          history: [snapshot],
+        },
+        meta: {
+          source: 'snapshot',
+          type: 'real',
+          fetchedAt: snapshot.fetchedAt,
+          updatedAt: snapshot.snapshotAt,
+          sourceUrl: snapshot.sourceUrl,
+          status: 'ready',
+          message: 'snapshot',
+        },
+      },
+      sourceStatuses: [
+        {
+          key: '051',
+          title: '051 — отключения ЖКХ',
+          sourceUrl: snapshot.sourceUrl,
+          updatedAt: snapshot.snapshotAt,
+          fetchedAt: snapshot.fetchedAt,
+          ttlMinutes: 30,
+          status: 'ready',
+          type: 'real',
+          message: 'snapshot',
+          source: 'snapshot',
+        },
+      ],
+    }
+  }
+
   beforeEach(() => {
     useSigmaStore.setState(createSigmaState(useSigmaStore.setState, useSigmaStore.getState), true)
     const { bundle, heatIncidentId: nextHeatIncidentId } = createTestLiveBundle()
     useSigmaStore.getState().applyLiveBundle(bundle)
     heatIncidentId = nextHeatIncidentId
+    electricityEmergencyIncidentId = useSigmaStore
+      .getState()
+      .live
+      .liveIncidents
+      .find((incident) => incident.utilityType === 'electricity' && incident.outageKind === 'emergency')
+      ?.id ?? ''
     installMatchMedia(true)
     container = document.createElement('div')
     document.body.appendChild(container)
@@ -306,6 +361,24 @@ describe('App smoke render', () => {
     })
   })
 
+  it('places the synthetic heating incident first in urgent actions when live heating events are missing', async () => {
+    useSigmaStore.getState().applyLiveBundle(createElectricityOnlyLiveBundle())
+
+    const root = await renderApp(['/mayor-dashboard'])
+    await waitForText('Срочные действия')
+
+    const priorityItems = Array.from(
+      container.querySelectorAll('[data-testid="mayor-priority-item"]'),
+    ) as HTMLDivElement[]
+
+    expect(priorityItems[0]?.getAttribute('data-incident-id')).toBe('051-len-synthetic-emergency-heating')
+    expect(priorityItems[0]?.textContent).toContain('Демонстрационный инцидент')
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
   it('keeps secondary mayor dashboard analytics visible on desktop', async () => {
     const root = await renderApp(['/mayor-dashboard?subsystem=roads'])
     await waitForText('Разбивка по статусам')
@@ -403,11 +476,13 @@ describe('App smoke render', () => {
     })
   })
 
-  it('shows the replay fallback state for non-heat incidents', async () => {
-    const root = await renderApp(['/incidents/INC-1001/replay'])
-    await waitForText('Воспроизведение пока доступно только для теплового контура')
+  it('shows the replay fallback state for non-heating incidents', async () => {
+    const root = await renderApp([`/incidents/${electricityEmergencyIncidentId}/replay`])
+    await waitForText('Воспроизведение доступно только для критических и экстренных событий по отоплению и горячей воде')
 
-    expect(container.textContent).toContain('Воспроизведение пока доступно только для теплового контура')
+    expect(container.textContent).toContain(
+      'Воспроизведение доступно только для критических и экстренных событий по отоплению и горячей воде',
+    )
     expect(container.querySelector('[data-testid="incident-replay-range"]')).toBeNull()
 
     await act(async () => {

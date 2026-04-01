@@ -8,6 +8,7 @@
 - при старте делает `sync:live`;
 - потом повторяет sync по расписанию;
 - проксирует `/api/routes` и `/api/vehicles` для live-транспорта через Vite middleware.
+- держит in-memory presentation sessions и SSE-стрим `/session/*/stream` для двухэкранного режима.
 
 Из-за этого схема `npm run build` + просто раздача `dist` статикой не подходит.
 
@@ -142,6 +143,8 @@ docker compose up -d --build
 - `/live-data/manifest.json`
 - `/live-data/051/latest.json`
 - `/api/routes`
+- `/display`
+- `/mobile?s=<sid>` после создания presentation session
 
 ## Если у тебя уже есть свой nginx
 
@@ -151,6 +154,12 @@ docker compose up -d --build
 - `http://127.0.0.1:5173`
 
 Готовый пример конфига уже есть в [`deploy/nginx/sigma.conf`](/Users/vadign/pilot-stand-sigma/deploy/nginx/sigma.conf).
+
+Для presentation mode важно:
+
+- не включать buffering на `/session/*/stream`;
+- оставлять длинные `proxy_read_timeout` и `proxy_send_timeout`;
+- прокидывать `X-Forwarded-Proto`, чтобы QR и session URLs строились с правильным `http/https`.
 
 Если не хочешь светить порт наружу вообще, в [`compose.yml`](/Users/vadign/pilot-stand-sigma/compose.yml) можно заменить:
 

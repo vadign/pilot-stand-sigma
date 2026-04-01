@@ -2,7 +2,14 @@ import { getDistrictId, getDistrictName } from '../../lib/districts'
 import { districts } from '../../mocks/data'
 import { getOutageKindLabel } from '../outageKindLabels'
 import { getOutageTitle, getUtilityLabel } from '../outagePresentation'
-import type { Power051Snapshot, Power051UtilityBucket, SigmaLiveOutageIncident, SigmaLiveOutageSummary } from '../types'
+import type {
+  Power051DistrictStat,
+  Power051Snapshot,
+  Power051UtilityBucket,
+  SigmaLiveOutageIncident,
+  SigmaLiveOutageSummary,
+  UtilityType,
+} from '../types'
 import { liveSeverityByOutageKind, liveStatusByOutageKind } from '../types'
 
 const utilityToSubsystem: Record<string, string> = {
@@ -13,6 +20,10 @@ const utilityToSubsystem: Record<string, string> = {
   electricity: 'utilities',
   gas: 'utilities',
 }
+
+const replayUtilityTypes = new Set<UtilityType>(['heating', 'hot_water'])
+const fallbackReplayDistrictId = 'sov'
+const syntheticReplayReason = 'Резервный демонстрационный инцидент Sigma'
 
 const buildUtilities = (snapshot: Pick<Power051Snapshot, 'planned' | 'emergency'>): Power051UtilityBucket[] => {
   const map = new Map<string, Power051UtilityBucket>()
@@ -42,24 +53,96 @@ export const build051Snapshot = (input: Omit<Power051Snapshot, 'utilities' | 'to
   }
 }
 
+const buildSnapshotInput = (
+  snapshot: Power051Snapshot,
+  patch: Pick<Power051Snapshot, 'planned' | 'emergency'>,
+): Omit<Power051Snapshot, 'utilities' | 'totals'> => ({
+  sourceUrl: snapshot.sourceUrl,
+  snapshotAt: snapshot.snapshotAt,
+  fetchedAt: snapshot.fetchedAt,
+  parseVersion: snapshot.parseVersion,
+  rawHash: snapshot.rawHash,
+  planned: patch.planned,
+  emergency: patch.emergency,
+})
+
+const pickFallbackDistrict = (records: Power051DistrictStat[]) => {
+  const prioritizedRecords = records.filter((item) => replayUtilityTypes.has(item.utilityType))
+  const sourceRecords = prioritizedRecords.length > 0 ? prioritizedRecords : records
+  const district = districts.find((item) => item.id === fallbackReplayDistrictId) ?? districts[0]
+  const fallbackLabel = `${district.name} район`
+
+  if (sourceRecords.length === 0) {
+    return { district, label: fallbackLabel }
+  }
+
+  const primaryRecord = [...sourceRecords].sort((left, right) => right.houses - left.houses)[0]
+  const districtId = getDistrictId(primaryRecord?.district)
+  const nextDistrict = districts.find((item) => item.id === districtId) ?? district
+  return {
+    district: nextDistrict,
+    label: primaryRecord?.district || `${nextDistrict.name} район`,
+  }
+}
+
+const createSyntheticReplayStat = (snapshot: Power051Snapshot): Power051DistrictStat => {
+  const records = [...snapshot.planned, ...snapshot.emergency]
+  const { district, label } = pickFallbackDistrict(records)
+  return {
+    district: label,
+    districtId: district.id,
+    utilityType: 'heating',
+    outageKind: 'emergency',
+    houses: 1,
+    reason: syntheticReplayReason,
+    description:
+      'Сигма автоматически сформировала демонстрационный аварийный инцидент по отоплению, ' +
+      'поскольку в текущем снимке 051 нет экстренных событий по отоплению и горячей воде.',
+  }
+}
+
+export const ensureReplayCoverageSnapshot = (snapshot: Power051Snapshot): Power051Snapshot => {
+  const emergencyReplayRecords = snapshot.emergency.filter((item) => replayUtilityTypes.has(item.utilityType))
+  if (emergencyReplayRecords.length > 0) return snapshot
+
+  return build051Snapshot(
+    buildSnapshotInput(snapshot, {
+      planned: snapshot.planned,
+      emergency: [...snapshot.emergency, createSyntheticReplayStat(snapshot)],
+    }),
+  )
+}
+
+const isSyntheticReplayStat = (item: Power051DistrictStat): boolean =>
+  item.reason === syntheticReplayReason
+
 export const normalize051ToSigmaIncidents = (snapshot: Power051Snapshot): SigmaLiveOutageIncident[] => {
-  const records = [...snapshot.emergency, ...snapshot.planned]
-  return records.map((item, index) => {
+  const normalizedSnapshot = ensureReplayCoverageSnapshot(snapshot)
+  const rawRecords = [...normalizedSnapshot.emergency, ...normalizedSnapshot.planned]
+
+  return rawRecords.map((item, index) => {
+    const synthetic = isSyntheticReplayStat(item)
     const districtId = getDistrictId(item.district)
     const district = districts.find((entry) => entry.id === districtId) ?? districts[0]
-    const detectedAt = snapshot.snapshotAt
+    const detectedAt = normalizedSnapshot.snapshotAt
     const label = getUtilityLabel(item.utilityType)
+    const incidentId = synthetic
+      ? `051-${district.id}-synthetic-${item.outageKind}-${item.utilityType}`
+      : `051-${district.id}-${item.outageKind}-${item.utilityType}-${index}`
+
     return {
-      id: `051-${district.id}-${item.outageKind}-${item.utilityType}-${index}`,
+      id: incidentId,
       liveSource: '051',
-      liveIncidentId: `051-${district.id}-${item.outageKind}-${item.utilityType}-${index}`,
+      liveIncidentId: incidentId,
       utilityType: item.utilityType,
       outageKind: item.outageKind,
       level: 'district-level',
-      sourceUrl: snapshot.sourceUrl,
+      sourceUrl: normalizedSnapshot.sourceUrl,
       raw: item,
-      sourceId: 'live-051',
-      title: getOutageTitle(item.outageKind, item.utilityType),
+      sourceId: synthetic ? 'live-051-demo' : 'live-051',
+      title: synthetic
+        ? `Демонстрационный инцидент: ${getOutageTitle(item.outageKind, item.utilityType)}`
+        : getOutageTitle(item.outageKind, item.utilityType),
       subsystem: utilityToSubsystem[item.utilityType] ?? 'utilities',
       severity: liveSeverityByOutageKind[item.outageKind],
       status: liveStatusByOutageKind[item.outageKind],
@@ -67,32 +150,47 @@ export const normalize051ToSigmaIncidents = (snapshot: Power051Snapshot): SigmaL
       coordinates: district.center,
       createdAt: detectedAt,
       detectedAt,
-      summary: `${getDistrictName(district.id)} район · ${item.houses} домов · ${label}`,
-      description: item.description ?? `${getDistrictName(district.id)} район, ресурс: ${label}.`,
+      summary: synthetic
+        ? `${getDistrictName(district.id)} район · демонстрационный резерв по ${label}`
+        : `${getDistrictName(district.id)} район · ${item.houses} домов · ${label}`,
+      description: synthetic
+        ? item.description ?? 'Сигма автоматически сформировала демонстрационный аварийный инцидент по отоплению.'
+        : item.description ?? `${getDistrictName(district.id)} район, ресурс: ${label}.`,
       metrics: [
-        { label: 'Отключено домов', value: String(item.houses), type: 'real' },
+        { label: synthetic ? 'Демонстрационных домов' : 'Отключено домов', value: String(item.houses), type: 'real' },
         { label: 'Тип отключения', value: getOutageKindLabel(item.outageKind, 'singular'), type: 'real' },
-        { label: 'Уровень детализации', value: 'район', type: 'real' },
+        { label: 'Уровень детализации', value: synthetic ? 'демонстрационный районный резерв' : 'район', type: 'real' },
       ],
       affectedPopulation: item.houses * 3,
       linkedRegulationIds: item.utilityType === 'heating' || item.utilityType === 'hot_water' ? ['reg-heat'] : ['reg-utilities'],
       recommendations: [
         {
-          id: `rec-${index}`,
-          title: 'Базовый рабочий процесс Сигмы',
-          sourceId: 'live-051',
+          id: synthetic ? `rec-synthetic-${district.id}` : `rec-${index}`,
+          title: synthetic ? 'Проверка демонстрационного сценария' : 'Базовый рабочий процесс Сигмы',
+          sourceId: synthetic ? 'live-051-demo' : 'live-051',
           steps: [
-            { id: `step-${index}-1`, title: 'Подтвердить район и контур отключения', done: true },
-            { id: `step-${index}-2`, title: 'Назначить ответственную службу', done: false },
-            { id: `step-${index}-3`, title: 'Сообщить ожидаемое время восстановления', done: false },
+            { id: `step-${index}-1`, title: synthetic ? 'Подтвердить демонстрационный районный контур' : 'Подтвердить район и контур отключения', done: true },
+            { id: `step-${index}-2`, title: synthetic ? 'Показать воспроизведение и прогноз' : 'Назначить ответственную службу', done: false },
+            { id: `step-${index}-3`, title: synthetic ? 'Вернуться к реальным событиям 051 после демонстрации' : 'Сообщить ожидаемое время восстановления', done: false },
           ],
         },
       ],
-      assignee: item.outageKind === 'emergency' ? 'ЕДДС / экстренная служба' : 'Запланированные работы ЖКХ',
+      assignee: synthetic
+        ? 'Сигма / демонстрационный резерв'
+        : item.outageKind === 'emergency'
+          ? 'ЕДДС / экстренная служба'
+          : 'Запланированные работы ЖКХ',
       deadline: item.recoveryTime ? new Date().toISOString() : new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-      progress: item.outageKind === 'emergency' ? 20 : 10,
+      progress: synthetic ? 5 : item.outageKind === 'emergency' ? 20 : 10,
       timeline: [
-        { id: `tl-${index}-1`, at: detectedAt, author: '051', text: `Опубликовано отключение уровня района: ${label}.` },
+        {
+          id: synthetic ? `tl-synthetic-${district.id}` : `tl-${index}-1`,
+          at: detectedAt,
+          author: synthetic ? 'Сигма' : '051',
+          text: synthetic
+            ? 'Сформирован демонстрационный инцидент по отоплению из-за отсутствия событий по отоплению и горячей воде в текущем снимке 051.'
+            : `Опубликовано отключение уровня района: ${label}.`,
+        },
       ],
       detail: {
         houses: item.houses,
@@ -105,8 +203,10 @@ export const normalize051ToSigmaIncidents = (snapshot: Power051Snapshot): SigmaL
 }
 
 export const summarize051Snapshot = (snapshot: Power051Snapshot, previousSnapshot?: Power051Snapshot): SigmaLiveOutageSummary => {
+  const normalizedSnapshot = ensureReplayCoverageSnapshot(snapshot)
+  const normalizedPreviousSnapshot = previousSnapshot ? ensureReplayCoverageSnapshot(previousSnapshot) : undefined
   const districtMap = new Map<string, { district: string; districtId?: string; houses: number; incidents: number }>()
-  for (const item of [...snapshot.planned, ...snapshot.emergency]) {
+  for (const item of [...normalizedSnapshot.planned, ...normalizedSnapshot.emergency]) {
     const districtId = getDistrictId(item.district)
     const key = districtId ?? item.district
     const current = districtMap.get(key) ?? { district: getDistrictName(districtId ?? item.district), districtId, houses: 0, incidents: 0 }
@@ -116,17 +216,17 @@ export const summarize051Snapshot = (snapshot: Power051Snapshot, previousSnapsho
   }
 
   return {
-    totalHouses: snapshot.totals.houses,
-    plannedHouses: snapshot.totals.planned,
-    emergencyHouses: snapshot.totals.emergency,
-    activeIncidents: snapshot.totals.incidents,
+    totalHouses: normalizedSnapshot.totals.houses,
+    plannedHouses: normalizedSnapshot.totals.planned,
+    emergencyHouses: normalizedSnapshot.totals.emergency,
+    activeIncidents: normalizedSnapshot.totals.incidents,
     topDistricts: Array.from(districtMap.values()).sort((left, right) => right.houses - left.houses).slice(0, 5),
-    utilities: snapshot.utilities,
-    delta: previousSnapshot ? {
-      houses: snapshot.totals.houses - previousSnapshot.totals.houses,
-      planned: snapshot.totals.planned - previousSnapshot.totals.planned,
-      emergency: snapshot.totals.emergency - previousSnapshot.totals.emergency,
-      incidents: snapshot.totals.incidents - previousSnapshot.totals.incidents,
+    utilities: normalizedSnapshot.utilities,
+    delta: normalizedPreviousSnapshot ? {
+      houses: normalizedSnapshot.totals.houses - normalizedPreviousSnapshot.totals.houses,
+      planned: normalizedSnapshot.totals.planned - normalizedPreviousSnapshot.totals.planned,
+      emergency: normalizedSnapshot.totals.emergency - normalizedPreviousSnapshot.totals.emergency,
+      incidents: normalizedSnapshot.totals.incidents - normalizedPreviousSnapshot.totals.incidents,
     } : undefined,
   }
 }

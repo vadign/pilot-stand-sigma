@@ -24,7 +24,7 @@ const getSpeechRecognition = (): BrowserSpeechRecognitionConstructor | null => {
   return speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition ?? null
 }
 
-export const useVoiceInput = () => {
+export const useVoiceInput = (options?: { onTranscript?: (query: string) => void }) => {
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null)
   const backgroundCheckTimeoutRef = useRef<number | null>(null)
   const ask = useAskSigmaStore((s) => s.ask)
@@ -80,7 +80,10 @@ export const useVoiceInput = () => {
       setVoiceState('processing')
       const transcript = event.results[0]?.[0]?.transcript ?? ''
       const clean = stripWakeWord(transcript)
-      if (clean) ask(clean)
+      if (clean) {
+        if (options?.onTranscript) options.onTranscript(clean)
+        else ask(clean)
+      }
       setVoiceState('idle')
     }
 
@@ -97,7 +100,7 @@ export const useVoiceInput = () => {
     recognitionRef.current = recognition
     setVoiceState('listening')
     recognition.start()
-  }, [ask, setVoiceState, voiceState])
+  }, [ask, options, setVoiceState, voiceState])
 
   const stop = useCallback(() => {
     stopRecognition(false)

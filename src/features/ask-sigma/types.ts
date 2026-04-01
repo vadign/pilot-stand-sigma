@@ -1,6 +1,7 @@
 import type { Deputy, Incident, Regulation, ServicePerformance } from '../../types'
 import type { SigmaLiveOutageSummary, SourceStatusCard } from '../../live/types'
 import type { TransportFare, TransportSourceStatus, TransitStop } from '../public-transport/types'
+import type { PresentationCommand } from '../presentation/types'
 
 export type SigmaRole = 'мэр' | 'диспетчер' | 'аналитик'
 export type VoiceState = 'idle' | 'listening' | 'processing' | 'error' | 'unsupported'
@@ -134,6 +135,14 @@ export type AskSigmaHint = string | {
   description?: string
 }
 
+export interface AskSigmaAction {
+  label: string
+  route?: string
+  incidentId?: string
+  district?: string
+  presentationCommand?: PresentationCommand
+}
+
 export interface AskSigmaResult {
   type: AskSigmaResultType
   title: string
@@ -168,7 +177,7 @@ export interface AskSigmaResult {
     rawLabel?: string
     source: 'explicit' | 'implicit'
   }
-  actions?: { label: string; route?: string; incidentId?: string; district?: string }[]
+  actions?: AskSigmaAction[]
   hints?: AskSigmaHint[]
   explain: AskSigmaExplain
 }

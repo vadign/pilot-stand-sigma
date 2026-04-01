@@ -1,12 +1,16 @@
 import { Download } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Card, SourceMetaFooter } from '../../components/ui'
 import { getOutageKindLabel } from '../../live/outageKindLabels'
+import { buildIncidentReplayRoute, canOpenIncidentReplay, incidentReplayCtaLabel } from '../incident-replay/availability'
 import { formatDelta, useDashboardData } from './shared'
 
 export default function BriefingPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { incidents, outageSummary, districtCards, sourceStatuses } = useDashboardData()
+  const focus = searchParams.get('focus') ?? 'summary'
+  const highlightedIncidentId = searchParams.get('incident') ?? ''
   const liveStatus051 = sourceStatuses.find((item) => item.key === '051')
   const emergencyLive = incidents.filter(
     (incident) => incident.sourceKind === 'live' && incident.liveMeta?.outageKind === 'emergency',
@@ -27,7 +31,7 @@ export default function BriefingPage() {
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className={focus === 'summary' ? 'ring-2 ring-blue-500 ring-offset-2' : ''}>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="mb-2 text-sm font-semibold uppercase tracking-wider text-blue-700">
@@ -79,7 +83,7 @@ export default function BriefingPage() {
         </Card>
       </div>
 
-      <Card>
+      <Card className={focus === 'summary' ? 'ring-2 ring-blue-500 ring-offset-2' : ''}>
         <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">
           Сводка системы
         </div>
@@ -104,28 +108,44 @@ export default function BriefingPage() {
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-12">
-        <Card className="lg:col-span-7">
+        <Card className={`lg:col-span-7 ${focus === 'incidents' ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`.trim()}>
           <div className="mb-3 text-2xl font-bold">Активные события ЖКХ</div>
           {incidents
             .filter((incident) => incident.sourceKind === 'live')
             .slice(0, 5)
             .map((incident) => (
-              <button
+              <div
                 key={incident.id}
-                onClick={() => navigate(`/incidents/${incident.id}`)}
-                className="mb-2 flex w-full items-center justify-between rounded-xl border px-3 py-3 text-left hover:bg-slate-50"
+                className={`mb-2 flex w-full items-center justify-between rounded-xl border px-3 py-3 text-left hover:bg-slate-50 ${
+                  highlightedIncidentId === incident.id ? 'border-blue-500 bg-blue-50' : ''
+                }`.trim()}
               >
-                <div>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/incidents/${incident.id}`)}
+                  className="min-w-0 flex-1 text-left"
+                >
                   <div className="font-semibold">{incident.title}</div>
                   <div className="text-sm text-slate-500">{incident.summary}</div>
+                </button>
+                <div className="ml-3 flex shrink-0 flex-col items-end gap-2">
+                  <div className="text-right text-sm text-slate-500">
+                    {new Date(incident.detectedAt).toLocaleTimeString('ru-RU')}
+                  </div>
+                  {canOpenIncidentReplay(incident) && (
+                    <button
+                      type="button"
+                      onClick={() => navigate(buildIncidentReplayRoute(incident.id))}
+                      className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700"
+                    >
+                      {incidentReplayCtaLabel}
+                    </button>
+                  )}
                 </div>
-                <div className="text-right text-sm text-slate-500">
-                  {new Date(incident.detectedAt).toLocaleTimeString('ru-RU')}
-                </div>
-              </button>
+              </div>
             ))}
         </Card>
-        <Card className="lg:col-span-5">
+        <Card className={`lg:col-span-5 ${focus === 'districts' ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`.trim()}>
           <div className="mb-3 text-2xl font-bold">Нагрузка по районам</div>
           <div className="space-y-2">
             {districtCards.slice(0, 5).map((item) => (

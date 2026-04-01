@@ -145,7 +145,7 @@ export class LiveSourceManager {
     return {
       payload: {
         snapshot: mock,
-        incidents: [],
+        incidents: normalize051ToSigmaIncidents(mock),
         summary: summarize051Snapshot(mock),
         history: [],
       },

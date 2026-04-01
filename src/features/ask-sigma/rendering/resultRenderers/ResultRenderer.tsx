@@ -1,17 +1,19 @@
-import { Link } from 'react-router-dom'
 import { Card } from '../../../../components/ui'
 import { getDistrictAnswerName } from '../../../../lib/districts'
+import { buildIncidentReplayRoute, canOpenIncidentReplay, incidentReplayCtaLabel } from '../../../incident-replay/availability'
 import { getTransportDistrictLabel } from '../../../public-transport/selectors'
-import type { AskSigmaResult } from '../../types'
+import type { AskSigmaAction, AskSigmaResult } from '../../types'
 
 export const ResultRenderer = ({
   result,
   onAction,
   onHintSelect,
+  disableActions = false,
 }: {
   result: AskSigmaResult
-  onAction: (route?: string, district?: string) => void
+  onAction: (action: AskSigmaAction) => void
   onHintSelect?: (question: string) => void
+  disableActions?: boolean
 }) => {
   const isUnknown = result.type === 'UNKNOWN'
   const canRunHintQuery = Boolean(onHintSelect) && (isUnknown || result.type === 'HELP')
@@ -54,7 +56,39 @@ export const ResultRenderer = ({
             <div key={incident.id} className="rounded-lg border p-2 text-sm">
               <div className="font-semibold">{incident.title}</div>
               <div>{incident.severity} · {incident.status} · {getDistrictAnswerName(incident.district)}</div>
-              <button className="mt-2 rounded border px-2 py-1" onClick={() => onAction(`/incidents/${incident.id}`, incident.district)}>Открыть</button>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {disableActions ? (
+                  <span className="inline-flex rounded border px-2 py-1 text-xs font-semibold text-slate-700">
+                    Открыть карточку
+                  </span>
+                ) : (
+                  <button
+                    className="rounded border px-2 py-1"
+                    onClick={() => onAction({ label: 'Открыть', route: `/incidents/${incident.id}`, district: incident.district })}
+                  >
+                    Открыть
+                  </button>
+                )}
+                {canOpenIncidentReplay(incident) && (
+                  disableActions ? (
+                    <span className="inline-flex rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700">
+                      {incidentReplayCtaLabel}
+                    </span>
+                  ) : (
+                    <button
+                      className="rounded border border-blue-200 bg-blue-50 px-2 py-1 text-blue-700"
+                      onClick={() => onAction({
+                        label: incidentReplayCtaLabel,
+                        incidentId: incident.id,
+                        route: buildIncidentReplayRoute(incident.id),
+                        district: incident.district,
+                      })}
+                    >
+                      {incidentReplayCtaLabel}
+                    </button>
+                  )
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -171,9 +205,22 @@ export const ResultRenderer = ({
 
       <div className="mt-3 flex flex-wrap gap-2">
         {result.actions?.map((action) => (
-          action.route ?
-            <button key={action.label + action.route} onClick={() => onAction(action.route, action.district)} className="rounded bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white">{action.label}</button>
-            : <Link key={action.label} to="#" className="rounded border px-3 py-1.5 text-sm">{action.label}</Link>
+          disableActions || !action.route ? (
+            <span
+              key={action.label + (action.route ?? '')}
+              className="rounded border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-semibold text-slate-700"
+            >
+              {action.label}
+            </span>
+          ) : (
+            <button
+              key={action.label + action.route}
+              onClick={() => onAction(action)}
+              className="rounded bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white"
+            >
+              {action.label}
+            </button>
+          )
         ))}
       </div>
     </Card>

@@ -45,6 +45,7 @@ describe('LiveSourceManager', () => {
     const bundle = await makeManager({ runtimeOk: true }).loadBundle({ mode: 'mock', runtimeEnabled: true })
     expect(bundle.mode).toBe('mock')
     expect(bundle.outages.meta.source).toBe('mock')
+    expect(bundle.outages.payload.incidents.some((incident) => incident.utilityType === 'heating')).toBe(true)
   })
 
   it('returns source statuses', async () => {

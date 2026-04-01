@@ -2,6 +2,7 @@ import { X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { AskSigmaBar } from '../AskSigmaBar'
 import { useAskSigmaStore } from '../store'
+import type { AskSigmaAction } from '../types'
 import { ResultRenderer } from './resultRenderers/ResultRenderer'
 
 export const AnswerPanel = () => {
@@ -12,7 +13,8 @@ export const AnswerPanel = () => {
   const isLoading = useAskSigmaStore((s) => s.isLoading)
   const ask = useAskSigmaStore((s) => s.ask)
 
-  const handleAction = (route?: string, district?: string) => {
+  const handleAction = (action: AskSigmaAction) => {
+    const { route, district } = action
     if (!route) return
     if (district && route === '/operations') {
       navigate(`/operations?district=${district}`)
@@ -27,7 +29,7 @@ export const AnswerPanel = () => {
 
     const route = nextResult.actions?.[0]?.route
     const district = nextResult.actions?.[0]?.district
-    handleAction(route, district)
+    handleAction({ label: 'Открыть', route, district })
   }
 
   if (!isOpen) return null

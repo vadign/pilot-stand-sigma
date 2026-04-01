@@ -1,9 +1,6 @@
 import { create } from 'zustand'
-import { getDistrictAnswerName } from '../../lib/districts'
-import { normalizeQuery } from './normalize'
-import { executePlan } from './executor'
-import { createPlan } from './planner'
 import { LocalAskSigmaProvider } from './provider'
+import { runAskSigmaQuery } from './runner'
 import type { AskSigmaResult, SigmaRole, VoiceState } from './types'
 
 const provider = new LocalAskSigmaProvider()
@@ -56,28 +53,25 @@ export const useAskSigmaStore = create<AskSigmaState>((set, get) => ({
   close: () => set({ isOpen: false }),
   open: () => set({ isOpen: true }),
   ask: (value) => {
-    const query = normalizeQuery(value)
     set({ isLoading: true, error: undefined })
-    const plan = createPlan(query)
+    const execution = runAskSigmaQuery({
+      query: value,
+      provider,
+      role: get().role,
+      implicitDistrict: get().district,
+    })
 
-    if (plan.role) {
-      get().setRole(plan.role, plan.district)
-      const result: AskSigmaResult = {
-        type: 'ROLE_SWITCH',
-        title: 'Роль обновлена',
-        summary: `Текущая роль: ${plan.role}${plan.district ? `, район: ${getDistrictAnswerName(plan.district)}` : ''}`,
-        explain: { dataType: 'pilot', source: 'Голосовая или текстовая команда', updatedAt: new Date().toISOString() },
-      }
-      set({ lastResult: result, isLoading: false, isOpen: true })
-      localStorage.setItem(LS_RESULT, JSON.stringify(result))
-      return result
+    if (execution.roleChange) {
+      get().setRole(execution.roleChange.role, execution.roleChange.district)
+      set({ lastResult: execution.result, isLoading: false, isOpen: true })
+      localStorage.setItem(LS_RESULT, JSON.stringify(execution.result))
+      return execution.result
     }
 
-    const result = executePlan(plan, provider, get().role, { implicitDistrict: get().district })
     const history = [value, ...get().history.filter((item) => item !== value)].slice(0, 10)
     localStorage.setItem(LS_HISTORY, JSON.stringify(history))
-    localStorage.setItem(LS_RESULT, JSON.stringify(result))
-    set({ lastResult: result, history, isLoading: false, isOpen: true, input: value })
-    return result
+    localStorage.setItem(LS_RESULT, JSON.stringify(execution.result))
+    set({ lastResult: execution.result, history, isLoading: false, isOpen: true, input: value })
+    return execution.result
   },
 }))

@@ -7,6 +7,7 @@ import { loadIncidentReplayScenario } from '../incident-replay/loadIncidentRepla
 import { IncidentReplayDiagram } from '../incident-replay/components/IncidentReplayDiagram'
 import { IncidentReplayTimeline } from '../incident-replay/components/IncidentReplayTimeline'
 import { IncidentReplayEventCard } from '../incident-replay/components/IncidentReplayEventCard'
+import { canOpenIncidentReplay } from '../incident-replay/availability'
 import { selectIncidentById } from '../../live/selectors'
 import { useSigmaStore } from '../../store/useSigmaStore'
 import type { IncidentReplayScenario } from '../incident-replay/types'
@@ -22,7 +23,7 @@ export default function IncidentReplayPage() {
   const [activeEventIndex, setActiveEventIndex] = useState(0)
 
   useEffect(() => {
-    if (!incident || incident.subsystem !== 'heat') return
+    if (!incident) return
 
     let cancelled = false
     setLoading(true)
@@ -61,7 +62,7 @@ export default function IncidentReplayPage() {
 
   if (!incident) return <Card>Инцидент не найден</Card>
 
-  if (incident.subsystem !== 'heat') {
+  if (!canOpenIncidentReplay(incident)) {
     return (
       <Card className="space-y-4">
         <button
@@ -77,11 +78,11 @@ export default function IncidentReplayPage() {
             Воспроизведение и прогноз инцидента
           </div>
           <h1 className="mt-2 text-3xl font-extrabold">
-            Воспроизведение пока доступно только для теплового контура
+            Воспроизведение доступно только для критических и экстренных событий по отоплению и горячей воде
           </h1>
           <p className="mt-3 max-w-3xl text-slate-600">
-            Для текущего инцидента сценарий развития пока не поддержан. Первая версия воспроизведения
-            построена для аварий теплосети и связанных предаварийных сигналов.
+            Для дорог, шума, воздуха и других коммунальных ресурсов этот режим не используется.
+            Он открывается только для критических и экстренных событий по отоплению и горячей воде.
           </p>
         </div>
       </Card>
@@ -106,7 +107,7 @@ export default function IncidentReplayPage() {
             </div>
             <h1 className="mt-1.5 text-2xl font-extrabold break-words lg:text-4xl">{incident.title}</h1>
             <p className="mt-1 text-sm text-slate-500">
-              Развитие дефекта до аварии и прогноз последствий без вмешательства.
+              Развитие сигнала до активной фазы и прогноз последствий без вмешательства.
             </p>
           </div>
         </div>

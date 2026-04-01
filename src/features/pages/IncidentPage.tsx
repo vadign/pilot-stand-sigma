@@ -6,6 +6,7 @@ import { getDistrictName } from '../../lib/districts'
 import { formatSourceBadgeLabel } from '../../lib/sourcePresentation'
 import { selectIncidentById } from '../../live/selectors'
 import { useSigmaStore } from '../../store/useSigmaStore'
+import { buildIncidentReplayRoute, canOpenIncidentReplay, incidentReplayCtaLabel } from '../incident-replay/availability'
 import { sourceTypeLabels, utilityLabels } from './shared'
 
 export default function IncidentPage() {
@@ -44,12 +45,12 @@ export default function IncidentPage() {
             >
               Эскалировать
             </button>
-            {incident.subsystem === 'heat' && (
+            {canOpenIncidentReplay(incident) && (
               <button
-                onClick={() => navigate(`/incidents/${incident.id}/replay`)}
+                onClick={() => navigate(buildIncidentReplayRoute(incident.id))}
                 className="hidden rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 font-semibold text-blue-700 sm:inline-flex"
               >
-                Открыть воспроизведение и прогноз
+                {incidentReplayCtaLabel}
               </button>
             )}
             {incident.canResolve && (

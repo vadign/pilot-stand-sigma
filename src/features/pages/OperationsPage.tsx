@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { AlertTriangle, Siren } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { MapView } from '../../components/MapView'
 import { Badge, Card } from '../../components/ui'
 import { formatSourceBadgeLabel } from '../../lib/sourcePresentation'
 import { getOutageKindLabel } from '../../live/outageKindLabels'
 import { useSigmaStore } from '../../store/useSigmaStore'
+import { buildIncidentReplayRoute, canOpenIncidentReplay, incidentReplayCtaLabel } from '../incident-replay/availability'
 import {
   isHeatSubsystemTab,
   matchesSubsystemTab,
@@ -18,6 +19,7 @@ import {
 import { useIncidentViews } from '../../live/selectors'
 
 export default function OperationsPage() {
+  const navigate = useNavigate()
   const incidents = useIncidentViews()
   const assignIncident = useSigmaStore((state) => state.assignIncident)
   const escalateIncident = useSigmaStore((state) => state.escalateIncident)
@@ -25,22 +27,43 @@ export default function OperationsPage() {
   const takeLiveIncident = useSigmaStore((state) => state.takeLiveIncident)
   const setSelectedIncident = useSigmaStore((state) => state.setSelectedIncident)
   const selectedIncidentId = useSigmaStore((state) => state.selectedIncidentId)
-  const [searchParams] = useSearchParams()
-  const [subsystem, setSubsystem] = useState<SubsystemTabId>('heat')
-  const [severity, setSeverity] = useState(searchParams.get('severity') ?? '')
-  const [source, setSource] = useState(searchParams.get('source') ?? 'all')
-  const [utility, setUtility] = useState('')
-  const [outageKind, setOutageKind] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const subsystemFromParams = searchParams.get('subsystem')
+  const subsystem = operationalSubsystemTabs.some((item) => item.id === subsystemFromParams)
+    ? subsystemFromParams as SubsystemTabId
+    : 'heat'
+  const severity = searchParams.get('severity') ?? ''
+  const source = searchParams.get('source') ?? 'all'
+  const utility = searchParams.get('utility') ?? ''
+  const outageKind = searchParams.get('outageKind') ?? ''
   const district = searchParams.get('district') ?? ''
+  const selected = searchParams.get('selected') ?? ''
   const isHeatTab = isHeatSubsystemTab(subsystem)
 
+  useEffect(() => {
+    if (!selected) return
+    setSelectedIncident(selected)
+  }, [selected, setSelectedIncident])
+
+  const patchSearchParams = (patch: Record<string, string | undefined>) => {
+    const nextParams = new URLSearchParams(searchParams)
+    Object.entries(patch).forEach(([key, value]) => {
+      if (value) nextParams.set(key, value)
+      else nextParams.delete(key)
+    })
+    setSearchParams(nextParams, { replace: true })
+  }
+
   const handleSubsystemChange = (nextSubsystem: SubsystemTabId) => {
-    setSubsystem(nextSubsystem)
+    const nextParams = new URLSearchParams(searchParams)
+    if (nextSubsystem === 'heat') nextParams.delete('subsystem')
+    else nextParams.set('subsystem', nextSubsystem)
     if (!isHeatSubsystemTab(nextSubsystem)) {
-      setSource('all')
-      setUtility('')
-      setOutageKind('')
+      nextParams.delete('source')
+      nextParams.delete('utility')
+      nextParams.delete('outageKind')
     }
+    setSearchParams(nextParams, { replace: true })
   }
 
   const filtered = incidents.filter(
@@ -69,7 +92,7 @@ export default function OperationsPage() {
             <select
               className="rounded-xl border px-3 py-2"
               value={severity}
-              onChange={(event) => setSeverity(event.target.value)}
+              onChange={(event) => patchSearchParams({ severity: event.target.value })}
             >
               <option value="">Критичность: все</option>
               <option value="критический">Критический</option>
@@ -79,7 +102,7 @@ export default function OperationsPage() {
             <select
               className="rounded-xl border px-3 py-2"
               value={source}
-              onChange={(event) => setSource(event.target.value)}
+              onChange={(event) => patchSearchParams({ source: event.target.value === 'all' ? undefined : event.target.value })}
             >
               <option value="all">Источник: все</option>
               {isHeatTab ? <option value="live">051</option> : <option value="mock">демонстрационный контур</option>}
@@ -89,7 +112,7 @@ export default function OperationsPage() {
                 <select
                   className="rounded-xl border px-3 py-2"
                   value={outageKind}
-                  onChange={(event) => setOutageKind(event.target.value)}
+                  onChange={(event) => patchSearchParams({ outageKind: event.target.value })}
                 >
                   <option value="">Тип отключения: все</option>
                   <option value="emergency">{getOutageKindLabel('emergency', 'titlePlural')}</option>
@@ -98,7 +121,7 @@ export default function OperationsPage() {
                 <select
                   className="rounded-xl border px-3 py-2"
                   value={utility}
-                  onChange={(event) => setUtility(event.target.value)}
+                  onChange={(event) => patchSearchParams({ utility: event.target.value })}
                 >
                   <option value="">Ресурс: все</option>
                   {Object.entries(utilityLabels).map(([value, label]) => (
@@ -170,6 +193,14 @@ export default function OperationsPage() {
                 </button>
               )}
             </div>
+            {canOpenIncidentReplay(incident) && (
+              <button
+                onClick={() => navigate(buildIncidentReplayRoute(incident.id))}
+                className="mt-2 w-full rounded-lg border border-blue-200 bg-blue-50 py-2 text-xs font-semibold text-blue-700"
+              >
+                {incidentReplayCtaLabel}
+              </button>
+            )}
           </Card>
         ))}
 
@@ -186,9 +217,12 @@ export default function OperationsPage() {
         <Card className="relative">
           <MapView
             incidents={filtered}
-            onPick={setSelectedIncident}
+            onPick={(incidentId) => {
+              setSelectedIncident(incidentId)
+              patchSearchParams({ selected: incidentId })
+            }}
             plannedTopByHousesLimit={isHeatTab ? 5 : undefined}
-            selectedIncidentId={selectedIncidentId}
+            selectedIncidentId={selected || selectedIncidentId}
           />
           <div className="absolute bottom-3 left-3 right-3 rounded-2xl border border-red-200 bg-white p-3 shadow lg:bottom-5 lg:left-auto lg:right-5">
             <div className="font-bold text-red-600">

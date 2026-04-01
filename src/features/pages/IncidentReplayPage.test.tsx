@@ -19,6 +19,7 @@ describe('IncidentReplayPage', () => {
   ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
   let container: HTMLDivElement
   let heatIncidentId = ''
+  let electricityEmergencyIncidentId = ''
 
   const renderPage = async (path: string) => {
     const root = createRoot(container)
@@ -44,6 +45,12 @@ describe('IncidentReplayPage', () => {
   beforeEach(() => {
     resetStore()
     heatIncidentId = createTestLiveBundle().heatIncidentId
+    electricityEmergencyIncidentId = useSigmaStore
+      .getState()
+      .live
+      .liveIncidents
+      .find((incident) => incident.utilityType === 'electricity' && incident.outageKind === 'emergency')
+      ?.id ?? ''
     container = document.createElement('div')
     document.body.innerHTML = ''
     document.body.appendChild(container)
@@ -105,10 +112,12 @@ describe('IncidentReplayPage', () => {
     })
   })
 
-  it('shows a fallback state for a non-heat incident route', async () => {
-    const root = await renderPage('/incidents/INC-1001/replay')
+  it('shows a fallback state for non-heating incidents', async () => {
+    const root = await renderPage(`/incidents/${electricityEmergencyIncidentId}/replay`)
 
-    expect(container.textContent).toContain('Воспроизведение пока доступно только для теплового контура')
+    expect(container.textContent).toContain(
+      'Воспроизведение доступно только для критических и экстренных событий по отоплению и горячей воде',
+    )
     expect(container.querySelector('[data-testid="incident-replay-range"]')).toBeNull()
 
     await act(async () => {

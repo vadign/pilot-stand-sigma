@@ -17,6 +17,7 @@ import {
   transportModeByRouteType,
 } from './queryState'
 import {
+  selectCurrentFareCards,
   getTransportDistrictLabel,
   selectDistrictConnectivity,
   selectFilteredStops,
@@ -31,7 +32,7 @@ import type { TransitStop } from './types'
 export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }) => {
   const isDesktop = useMediaQuery('(min-width: 1024px)')
   const sourceMode = useSigmaStore((state) => state.sourceMode)
-  const { filters, updateFilters, connectivity, updateConnectivity } = useTransportQueryState()
+  const { filters, updateFilters, connectivity, updateConnectivity, searchParams } = useTransportQueryState()
   const { bundle, loading } = useTransportData(sourceMode)
   const liveRoutes = useLiveTransportRoutes()
   const [selectedStop, setSelectedStop] = useState<TransitStop>()
@@ -107,10 +108,15 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
       ? `Сейчас на карте: район ${getTransportDistrictLabel(filters.district)}`
       : 'Сейчас на карте: весь город'
   const isEmbeddedMobile = embedded && !isDesktop
+  const focus = searchParams?.get('focus') ?? 'overview'
   const networkSummary = `${globalMetrics.totalStops} остановок · ${globalMetrics.totalUniqueRoutes} маршрутов`
   const connectivitySummary = connectivity.from && connectivity.to
     ? `${districtConnectivity.count} общих маршрутов`
     : 'Выберите два района для сравнения'
+  const currentFares = useMemo(
+    () => selectCurrentFareCards(bundle?.fares ?? []).slice(0, 4),
+    [bundle?.fares],
+  )
 
   const connectivitySection = (
     <>
@@ -181,7 +187,7 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
         <div className="space-y-4">
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.95fr)]">
             <div className="space-y-4">
-              <Card>
+              <Card className={focus === 'map' ? 'ring-2 ring-blue-500 ring-offset-2' : ''}>
                 <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">
@@ -203,8 +209,16 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
                 />
               </Card>
 
-              {isEmbeddedMobile && <StopDetailsDrawer stop={activeSelectedStop} relatedHubs={relatedHubs} />}
-              {isEmbeddedMobile && <RouteDetailsPanel route={selectedRoute} />}
+              {isEmbeddedMobile && (
+                <div className={focus === 'hubs' ? 'rounded-2xl ring-2 ring-blue-500 ring-offset-2' : ''}>
+                  <StopDetailsDrawer stop={activeSelectedStop} relatedHubs={relatedHubs} />
+                </div>
+              )}
+              {isEmbeddedMobile && (
+                <div className={focus === 'list' ? 'rounded-2xl ring-2 ring-blue-500 ring-offset-2' : ''}>
+                  <RouteDetailsPanel route={selectedRoute} />
+                </div>
+              )}
 
               {isEmbeddedMobile ? (
                 <CollapsibleCardSection
@@ -212,11 +226,12 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
                   title="Связность районов"
                   summary={connectivitySummary}
                   titleClassName="text-lg font-bold"
+                  contentClassName={focus === 'connectivity' ? 'rounded-2xl ring-2 ring-blue-500 ring-offset-2' : ''}
                 >
                   {connectivitySection}
                 </CollapsibleCardSection>
               ) : (
-                <Card>
+                <Card className={focus === 'connectivity' ? 'ring-2 ring-blue-500 ring-offset-2' : ''}>
                   <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">
                     Связность районов
                   </div>
@@ -232,6 +247,7 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
                   title="Сводка сети"
                   summary={networkSummary}
                   titleClassName="text-lg font-bold"
+                  contentClassName={focus === 'hubs' ? 'rounded-2xl ring-2 ring-blue-500 ring-offset-2' : ''}
                 >
                   <TransportMetrics
                     totalStops={globalMetrics.totalStops}
@@ -246,18 +262,37 @@ export const PublicTransportPage = ({ embedded = false }: { embedded?: boolean }
                 </CollapsibleCardSection>
               ) : (
                 <>
-                  <TransportMetrics
-                    totalStops={globalMetrics.totalStops}
-                    totalUniqueRoutes={globalMetrics.totalUniqueRoutes}
-                    pavilionShare={globalMetrics.pavilionShare}
-                    districtCount={globalMetrics.districtCount}
-                    topStopsByRouteCount={globalMetrics.topStopsByRouteCount}
-                    topDistrictsByStopCount={globalMetrics.topDistrictsByStopCount}
-                    topDistrictsByUniqueRoutes={globalMetrics.topDistrictsByUniqueRoutes}
-                    selectedDistrict={selectedDistrict}
-                  />
-                  <StopDetailsDrawer stop={activeSelectedStop} relatedHubs={relatedHubs} />
-                  <RouteDetailsPanel route={selectedRoute} />
+                  <div className={focus === 'hubs' ? 'rounded-2xl ring-2 ring-blue-500 ring-offset-2' : ''}>
+                    <TransportMetrics
+                      totalStops={globalMetrics.totalStops}
+                      totalUniqueRoutes={globalMetrics.totalUniqueRoutes}
+                      pavilionShare={globalMetrics.pavilionShare}
+                      districtCount={globalMetrics.districtCount}
+                      topStopsByRouteCount={globalMetrics.topStopsByRouteCount}
+                      topDistrictsByStopCount={globalMetrics.topDistrictsByStopCount}
+                      topDistrictsByUniqueRoutes={globalMetrics.topDistrictsByUniqueRoutes}
+                      selectedDistrict={selectedDistrict}
+                    />
+                  </div>
+                  <div className={focus === 'hubs' ? 'rounded-2xl ring-2 ring-blue-500 ring-offset-2' : ''}>
+                    <StopDetailsDrawer stop={activeSelectedStop} relatedHubs={relatedHubs} />
+                  </div>
+                  <div className={focus === 'list' ? 'rounded-2xl ring-2 ring-blue-500 ring-offset-2' : ''}>
+                    <RouteDetailsPanel route={selectedRoute} />
+                  </div>
+                  <Card className={focus === 'fares' ? 'ring-2 ring-blue-500 ring-offset-2' : ''}>
+                    <div className="text-sm font-semibold uppercase tracking-widest text-blue-700">
+                      Тарифы
+                    </div>
+                    <div className="mt-3 space-y-2 text-sm">
+                      {currentFares.map((fare) => (
+                        <div key={fare.id} className="rounded-xl border border-slate-200 p-3">
+                          <div className="font-semibold">{fare.fareType}</div>
+                          <div className="text-slate-500">{fare.amount} ₽ · {fare.mode}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
                 </>
               )}
             </div>

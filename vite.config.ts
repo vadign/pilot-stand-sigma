@@ -3,8 +3,10 @@ import { defineConfig } from 'vitest/config'
 import type { Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { createNskgortransProxy } from './src/features/public-transport/server/nskgortransProxy'
+import { createPresentationSessionMiddleware } from './src/features/presentation/server/middleware'
 
 const nskgortransProxy = createNskgortransProxy()
+const presentationSessions = createPresentationSessionMiddleware()
 
 const reactRefreshPreamblePlugin = (): Plugin => ({
   name: 'sigma-react-refresh-preamble',
@@ -70,9 +72,11 @@ const handleVehiclesRequest = (req: IncomingMessage, res: ServerResponse, next: 
 const transportVehiclesApiPlugin = (): Plugin => ({
   name: 'sigma-transport-vehicles-api',
   configureServer(server) {
+    server.middlewares.use(presentationSessions.handlePresentationRequest)
     server.middlewares.use(handleVehiclesRequest)
   },
   configurePreviewServer(server) {
+    server.middlewares.use(presentationSessions.handlePresentationRequest)
     server.middlewares.use(handleVehiclesRequest)
   },
 })

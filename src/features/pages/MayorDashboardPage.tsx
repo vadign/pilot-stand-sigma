@@ -5,6 +5,8 @@ import { Badge, Card, CollapsibleCardSection } from '../../components/ui'
 import { getDistrictName } from '../../lib/districts'
 import { useMediaQuery } from '../../lib/useMediaQuery'
 import { getOutageKindLabel } from '../../live/outageKindLabels'
+import type { LiveIncidentView } from '../../live/types'
+import { buildIncidentReplayRoute, canOpenIncidentReplay, incidentReplayCtaLabel } from '../incident-replay/availability'
 import { PublicTransportPage } from '../public-transport'
 import { applyMayorTransportParams } from '../public-transport/navigation'
 import { SchoolsKindergartensPage } from '../schools-kindergartens'
@@ -48,20 +50,28 @@ const mobileSubsystemDescriptions: Record<SubsystemTabId, string> = {
 }
 
 const pinnedHeatPriorityIncidentId = '051-kal-planned-heating-3'
+const isSyntheticHeatPriorityIncident = (incident: LiveIncidentView): boolean =>
+  incident.id.includes('-synthetic-') && incident.liveMeta?.utilityType === 'heating'
 
 export default function MayorDashboardPage() {
   const navigate = useNavigate()
   const { districts, incidents, outageSummary, districtCards } = useDashboardData()
   const [searchParams, setSearchParams] = useSearchParams()
   const isDesktop = useMediaQuery('(min-width: 1024px)')
-  const [district, setDistrict] = useState('')
-  const [viewMode, setViewMode] = useState<MayorDashboardViewMode>(() => isDesktop ? 'map' : 'list')
+  const [localViewMode, setLocalViewMode] = useState<MayorDashboardViewMode>(() => isDesktop ? 'map' : 'list')
+  const selectedDistrict = searchParams.get('district') ?? ''
+  const hasPresentationView = searchParams.get('view') === 'map' || searchParams.get('view') === 'list'
+  const isPresentationMode = searchParams.get('present') === '1' && Boolean(searchParams.get('s'))
+  const viewMode = hasPresentationView
+    ? (searchParams.get('view') as MayorDashboardViewMode)
+    : localViewMode
   const subsystem = readSubsystemFromParams(searchParams)
   const subsystemIncidents = incidents.filter((incident) => matchesSubsystemTab(incident, subsystem))
-  const visibleIncidents = subsystemIncidents.filter((incident) => !district || incident.district === district)
+  const visibleIncidents = subsystemIncidents.filter((incident) => !selectedDistrict || incident.district === selectedDistrict)
   const liveIncidents = visibleIncidents.filter((incident) => incident.sourceKind === 'live')
   const urgent = liveIncidents.filter((incident) => incident.liveMeta?.outageKind === 'emergency')
   const prioritizedIncidents = sortIncidentsByPriority(visibleIncidents)
+  const syntheticHeatPriorityIncident = visibleIncidents.find(isSyntheticHeatPriorityIncident)
   const pinnedHeatPriorityIncident = subsystemIncidents.find(
     (incident) => incident.id === pinnedHeatPriorityIncidentId,
   )
@@ -81,12 +91,17 @@ export default function MayorDashboardPage() {
   const isEducationTab = isEducationSubsystemTab(subsystem)
   const mapIncidents = visibleIncidents
   const listIncidents = prioritizedIncidents
-  const selectedTransportDistrict = searchParams.get('district') ?? ''
+  const selectedTransportDistrict = selectedDistrict
   const primaryViewSummary = viewMode === 'map' ? 'Отображение на карте' : `${listIncidents.length} в списке`
   const priorityItems = isHeatTab
     ? [
+        ...(syntheticHeatPriorityIncident ? [syntheticHeatPriorityIncident] : []),
         ...(pinnedHeatPriorityIncident ? [pinnedHeatPriorityIncident] : []),
-        ...urgent.filter((incident) => incident.id !== pinnedHeatPriorityIncidentId),
+        ...urgent.filter(
+          (incident) =>
+            incident.id !== pinnedHeatPriorityIncidentId &&
+            incident.id !== syntheticHeatPriorityIncident?.id,
+        ),
       ].slice(0, 4)
     : prioritizedIncidents.slice(0, 4)
   const heatAreaItems = districtCards.slice(0, 5)
@@ -165,8 +180,10 @@ export default function MayorDashboardPage() {
     : 'Нет данных по районам'
 
   useEffect(() => {
-    setViewMode(isDesktop ? 'map' : 'list')
-  }, [isDesktop])
+    if (!hasPresentationView && !isPresentationMode) {
+      setLocalViewMode(isDesktop ? 'map' : 'list')
+    }
+  }, [hasPresentationView, isDesktop, isPresentationMode])
 
   const handleSubsystemChange = (nextSubsystem: typeof subsystem) => {
     const nextParams = new URLSearchParams(searchParams)
@@ -187,6 +204,24 @@ export default function MayorDashboardPage() {
     setSearchParams(nextParams, { replace: true })
   }
 
+  const handleDistrictChange = (value: string) => {
+    const nextParams = new URLSearchParams(searchParams)
+    if (value) nextParams.set('district', value)
+    else nextParams.delete('district')
+    setSearchParams(nextParams, { replace: true })
+  }
+
+  const handleViewModeChange = (nextViewMode: MayorDashboardViewMode) => {
+    if (hasPresentationView || isPresentationMode) {
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.set('view', nextViewMode)
+      setSearchParams(nextParams, { replace: true })
+      return
+    }
+
+    setLocalViewMode(nextViewMode)
+  }
+
   const renderMetricGrid = (cards: MetricCard[]) => (
     <div className={`grid gap-4 ${isDesktop ? 'sm:grid-cols-2 xl:grid-cols-4' : 'grid-cols-2'}`}>
       {cards.map((item) => (
@@ -205,39 +240,56 @@ export default function MayorDashboardPage() {
     <>
       {priorityItems.length > 0 ? (
         priorityItems.map((incident) => (
-          <button
+          <div
             key={incident.id}
-            type="button"
             data-testid="mayor-priority-item"
             data-incident-id={incident.id}
             onClick={() => navigate(`/incidents/${incident.id}`)}
-            className="mb-2 w-full rounded-xl border bg-blue-50 p-3 text-left transition hover:bg-blue-100"
+            className="mb-2 cursor-pointer rounded-xl border bg-blue-50 p-3 transition hover:bg-blue-100"
           >
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge
-                text={
-                  isHeatTab
-                    ? getOutageKindLabel(
-                        incident.liveMeta?.outageKind === 'emergency'
-                          ? 'emergency'
-                          : 'planned',
-                        'singular',
-                      )
-                    : incident.severity
-                }
-                className={
-                  isHeatTab
-                    ? getOutageKindBadgeStyle(incident.liveMeta?.outageKind)
-                    : severityStyles[incident.severity]
-                }
-              />
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                {getDistrictName(incident.district)}
-              </span>
-            </div>
-            <div className="mt-2 font-bold">{incident.title}</div>
-            <div className="text-sm text-slate-500">{incident.summary}</div>
-          </button>
+            <button
+              type="button"
+              onClick={() => navigate(`/incidents/${incident.id}`)}
+              className="w-full text-left"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge
+                  text={
+                    isHeatTab
+                      ? getOutageKindLabel(
+                          incident.liveMeta?.outageKind === 'emergency'
+                            ? 'emergency'
+                            : 'planned',
+                          'singular',
+                        )
+                      : incident.severity
+                  }
+                  className={
+                    isHeatTab
+                      ? getOutageKindBadgeStyle(incident.liveMeta?.outageKind)
+                      : severityStyles[incident.severity]
+                  }
+                />
+                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  {getDistrictName(incident.district)}
+                </span>
+              </div>
+              <div className="mt-2 font-bold">{incident.title}</div>
+              <div className="text-sm text-slate-500">{incident.summary}</div>
+            </button>
+            {canOpenIncidentReplay(incident) && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  navigate(buildIncidentReplayRoute(incident.id))
+                }}
+                className="mt-3 inline-flex rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-semibold text-blue-700"
+              >
+                {incidentReplayCtaLabel}
+              </button>
+            )}
+          </div>
         ))
       ) : (
         <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
@@ -331,8 +383,8 @@ export default function MayorDashboardPage() {
             <div className="flex flex-wrap gap-2">
               <select
                 className="w-full min-w-0 rounded-xl border px-3 py-2 sm:w-auto"
-                value={district}
-                onChange={(event) => setDistrict(event.target.value)}
+                value={selectedDistrict}
+                onChange={(event) => handleDistrictChange(event.target.value)}
               >
                 <option value="">Все районы</option>
                 {districts.map((item) => (
@@ -409,7 +461,7 @@ export default function MayorDashboardPage() {
                   <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
                     <button
                       type="button"
-                      onClick={() => setViewMode('map')}
+                      onClick={() => handleViewModeChange('map')}
                       aria-pressed={viewMode === 'map'}
                       className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
                         viewMode === 'map'
@@ -421,7 +473,7 @@ export default function MayorDashboardPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setViewMode('list')}
+                      onClick={() => handleViewModeChange('list')}
                       aria-pressed={viewMode === 'list'}
                       className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
                         viewMode === 'list'
@@ -485,6 +537,15 @@ export default function MayorDashboardPage() {
                               ? `${utilityLabels[incident.liveMeta.utilityType]} · ${getOutageKindLabel(incident.liveMeta.outageKind, 'singular')} · население в зоне: ${incident.affectedPopulation}`
                               : `Население в зоне: ${incident.affectedPopulation}`}
                           </div>
+                          {canOpenIncidentReplay(incident) && (
+                            <button
+                              type="button"
+                              onClick={() => navigate(buildIncidentReplayRoute(incident.id))}
+                              className="mt-3 inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700"
+                            >
+                              {incidentReplayCtaLabel}
+                            </button>
+                          )}
                         </div>
                       ))
                     )}

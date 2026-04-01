@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
   Cell,
   Line,
@@ -10,6 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { useSearchParams } from 'react-router-dom'
 import { MapView } from '../../components/MapView'
 import { Card, SectionTitle } from '../../components/ui'
 import { getDistrictName } from '../../lib/districts'
@@ -22,7 +22,9 @@ export default function HistoryPage() {
   const incidents = useIncidentViews()
   const series = useOutageHistorySeries()
   const live = useSigmaStore((state) => state.live)
-  const [period, setPeriod] = useState('7 дней')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const period = searchParams.get('period') ?? '7d'
+  const focus = searchParams.get('focus') ?? 'trend'
   const category = Object.entries(
     incidents.reduce<Record<string, number>>(
       (acc, incident) => ({ ...acc, [incident.subsystem]: (acc[incident.subsystem] || 0) + 1 }),
@@ -39,15 +41,25 @@ export default function HistoryPage() {
           subtitle="Тренды по накопленным снимкам 051 и оперативным событиям."
         />
         <div className="flex gap-2">
-          {['7 дней', 'месяц', 'квартал', 'год'].map((item) => (
+          {[
+            ['7 дней', '7d'],
+            ['месяц', '1m'],
+            ['квартал', '1q'],
+            ['год', '1y'],
+          ].map(([label, value]) => (
             <button
-              key={item}
-              onClick={() => setPeriod(item)}
+              key={value}
+              onClick={() => {
+                const nextParams = new URLSearchParams(searchParams)
+                if (value === '7d') nextParams.delete('period')
+                else nextParams.set('period', value)
+                setSearchParams(nextParams, { replace: true })
+              }}
               className={`rounded-xl px-3 py-2 ${
-                period === item ? 'bg-slate-900 text-white' : 'bg-slate-100'
+                period === value ? 'bg-slate-900 text-white' : 'bg-slate-100'
               }`}
             >
-              {item}
+              {label}
             </button>
           ))}
         </div>
@@ -61,7 +73,9 @@ export default function HistoryPage() {
         </Card>
         <Card>
           <div className="text-slate-500">Период</div>
-          <div className="text-4xl font-bold lg:text-5xl">{period}</div>
+          <div className="text-4xl font-bold lg:text-5xl">
+            {period === '1m' ? 'месяц' : period === '1q' ? 'квартал' : period === '1y' ? 'год' : '7 дней'}
+          </div>
           <div className="text-slate-500">если история короткая, интерфейс честно показывает ограничение</div>
         </Card>
         <Card>
@@ -78,7 +92,7 @@ export default function HistoryPage() {
 
       <div className="grid gap-4 lg:grid-cols-12">
         <div className="space-y-4 lg:col-span-8">
-          <Card>
+          <Card className={focus === 'trend' ? 'ring-2 ring-blue-500 ring-offset-2' : ''}>
             <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-3xl font-bold">Тренд отключений 051</div>
               <div className="text-slate-500">накопленная история снимков</div>
@@ -112,14 +126,14 @@ export default function HistoryPage() {
               </div>
             )}
           </Card>
-          <Card>
+          <Card className={focus === 'map' ? 'ring-2 ring-blue-500 ring-offset-2' : ''}>
             <div className="mb-2 text-3xl font-bold">Очаги проблем</div>
             <MapView incidents={incidents} plannedTopByHousesLimit={5} />
           </Card>
         </div>
 
         <div className="space-y-4 lg:col-span-4">
-          <Card>
+          <Card className={focus === 'categories' ? 'ring-2 ring-blue-500 ring-offset-2' : ''}>
             <div className="mb-3 text-3xl font-bold">Распределение по категориям</div>
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
@@ -134,7 +148,7 @@ export default function HistoryPage() {
               </PieChart>
             </ResponsiveContainer>
           </Card>
-          <Card>
+          <Card className={focus === 'districts' ? 'ring-2 ring-blue-500 ring-offset-2' : ''}>
             <div className="mb-3 text-3xl font-bold">Топ районов</div>
             <div className="space-y-2">
               {(live.outages?.payload.summary.topDistricts ?? []).slice(0, 6).map((item) => (
