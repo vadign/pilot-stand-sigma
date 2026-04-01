@@ -14,6 +14,8 @@ const jsonHeaders = {
 
 const sessionRoutePattern = /^\/session\/([^/]+)\/(info|stream|command|ask|present)$/
 const localhostHosts = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]'])
+const forwardedProtoPattern = /^(http|https)$/
+const presentationDebugOriginEnabled = process.env.SIGMA_PRESENTATION_DEBUG_ORIGIN === '1'
 
 const isPrivateIpv4 = (address: string): boolean =>
   address.startsWith('10.') ||
@@ -50,16 +52,41 @@ const readJsonBody = async <T>(req: IncomingMessage): Promise<T> => {
   return JSON.parse(raw) as T
 }
 
-export const buildRequestOrigin = (req: IncomingMessage): string => {
-  const forwardedHost = req.headers['x-forwarded-host']
-  const host = typeof forwardedHost === 'string'
-    ? forwardedHost.split(',')[0].trim()
-    : req.headers.host ?? 'localhost'
-  const forwardedProto = req.headers['x-forwarded-proto']
+const getHeaderValue = (value: string | string[] | undefined): string | undefined =>
+  typeof value === 'string' ? value : value?.[0]
+
+const normalizeHostHeader = (value: string | string[] | undefined): string | undefined => {
+  const raw = getHeaderValue(value)
+  if (!raw) return undefined
+
+  const host = raw.split(',')[0]?.trim()
+  if (!host) return undefined
+
+  try {
+    const parsed = new URL(`http://${host}`)
+    return parsed.host ? host : undefined
+  } catch {
+    return undefined
+  }
+}
+
+const resolveRequestProtocol = (req: IncomingMessage): 'http' | 'https' => {
   const maybeTlsSocket = req.socket as typeof req.socket & { encrypted?: boolean }
-  const protocol = typeof forwardedProto === 'string'
-    ? forwardedProto.split(',')[0]
-    : maybeTlsSocket.encrypted ? 'https' : 'http'
+  const forwardedProto = getHeaderValue(req.headers['x-forwarded-proto'])
+  const normalizedProto = forwardedProto?.split(',')[0]?.trim().toLowerCase()
+
+  if (normalizedProto && forwardedProtoPattern.test(normalizedProto)) {
+    return normalizedProto
+  }
+
+  return maybeTlsSocket.encrypted ? 'https' : 'http'
+}
+
+export const buildRequestOrigin = (req: IncomingMessage): string => {
+  const host = normalizeHostHeader(req.headers['x-forwarded-host'])
+    ?? normalizeHostHeader(req.headers.host)
+    ?? 'localhost'
+  const protocol = resolveRequestProtocol(req)
   const origin = new URL(`${protocol}://${host}`)
 
   if (localhostHosts.has(origin.hostname)) {
@@ -130,7 +157,12 @@ export const createPresentationSessionMiddleware = (
             return
           }
 
-          writeJson(res, 200, manager.getInfo(sid, origin))
+          const info = manager.getInfo(sid, origin)
+          writeJson(
+            res,
+            200,
+            presentationDebugOriginEnabled ? { ...info, debugOrigin: origin } : info,
+          )
           return
         }
 
