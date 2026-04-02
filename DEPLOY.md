@@ -86,7 +86,8 @@ npm run build && node --import tsx scripts/start.mts --host 0.0.0.0 --port 4173
 
 Это дает сразу три вещи:
 
-- стартовую синхронизацию `public/live-data`;
+- стартовую синхронизацию `public/live-data` перед `build`;
+- runtime-отдачу `/live-data/*` напрямую из `public/live-data`, чтобы `vite preview` не зависел от снимка, зашитого в `dist`;
 - повторный sync по расписанию;
 - HTTP-сервер приложения с транспортными `/api/*` endpoint'ами.
 

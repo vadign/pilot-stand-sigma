@@ -6,8 +6,13 @@ import { startLiveSyncScheduler } from './sync-live.mts'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const viteBin = join(root, 'node_modules', 'vite', 'bin', 'vite.js')
 const scheduler = startLiveSyncScheduler({ runOnStart: false })
+const shouldRunStartupSync = process.env.SIGMA_RUN_STARTUP_SYNC !== 'false'
 
-await scheduler.runNow('startup')
+if (shouldRunStartupSync) {
+  await scheduler.runNow('startup')
+} else {
+  console.log('[start] startup sync skipped: SIGMA_RUN_STARTUP_SYNC=false')
+}
 
 const vite = spawn(process.execPath, [viteBin, 'preview', ...process.argv.slice(2)], {
   cwd: root,
