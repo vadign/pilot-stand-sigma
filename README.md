@@ -76,11 +76,14 @@ VITE_051_URL=https://051.novo-sibirsk.ru/SitePages/off.aspx
 VITE_OPENDATA_BASE_URL=https://opendata.novo-sibirsk.ru
 VITE_051_PROXY_URL=
 VITE_OPENDATA_PROXY_URL=
+VITE_PRESENTATION_API_BASE=
 ```
 
 ### Поведение env
-- `VITE_ENABLE_RUNTIME_LIVE_FETCH=false` — только snapshot + cache + mock.
-- если `true`, клиент сначала пробует runtime-refresh;
+- `VITE_PRESENTATION_API_BASE` — базовый URL для presentation API (`/session/*`).
+  - пусто (по умолчанию): тот же origin, что и UI, с учетом `BASE_URL`;
+  - можно указать абсолютный URL (например, `https://api.example.com`) или префикс (например, `/sigma`).
+- runtime-refresh включён по умолчанию для всех режимов запуска: сначала клиент пробует живой источник, затем откатывается на snapshot/cache/mock;
 - если прямой fetch не проходит из-за CORS/timeout/parser error, приложение откатывается на snapshot/cache/mock и показывает это в UI.
 
 ## Синхронизация snapshots

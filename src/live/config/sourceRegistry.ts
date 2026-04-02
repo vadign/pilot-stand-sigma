@@ -16,4 +16,4 @@ export const getLiveSourceMode = (): LiveSourceMode => {
   return 'hybrid'
 }
 
-export const isRuntimeLiveFetchEnabled = (): boolean => String(import.meta.env.VITE_ENABLE_RUNTIME_LIVE_FETCH || 'true') === 'true'
+export const isRuntimeLiveFetchEnabled = (): boolean => true

@@ -53,7 +53,7 @@ cp deploy/docker/sigma.env.example deploy/docker/sigma.env
 
 ```env
 VITE_SOURCE_MODE=hybrid
-VITE_ENABLE_RUNTIME_LIVE_FETCH=false
+VITE_ENABLE_RUNTIME_LIVE_FETCH=true
 SIGMA_PORT=4173
 SIGMA_SNAPSHOT_SYNC_INTERVAL_MS=3600000
 VITE_051_PORTAL_URL=https://map.novo-sibirsk.ru/portal/disconnections?t=
