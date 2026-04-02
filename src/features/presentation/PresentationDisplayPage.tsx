@@ -1,15 +1,21 @@
 import { CheckCircle2, Copy, LoaderCircle, QrCode, Smartphone } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { Badge, Card } from '../../components/ui'
 import { createPresentationSession, fetchPresentationSessionInfo } from './api'
 import { getPresentationClientId } from './clientId'
 import { usePresentationStore } from './store'
 import { SessionQrCode } from './SessionQrCode'
-import { buildDisplayRoute, buildFallbackMobileUrl, getPresentationSessionId } from './url'
+import { PRESENTATION_SESSION_PARAM, buildFallbackMobileUrl, getPresentationSessionId } from './url'
+
+
+const buildDisplaySessionUrl = (sid: string): string => {
+  const nextParams = new URLSearchParams(window.location.search)
+  nextParams.set(PRESENTATION_SESSION_PARAM, sid)
+  return `${window.location.pathname}?${nextParams.toString()}`
+}
 
 export default function PresentationDisplayPage() {
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const session = usePresentationStore((state) => state.session)
   const setSnapshot = usePresentationStore((state) => state.setSnapshot)
@@ -35,7 +41,8 @@ export default function PresentationDisplayPage() {
     void createPresentationSession()
       .then((response) => {
         if (!isMounted) return
-        navigate(buildDisplayRoute(response.sid), { replace: true })
+        const target = buildDisplaySessionUrl(response.sid)
+        window.location.replace(target)
       })
       .catch(() => {
         if (!isMounted) return
@@ -45,7 +52,7 @@ export default function PresentationDisplayPage() {
     return () => {
       isMounted = false
     }
-  }, [creatingSession, navigate, sessionId])
+  }, [creatingSession, sessionId])
 
   useEffect(() => {
     if (!sessionId) return
