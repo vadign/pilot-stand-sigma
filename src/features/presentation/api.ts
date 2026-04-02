@@ -1,3 +1,4 @@
+import { buildPresentationApiUrl } from './apiBase'
 import type {
   PresentationAskRequest,
   PresentationCommandRequest,
@@ -69,7 +70,7 @@ const readJson = async <T>(response: Response): Promise<T> => {
 }
 
 export const createPresentationSession = async (): Promise<PresentationCreateSessionResponse> => {
-  const response = await fetch('/session/create', { method: 'POST' })
+  const response = await fetch(buildPresentationApiUrl('/session/create'), { method: 'POST' })
   return readJson<PresentationCreateSessionResponse>(response)
 }
 
@@ -83,7 +84,7 @@ export const fetchPresentationSessionInfo = async ({
   role: PresentationRole
 }): Promise<PresentationSessionInfo> => {
   const searchParams = new URLSearchParams({ clientId, role })
-  const response = await fetch(`/session/${sid}/info?${searchParams.toString()}`)
+  const response = await fetch(buildPresentationApiUrl(`/session/${sid}/info?${searchParams.toString()}`))
   return readJson<PresentationSessionInfo>(response)
 }
 
@@ -91,7 +92,7 @@ export const postPresentationAsk = async (
   sid: string,
   request: PresentationAskRequest,
 ): Promise<PresentationSessionInfo> => {
-  const response = await fetch(`/session/${sid}/ask`, {
+  const response = await fetch(buildPresentationApiUrl(`/session/${sid}/ask`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
@@ -103,7 +104,7 @@ export const postPresentationCommand = async (
   sid: string,
   request: PresentationCommandRequest,
 ): Promise<PresentationSessionInfo> => {
-  const response = await fetch(`/session/${sid}/command`, {
+  const response = await fetch(buildPresentationApiUrl(`/session/${sid}/command`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
@@ -115,7 +116,7 @@ export const postPresentationRoute = async (
   sid: string,
   request: PresentationPresentRequest,
 ): Promise<PresentationSessionInfo> => {
-  const response = await fetch(`/session/${sid}/present`, {
+  const response = await fetch(buildPresentationApiUrl(`/session/${sid}/present`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
