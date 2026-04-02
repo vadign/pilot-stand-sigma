@@ -24,7 +24,6 @@ export default function PresentationDisplayPage() {
   const setError = usePresentationStore((state) => state.setError)
   const sessionId = useMemo(() => getPresentationSessionId(searchParams), [searchParams])
   const clientId = useMemo(() => getPresentationClientId('display'), [])
-  const [creatingSession, setCreatingSession] = useState(false)
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState('')
   const mobileUrl = useMemo(
@@ -33,10 +32,9 @@ export default function PresentationDisplayPage() {
   )
 
   useEffect(() => {
-    if (sessionId || creatingSession) return
+    if (sessionId) return
 
-    let isMounted = true
-    setCreatingSession(true)
+    let cancelled = false
 
     void createPresentationSession()
       .then((response) => {
@@ -44,13 +42,14 @@ export default function PresentationDisplayPage() {
         const target = buildDisplaySessionUrl(response.sid)
         window.location.replace(target)
       })
-      .catch(() => {
-        if (!isMounted) return
-        setCreatingSession(false)
+      .catch((nextError) => {
+        if (cancelled) return
+        const details = nextError instanceof Error ? nextError.message : String(nextError)
+        setError(`Не удалось создать сессию: ${details}`)
       })
 
     return () => {
-      isMounted = false
+      cancelled = true
     }
   }, [creatingSession, sessionId])
 
