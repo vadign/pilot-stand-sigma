@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { buildPresentationApiUrl } from './apiBase'
 import { fetchPresentationSessionInfo } from './api'
 import { getPresentationClientId } from './clientId'
 import { usePresentationStore } from './store'
@@ -55,7 +56,7 @@ export const PresentationRuntime = () => {
         setError(error instanceof Error ? error.message : String(error))
       })
 
-    const stream = new EventSource(`/session/${sessionId}/stream`)
+    const stream = new EventSource(buildPresentationApiUrl(`/session/${sessionId}/stream`))
 
     const onSnapshot = (event: MessageEvent<string>) => {
       setSnapshot(parseEventPayload<PresentationSessionInfo>(event))
