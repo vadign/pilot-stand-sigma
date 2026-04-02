@@ -38,7 +38,7 @@ export default function PresentationDisplayPage() {
 
     void createPresentationSession()
       .then((response) => {
-        if (cancelled) return
+        if (!isMounted) return
         const target = buildDisplaySessionUrl(response.sid)
         window.location.replace(target)
       })
@@ -51,7 +51,7 @@ export default function PresentationDisplayPage() {
     return () => {
       cancelled = true
     }
-  }, [sessionId, setError])
+  }, [creatingSession, sessionId])
 
   useEffect(() => {
     if (!sessionId) return
