@@ -12,6 +12,7 @@ import type {
 } from './types'
 import {
   buildDisplayRoute,
+  buildMobileRoute,
   buildPresentationRoute,
   getPresentationSessionId,
   isPresentationPageMode,
@@ -45,6 +46,18 @@ export const PresentationRuntime = () => {
     let isActive = true
     setConnection('connecting')
     setError(undefined)
+    if (session?.sid !== sessionId) {
+      setSnapshot({
+        sid: sessionId,
+        expiresAt: '',
+        scene: { type: 'idle', requestedAt: new Date(0).toISOString() },
+        previousScene: undefined,
+        historyDepth: 0,
+        controller: undefined,
+        mobileUrl: buildMobileRoute(sessionId),
+        displayUrl: buildDisplayRoute(sessionId),
+      })
+    }
 
     void fetchPresentationSessionInfo({ sid: sessionId, clientId: displayClientId, role: 'display' })
       .then((info) => {
@@ -102,6 +115,7 @@ export const PresentationRuntime = () => {
     setLastCommand,
     setScene,
     setSnapshot,
+    session?.sid,
   ])
 
   useEffect(() => {

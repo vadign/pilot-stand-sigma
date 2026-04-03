@@ -20,9 +20,36 @@ interface PresentationState {
   reset: () => void
 }
 
+const sceneRequestedAt = (scene?: PresentationScene): number => {
+  if (!scene) return Number.NEGATIVE_INFINITY
+  const timestamp = Date.parse(scene.requestedAt)
+  return Number.isNaN(timestamp) ? Number.NEGATIVE_INFINITY : timestamp
+}
+
 export const usePresentationStore = create<PresentationState>((set) => ({
   connection: 'idle',
-  setSnapshot: (session) => set({ session, error: undefined }),
+  setSnapshot: (session) =>
+    set((state) => {
+      const current = state.session
+      if (!current || current.sid !== session.sid) {
+        return { session, error: undefined }
+      }
+
+      if (sceneRequestedAt(current.scene) <= sceneRequestedAt(session.scene)) {
+        return { session, error: undefined }
+      }
+
+      return {
+        session: {
+          ...session,
+          scene: current.scene,
+          previousScene: current.previousScene ?? session.previousScene,
+          historyDepth: Math.max(current.historyDepth, session.historyDepth),
+          controller: current.controller ?? session.controller,
+        },
+        error: undefined,
+      }
+    }),
   setScene: (scene) =>
     set((state) => state.session ? { session: { ...state.session, scene }, error: undefined } : state),
   setController: (controller) =>
