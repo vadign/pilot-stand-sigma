@@ -25,3 +25,7 @@ dist-ssr
 
 # Generated live snapshots
 public/live-data/**
+
+# Local Codex workspaces and brainstorming artifacts
+.worktrees/
+.superpowers/
