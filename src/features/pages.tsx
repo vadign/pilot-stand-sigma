@@ -1,5 +1,6 @@
 export { default as BriefingPage } from './pages/BriefingPage'
 export { default as MayorDashboardPage } from './pages/MayorDashboardPage'
+export { default as ReportsPage } from './pages/ReportsPage'
 export { default as OperationsPage } from './pages/OperationsPage'
 export { default as IncidentPage } from './pages/IncidentPage'
 export { default as IncidentReplayPage } from './pages/IncidentReplayPage'

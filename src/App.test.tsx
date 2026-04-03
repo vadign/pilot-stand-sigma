@@ -186,6 +186,33 @@ describe('App smoke render', () => {
     })
   })
 
+  it('renders the reports route without crashing to a blank screen', async () => {
+    const root = await renderApp(['/reports'])
+    await waitForText('Ежедневная сводка руководителя')
+
+    expect(container.textContent).toContain('Что изменилось со вчера')
+    expect(container.textContent).toContain('Приоритетные инциденты')
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
+  it('points the desktop executive report navigation link to /reports', async () => {
+    const root = await renderApp(['/mayor-dashboard'])
+    await waitForText('ЖКХ и энергетика под управлением оперативных источников')
+
+    const reportLink = Array.from(container.querySelectorAll('a')).find(
+      (link) => link.textContent?.trim() === 'Управленческий отчет',
+    )
+
+    expect(reportLink?.getAttribute('href')).toBe('/reports')
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
   it('defaults mayor dashboard events view to map on desktop', async () => {
     const root = await renderApp(['/mayor-dashboard'])
     await waitForText('Территориальные события')

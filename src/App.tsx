@@ -7,6 +7,7 @@ import { PresentationRuntime } from './features/presentation/PresentationRuntime
 
 const BriefingPage = lazy(() => import('./features/pages/BriefingPage'))
 const MayorDashboardPage = lazy(() => import('./features/pages/MayorDashboardPage'))
+const ReportsPage = lazy(() => import('./features/pages/ReportsPage'))
 const OperationsPage = lazy(() => import('./features/pages/OperationsPage'))
 const IncidentPage = lazy(() => import('./features/pages/IncidentPage'))
 const IncidentReplayPage = lazy(() => import('./features/pages/IncidentReplayPage'))
@@ -38,22 +39,22 @@ export default function App() {
       <Routes>
         <Route path="/display" element={renderLazyRoute(PresentationDisplayPage)} />
         <Route path="/mobile" element={renderLazyRoute(PresentationMobilePage)} />
-        <Route element={<Layout />}>
-          <Route path="/" element={<Navigate to="/mayor-dashboard" />} />
-          <Route path="/briefing" element={renderLazyRoute(BriefingPage)} />
-          <Route path="/mayor-dashboard" element={renderLazyRoute(MayorDashboardPage)} />
-          <Route path="/operations" element={renderLazyRoute(OperationsPage)} />
-          <Route path="/incidents/:id/replay" element={renderLazyRoute(IncidentReplayPage)} />
+          <Route element={<Layout />}>
+            <Route path="/" element={<Navigate to="/mayor-dashboard" />} />
+            <Route path="/briefing" element={renderLazyRoute(BriefingPage)} />
+            <Route path="/reports" element={renderLazyRoute(ReportsPage)} />
+            <Route path="/mayor-dashboard" element={renderLazyRoute(MayorDashboardPage)} />
+            <Route path="/operations" element={renderLazyRoute(OperationsPage)} />
+            <Route path="/incidents/:id/replay" element={renderLazyRoute(IncidentReplayPage)} />
           <Route path="/incidents/:id" element={renderLazyRoute(IncidentPage)} />
           <Route path="/history" element={renderLazyRoute(HistoryPage)} />
           <Route path="/scenarios" element={renderLazyRoute(ScenariosPage)} />
-          <Route path="/deputies" element={renderLazyRoute(DeputiesPage)} />
-          <Route path="/regulations" element={renderLazyRoute(RegulationsPage)} />
-          <Route path="/public-transport" element={<LegacyPublicTransportRedirect />} />
-          <Route path="/resources" element={renderLazyRoute(PlaceholderPage)} />
-          <Route path="/reports" element={renderLazyRoute(PlaceholderPage)} />
-          <Route path="/settings" element={renderLazyRoute(PlaceholderPage)} />
-        </Route>
+            <Route path="/deputies" element={renderLazyRoute(DeputiesPage)} />
+            <Route path="/regulations" element={renderLazyRoute(RegulationsPage)} />
+            <Route path="/public-transport" element={<LegacyPublicTransportRedirect />} />
+            <Route path="/resources" element={renderLazyRoute(PlaceholderPage)} />
+            <Route path="/settings" element={renderLazyRoute(PlaceholderPage)} />
+          </Route>
       </Routes>
       <PresentationAnswerView />
     </>

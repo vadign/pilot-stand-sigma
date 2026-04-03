@@ -9,7 +9,7 @@ import { useLiveDataBootstrap } from '../live/hooks/useLiveDataBootstrap'
 
 const nav = [
   ['/mayor-dashboard', 'Панель мэра'],
-  ['/briefing', 'Управленческий отчет'],
+  ['/reports', 'Управленческий отчет'],
   ['/history', 'История и аналитика'],
   ['/display', 'Режим демонстрации'],
 ]
